@@ -111,6 +111,7 @@ export default function App() {
   const allFeaturedPool = useMemo(() => {
     if (activeTab === 'series') return catalog.popularTv;
     if (activeTab === 'movies') return catalog.trendingMovies;
+    if (activeTab === 'trending') return [...catalog.trendingMovies, ...catalog.trendingTv];
     return [...catalog.trendingMovies, ...catalog.popularTv];
   }, [catalog, activeTab]);
 
@@ -120,11 +121,14 @@ export default function App() {
     setFeaturedIndex((prev) => (prev + 1) % (allFeaturedPool.length || 1));
   };
 
+  // Filtros responsivos inteligentes
   const showSeriesOnly = activeTab === 'series' || activeCategoryFilter === 'series';
   const showMoviesOnly = activeTab === 'movies' || activeCategoryFilter === 'movies';
 
   return (
-    <div className="min-h-screen bg-[#0e0e0e] text-white flex flex-col font-sans selection:bg-netflix-red selection:text-white">
+    <div className="min-h-screen bg-[#070709] text-white flex flex-col font-sans selection:bg-netflix-red selection:text-white relative overflow-x-hidden">
+      {/* Luz ambiental Apple Glass Mesh */}
+      <div className="ambient-mesh fixed inset-0 pointer-events-none z-0" />
       
       {/* Navigation Header */}
       <Navbar 
@@ -238,6 +242,30 @@ export default function App() {
               </div>
             )}
           </motion.div>
+        ) : isLoadingCatalog ? (
+          /* SKELETON SCREEN FLUIDO ESTILO APPLE DESIGN */
+          <div className="pt-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 animate-pulse">
+            <div className="w-full h-80 sm:h-[480px] rounded-3xl bg-white/5 border border-white/10 relative overflow-hidden flex items-end p-6 sm:p-12">
+              <div className="space-y-4 max-w-xl w-full">
+                <div className="h-5 w-32 bg-white/10 rounded-full" />
+                <div className="h-10 sm:h-14 w-3/4 bg-white/15 rounded-xl" />
+                <div className="h-4 w-full bg-white/10 rounded" />
+                <div className="h-4 w-2/3 bg-white/10 rounded" />
+                <div className="flex space-x-3 pt-3">
+                  <div className="h-11 w-36 bg-white/20 rounded-xl" />
+                  <div className="h-11 w-32 bg-white/10 rounded-xl" />
+                </div>
+              </div>
+            </div>
+            <div className="space-y-6 pt-2">
+              <div className="h-7 w-60 bg-white/15 rounded-lg" />
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="aspect-[2/3] rounded-2xl bg-white/5 border border-white/5" />
+                ))}
+              </div>
+            </div>
+          </div>
         ) : (
           /* VISTA 3: CATÁLOGO COMPLETO ESTILO FRANCHISE */
           <motion.div
@@ -270,7 +298,7 @@ export default function App() {
             <div className="relative z-20 space-y-6">
               
               {/* Continuar Viendo */}
-              {history.length > 0 && (
+              {history.length > 0 && activeCategoryFilter === 'all' && (
                 <MovieRow 
                   title="🕒 Continuar Viendo"
                   movies={history}
@@ -281,38 +309,17 @@ export default function App() {
                 />
               )}
 
-              {/* TOP 10 NETFLIX OFICIAL */}
-              {(!showSeriesOnly || activeCategoryFilter === 'top10') && (
-                <Top10Row 
-                  movies={showSeriesOnly ? catalog.popularTv : catalog.trendingMovies}
-                  onPlay={(m) => handleStartPlay(m, 1, 1)}
-                  onOpenDetails={(m) => setSelectedMovieForDetails(m)}
-                  onToggleMyList={handleToggleMyList}
-                  isInMyList={isInMyList}
-                />
-              )}
-
-              {/* SECCIÓN ESPECIAL: SERIES DE TV COMPLETAS */}
-              {(!showMoviesOnly) && (
+              {/* FILTROS ESPECÍFICOS DE CATEGORÍA */}
+              {activeCategoryFilter === 'action' ? (
                 <>
                   <MovieRow 
-                    title="📺 Series Más Aclamadas en 4K (Temporadas Completas)"
-                    movies={catalog.popularTv}
+                    title="💥 Películas de Acción y Adrenalina Pura"
+                    movies={catalog.actionMovies}
                     onPlay={(m) => handleStartPlay(m, 1, 1)}
                     onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                     onToggleMyList={handleToggleMyList}
                     isInMyList={isInMyList}
                   />
-
-                  <MovieRow 
-                    title="🔥 Series en Tendencia Global (Español Latino)"
-                    movies={catalog.trendingTv}
-                    onPlay={(m) => handleStartPlay(m, 1, 1)}
-                    onOpenDetails={(m) => setSelectedMovieForDetails(m)}
-                    onToggleMyList={handleToggleMyList}
-                    isInMyList={isInMyList}
-                  />
-
                   <MovieRow 
                     title="💥 Series de Acción y Aventura Épica"
                     movies={catalog.actionTv}
@@ -322,34 +329,8 @@ export default function App() {
                     isInMyList={isInMyList}
                   />
                 </>
-              )}
-
-              {/* Lanzador Rápido por TMDB o Enlace */}
-              <QuickLauncher 
-                onPlayCustomMovie={(m, s, e, epTitle) => handleStartPlay(m, s, e, epTitle)}
-              />
-
-              {/* SECCIÓN DE PELÍCULAS 4K */}
-              {(!showSeriesOnly) && (
+              ) : activeCategoryFilter === 'scifi' ? (
                 <>
-                  <MovieRow 
-                    title="💎 Estrenos en Cine y Cartelera (4K Ultra HD)"
-                    movies={catalog.nowPlayingMovies}
-                    onPlay={(m) => handleStartPlay(m, 1, 1)}
-                    onOpenDetails={(m) => setSelectedMovieForDetails(m)}
-                    onToggleMyList={handleToggleMyList}
-                    isInMyList={isInMyList}
-                  />
-
-                  <MovieRow 
-                    title="💥 Películas de Acción y Adrenalina Pura"
-                    movies={catalog.actionMovies}
-                    onPlay={(m) => handleStartPlay(m, 1, 1)}
-                    onOpenDetails={(m) => setSelectedMovieForDetails(m)}
-                    onToggleMyList={handleToggleMyList}
-                    isInMyList={isInMyList}
-                  />
-
                   <MovieRow 
                     title="🌌 Ciencia Ficción y Multiversos Cinemáticos"
                     movies={catalog.scifiMovies}
@@ -358,37 +339,185 @@ export default function App() {
                     onToggleMyList={handleToggleMyList}
                     isInMyList={isInMyList}
                   />
-
                   <MovieRow 
-                    title="🎃 Noches de Terror y Suspenso"
-                    movies={catalog.horrorMovies}
-                    onPlay={(m) => handleStartPlay(m, 1, 1)}
-                    onOpenDetails={(m) => setSelectedMovieForDetails(m)}
-                    onToggleMyList={handleToggleMyList}
-                    isInMyList={isInMyList}
-                  />
-
-                  <MovieRow 
-                    title="⭐ Obras Maestras Mejor Calificadas de la Historia"
-                    movies={catalog.topRatedMovies}
+                    title="🚀 Series de Ficción Futurista"
+                    movies={catalog.scifiTv}
                     onPlay={(m) => handleStartPlay(m, 1, 1)}
                     onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                     onToggleMyList={handleToggleMyList}
                     isInMyList={isInMyList}
                   />
                 </>
-              )}
-
-              {/* Series de Animación & Anime */}
-              {(!showMoviesOnly) && (
+              ) : activeCategoryFilter === 'horror' ? (
                 <MovieRow 
-                  title="🎨 Series Animadas y Anime Populares"
+                  title="🎃 Noches de Terror, Suspenso y Misterio"
+                  movies={catalog.horrorMovies}
+                  onPlay={(m) => handleStartPlay(m, 1, 1)}
+                  onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                  onToggleMyList={handleToggleMyList}
+                  isInMyList={isInMyList}
+                />
+              ) : activeCategoryFilter === 'animation' ? (
+                <MovieRow 
+                  title="🎨 Series Animadas, Animación 3D y Anime"
                   movies={catalog.animationTv}
                   onPlay={(m) => handleStartPlay(m, 1, 1)}
                   onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                   onToggleMyList={handleToggleMyList}
                   isInMyList={isInMyList}
                 />
+              ) : activeCategoryFilter === 'topRated' ? (
+                <>
+                  <MovieRow 
+                    title="⭐ Obras Maestras del Cine (Mejor Calificadas)"
+                    movies={catalog.topRatedMovies}
+                    onPlay={(m) => handleStartPlay(m, 1, 1)}
+                    onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                    onToggleMyList={handleToggleMyList}
+                    isInMyList={isInMyList}
+                  />
+                  <MovieRow 
+                    title="⭐ Series de TV Aclamadas por la Crítica"
+                    movies={catalog.topRatedTv}
+                    onPlay={(m) => handleStartPlay(m, 1, 1)}
+                    onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                    onToggleMyList={handleToggleMyList}
+                    isInMyList={isInMyList}
+                  />
+                </>
+              ) : activeCategoryFilter === 'top10' ? (
+                <>
+                  <Top10Row 
+                    title="Top 10 Películas Más Vistas Hoy"
+                    movies={catalog.trendingMovies}
+                    onPlay={(m) => handleStartPlay(m, 1, 1)}
+                    onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                    onToggleMyList={handleToggleMyList}
+                    isInMyList={isInMyList}
+                  />
+                  <Top10Row 
+                    title="Top 10 Series en Tendencia Hoy"
+                    movies={catalog.popularTv}
+                    onPlay={(m) => handleStartPlay(m, 1, 1)}
+                    onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                    onToggleMyList={handleToggleMyList}
+                    isInMyList={isInMyList}
+                  />
+                </>
+              ) : (
+                /* VISTA COMPLETA (HOME, MOVIES, SERIES, TRENDING) */
+                <>
+                  {/* TOP 10 NETFLIX OFICIAL */}
+                  {(!showSeriesOnly || activeCategoryFilter === 'top10') && (
+                    <Top10Row 
+                      title={showSeriesOnly ? "Top 10 Series Más Vistas Hoy" : "Las 10 Más Vistas Hoy en 4K"}
+                      movies={showSeriesOnly ? catalog.popularTv : catalog.trendingMovies}
+                      onPlay={(m) => handleStartPlay(m, 1, 1)}
+                      onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                      onToggleMyList={handleToggleMyList}
+                      isInMyList={isInMyList}
+                    />
+                  )}
+
+                  {/* SECCIÓN ESPECIAL: SERIES DE TV COMPLETAS */}
+                  {(!showMoviesOnly) && (
+                    <>
+                      <MovieRow 
+                        title="📺 Series Más Aclamadas en 4K (Temporadas Completas)"
+                        movies={catalog.popularTv}
+                        onPlay={(m) => handleStartPlay(m, 1, 1)}
+                        onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                        onToggleMyList={handleToggleMyList}
+                        isInMyList={isInMyList}
+                      />
+
+                      <MovieRow 
+                        title="🔥 Series en Tendencia Global (Español Latino)"
+                        movies={catalog.trendingTv}
+                        onPlay={(m) => handleStartPlay(m, 1, 1)}
+                        onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                        onToggleMyList={handleToggleMyList}
+                        isInMyList={isInMyList}
+                      />
+
+                      <MovieRow 
+                        title="💥 Series de Acción y Aventura Épica"
+                        movies={catalog.actionTv}
+                        onPlay={(m) => handleStartPlay(m, 1, 1)}
+                        onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                        onToggleMyList={handleToggleMyList}
+                        isInMyList={isInMyList}
+                      />
+                    </>
+                  )}
+
+                  {/* Lanzador Rápido por TMDB o Enlace */}
+                  <QuickLauncher 
+                    onPlayCustomMovie={(m, s, e, epTitle) => handleStartPlay(m, s, e, epTitle)}
+                  />
+
+                  {/* SECCIÓN DE PELÍCULAS 4K */}
+                  {(!showSeriesOnly) && (
+                    <>
+                      <MovieRow 
+                        title="💎 Estrenos en Cine y Cartelera (4K Ultra HD)"
+                        movies={catalog.nowPlayingMovies}
+                        onPlay={(m) => handleStartPlay(m, 1, 1)}
+                        onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                        onToggleMyList={handleToggleMyList}
+                        isInMyList={isInMyList}
+                      />
+
+                      <MovieRow 
+                        title="💥 Películas de Acción y Adrenalina Pura"
+                        movies={catalog.actionMovies}
+                        onPlay={(m) => handleStartPlay(m, 1, 1)}
+                        onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                        onToggleMyList={handleToggleMyList}
+                        isInMyList={isInMyList}
+                      />
+
+                      <MovieRow 
+                        title="🌌 Ciencia Ficción y Multiversos Cinemáticos"
+                        movies={catalog.scifiMovies}
+                        onPlay={(m) => handleStartPlay(m, 1, 1)}
+                        onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                        onToggleMyList={handleToggleMyList}
+                        isInMyList={isInMyList}
+                      />
+
+                      <MovieRow 
+                        title="🎃 Noches de Terror y Suspenso"
+                        movies={catalog.horrorMovies}
+                        onPlay={(m) => handleStartPlay(m, 1, 1)}
+                        onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                        onToggleMyList={handleToggleMyList}
+                        isInMyList={isInMyList}
+                      />
+
+                      <MovieRow 
+                        title="⭐ Obras Maestras Mejor Calificadas de la Historia"
+                        movies={catalog.topRatedMovies}
+                        onPlay={(m) => handleStartPlay(m, 1, 1)}
+                        onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                        onToggleMyList={handleToggleMyList}
+                        isInMyList={isInMyList}
+                      />
+                    </>
+                  )}
+
+                  {/* Series de Animación & Anime */}
+                  {(!showMoviesOnly) && (
+                    <MovieRow 
+                      title="🎨 Series Animadas y Anime Populares"
+                      movies={catalog.animationTv}
+                      onPlay={(m) => handleStartPlay(m, 1, 1)}
+                      onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                      onToggleMyList={handleToggleMyList}
+                      isInMyList={isInMyList}
+                    />
+                  )}
+                </>
               )}
 
             </div>

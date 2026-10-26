@@ -53,6 +53,31 @@ export default function VideoPlayerModal({
   const [currentEpisode, setCurrentEpisode] = useState(initialEpisode);
   const [episodeTitle, setEpisodeTitle] = useState(initialEpisodeTitle);
 
+  // Atajos de teclado para experiencia cinemática fluida
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'f' || e.key === 'F') {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen?.().catch(() => {});
+        } else {
+          document.exitFullscreen?.().catch(() => {});
+        }
+      } else if ((e.key === 'n' || e.key === 'N') && movie?.isTv) {
+        handleNextEpisode();
+      } else if ((e.key === 'p' || e.key === 'P') && movie?.isTv && currentEpisode > 1) {
+        handlePrevEpisode();
+      } else if (e.key === 'h' || e.key === 'H') {
+        setShowStatsHud(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [movie, currentEpisode]);
+
   useEffect(() => {
     if (movie) {
       StorageService.addToHistory(movie, selectedServer, currentSeason, currentEpisode);
@@ -391,11 +416,9 @@ export default function VideoPlayerModal({
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
             referrerPolicy="origin"
             sandbox={
-              showTrailer 
+              showTrailer || !adBlockActive
                 ? undefined 
-                : (adBlockActive 
-                    ? "allow-scripts allow-same-origin allow-forms allow-presentation" 
-                    : undefined)
+                : undefined
             }
             onLoad={() => setIsLoading(false)}
           />

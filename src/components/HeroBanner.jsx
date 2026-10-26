@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Info, Plus, Check, Volume2, VolumeX, Sparkles, Star, Zap, Cast } from 'lucide-react';
+import { Play, Info, Plus, Check, Volume2, VolumeX, Sparkles, Star, Zap, Cast, ShieldCheck } from 'lucide-react';
 import { MovieAPI } from '../services/movieService';
 
 export default function HeroBanner({ 
@@ -91,6 +91,9 @@ export default function HeroBanner({
             </span>
             <span className="border border-white/30 text-gray-200 text-[10px] px-1.5 py-0.5 rounded font-black tracking-wider">
               ATMOS 5.1
+            </span>
+            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/35 text-[10px] font-black px-2 py-0.5 rounded flex items-center shadow">
+              <ShieldCheck className="w-3 h-3 mr-1 text-emerald-400" /> 100% SIN ANUNCIOS
             </span>
             <span className="text-emerald-400 font-extrabold flex items-center text-xs">
               {movie.match || 98}% de coincidencia

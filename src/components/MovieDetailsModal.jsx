@@ -63,7 +63,7 @@ export default function MovieDetailsModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
         transition={{ type: "spring", stiffness: 350, damping: 28 }}
-        className="relative w-full max-w-4xl bg-[#181818] rounded-xl overflow-hidden shadow-2xl border border-white/10 text-white my-auto max-h-[92vh] flex flex-col"
+        className="relative w-full max-w-4xl bg-[#121217]/95 backdrop-blur-2xl rounded-2xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.85)] border border-white/15 text-white my-auto max-h-[92vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
@@ -86,8 +86,8 @@ export default function MovieDetailsModal({
               alt={movie.title}
               className="w-full h-full object-cover filter brightness-[0.75]"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-[#181818]/50 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#181818]/90 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#121217] via-[#121217]/50 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#121217]/90 via-transparent to-transparent" />
 
             {/* Title & Quick Actions */}
             <div className="absolute bottom-6 left-6 right-6 space-y-4">

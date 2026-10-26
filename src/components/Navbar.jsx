@@ -71,10 +71,10 @@ export default function Navbar({
       initial={{ y: -60 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className={`fixed top-0 left-0 right-0 z-40 transition-colors duration-500 ${
+      className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
         isScrolled 
-          ? 'bg-[#0e0e0e]/95 backdrop-blur-2xl shadow-2xl py-3 border-b border-white/[0.08]' 
-          : 'bg-gradient-to-b from-black/95 via-black/60 to-transparent py-5'
+          ? 'glass-chrome shadow-2xl py-3 border-b border-white/[0.08]' 
+          : 'bg-gradient-to-b from-[#070709]/95 via-[#070709]/75 to-transparent py-4'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
@@ -82,24 +82,24 @@ export default function Navbar({
         {/* Left: Franchise Logo & Navigation */}
         <div className="flex items-center space-x-8">
           <motion.div 
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
             onClick={() => { setActiveTab('home'); clearSearch(); }}
             className="flex items-center space-x-2.5 cursor-pointer select-none group"
           >
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-netflix-red to-red-600 flex items-center justify-center shadow-lg shadow-red-900/60 group-hover:shadow-red-700/80 transition-shadow">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-netflix-red via-red-600 to-rose-500 flex items-center justify-center shadow-lg shadow-red-900/60 group-hover:shadow-red-600/80 transition-shadow">
               <Film className="w-4 h-4 text-white" />
             </div>
             <div className="flex flex-col">
-              <span className="logo-font text-3xl font-black text-netflix-red tracking-wider leading-none drop-shadow-md">
-                CINEFLEX
+              <span className="logo-font text-3xl font-black text-white tracking-wider leading-none drop-shadow-md group-hover:text-netflix-red transition-colors">
+                CINE<span className="text-netflix-red">FLEX</span>
               </span>
               <span className="text-[8px] font-black tracking-widest text-gray-400 uppercase -mt-0.5">
-                MAX 4K
+                MAX 4K • LATINO
               </span>
             </div>
-            <span className="hidden lg:inline-block bg-gradient-to-r from-amber-500/20 to-netflix-red/20 text-amber-300 border border-amber-400/30 text-[9px] font-black px-2 py-0.5 rounded-full ml-1">
-              LATINO 4K
+            <span className="hidden xl:inline-flex items-center space-x-1 bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[9px] font-black px-2 py-0.5 rounded-full ml-1">
+              <ShieldCheck className="w-2.5 h-2.5 mr-0.5 text-emerald-400" /> CERO ANUNCIOS
             </span>
           </motion.div>
 

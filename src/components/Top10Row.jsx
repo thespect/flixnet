@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Play, Plus, Check, ChevronDown, Star } from 'lucide-react';
 
 export default function Top10Row({ 
+  title = "Las 10 Más Vistas Hoy en 4K",
   movies = [], 
   onPlay, 
   onOpenDetails, 
@@ -42,12 +43,12 @@ export default function Top10Row({
       {/* Title with Badge */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-1.5 h-6 bg-netflix-red rounded-full" />
-          <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-wide">
-            Las 10 Películas Más Vistas Hoy
+          <div className="w-1.5 h-6 bg-netflix-red rounded-full shadow-[0_0_12px_rgba(229,9,20,0.8)]" />
+          <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight">
+            {title}
           </h3>
-          <span className="bg-netflix-red/20 text-netflix-red border border-netflix-red/30 text-[10px] font-black px-2 py-0.5 rounded tracking-widest uppercase hidden sm:inline-block">
-            TOP 10
+          <span className="bg-netflix-red/20 text-netflix-red border border-netflix-red/40 text-[10px] font-black px-2.5 py-0.5 rounded-full tracking-widest uppercase hidden sm:inline-block shadow-[0_0_10px_rgba(229,9,20,0.3)]">
+            TOP 10 OFICIAL
           </span>
         </div>
       </div>
@@ -61,7 +62,7 @@ export default function Top10Row({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => handleScroll('left')}
-            className="absolute left-0 top-0 bottom-8 z-30 w-12 bg-black/80 hover:bg-black text-white flex items-center justify-center transition-all opacity-0 group-hover/top10:opacity-100 rounded-r-md border-r border-white/10"
+            className="absolute left-0 top-0 bottom-8 z-30 w-12 bg-black/85 hover:bg-black text-white flex items-center justify-center transition-all opacity-0 group-hover/top10:opacity-100 rounded-r-xl border-r border-white/10 shadow-2xl backdrop-blur-md"
           >
             <ChevronLeft className="w-8 h-8" />
           </motion.button>
@@ -83,12 +84,12 @@ export default function Top10Row({
                 className="relative shrink-0 flex items-center group/card cursor-pointer"
                 onClick={() => onOpenDetails(movie)}
               >
-                {/* Netflix Stylized Giant Rank Number */}
+                {/* Netflix / Apple TV Stylized Giant Rank Number */}
                 <div className="relative -mr-5 sm:-mr-8 z-0 pointer-events-none select-none">
                   <span 
-                    className="text-8xl sm:text-9xl md:text-[140px] font-black tracking-tighter leading-none text-[#141414] transition-all duration-300 drop-shadow-2xl"
+                    className="text-8xl sm:text-9xl md:text-[145px] font-black tracking-tighter leading-none text-[#070709] transition-all duration-300 drop-shadow-2xl group-hover/card:text-[#0f0f14]"
                     style={{
-                      WebkitTextStroke: '4px #595959',
+                      WebkitTextStroke: '4px rgba(255, 255, 255, 0.28)',
                       paintOrder: 'stroke fill',
                     }}
                   >
@@ -97,7 +98,7 @@ export default function Top10Row({
                 </div>
 
                 {/* Poster Card */}
-                <div className="relative w-36 sm:w-44 md:w-52 aspect-[2/3] rounded-md overflow-hidden bg-[#181818] border border-white/10 shadow-2xl z-10 transition-all duration-300 group-hover/card:border-netflix-red/60 group-hover/card:shadow-netflix-red/20">
+                <div className="relative w-36 sm:w-44 md:w-52 aspect-[2/3] rounded-xl overflow-hidden bg-[#121216] border border-white/10 shadow-2xl z-10 transition-all duration-400 group-hover/card:border-netflix-red/70 group-hover/card:shadow-[0_12px_32px_rgba(229,9,20,0.25)]">
                   <img 
                     src={movie.poster_path} 
                     alt={movie.title}

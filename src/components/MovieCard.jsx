@@ -23,13 +23,14 @@ export default function MovieCard({
       {/* Main Card Container */}
       <div 
         onClick={() => onOpenDetails(movie)}
-        className="relative aspect-[2/3] w-full rounded-md overflow-hidden bg-[#181818] border border-white/10 shadow-2xl transition-all duration-300 group hover:border-netflix-red/60 hover:shadow-netflix-red/20"
+        className="relative aspect-[2/3] w-full rounded-xl overflow-hidden bg-[#121216] border border-white/[0.08] shadow-2xl transition-all duration-300 group hover:border-netflix-red/70 hover:shadow-2xl hover:shadow-red-900/20"
       >
         <img 
           src={movie.poster_path} 
           alt={movie.title}
           loading="lazy"
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 filter brightness-[0.92] group-hover:brightness-105"
+          decoding="async"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 filter brightness-[0.94] group-hover:brightness-105"
           onError={(e) => {
             e.target.src = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=500&auto=format&fit=crop';
           }}
@@ -38,7 +39,7 @@ export default function MovieCard({
         {/* Top Badges */}
         <div className="absolute top-2 left-2 flex items-center space-x-1 z-10">
           <span className="bg-netflix-red text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-md tracking-wider">
-            N
+            {movie.isTv ? 'SERIE' : 'N'}
           </span>
           <span className="bg-black/75 backdrop-blur-md text-[9px] font-black px-1.5 py-0.5 rounded text-amber-300 border border-amber-300/30 flex items-center shadow">
             <Zap className="w-2.5 h-2.5 mr-0.5 fill-current" /> 4K
