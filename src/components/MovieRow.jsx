@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import MovieCard from './MovieCard';
 
 export default function MovieRow({ 
@@ -9,7 +9,8 @@ export default function MovieRow({
   onPlay, 
   onOpenDetails, 
   onToggleMyList, 
-  isInMyList 
+  isInMyList,
+  onExplore
 }) {
   const rowRef = useRef(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
@@ -43,14 +44,23 @@ export default function MovieRow({
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       className="relative py-4 space-y-2 select-none group/row"
     >
-      {/* Row Title */}
+      {/* Row Title with Functional Explore Link */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-        <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white tracking-wide group-hover/row:text-netflix-red transition-colors flex items-center space-x-2">
-          <span>{title}</span>
-          <span className="text-xs text-netflix-red font-bold opacity-0 group-hover/row:opacity-100 transition-opacity">
-            Explorar &gt;
-          </span>
-        </h3>
+        <div 
+          onClick={onExplore}
+          className={`flex items-center space-x-2.5 ${onExplore ? 'cursor-pointer group/title' : ''}`}
+        >
+          <div className="w-1.5 h-5 bg-netflix-red rounded-full shadow-[0_0_8px_rgba(229,9,20,0.8)]" />
+          <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white tracking-wide group-hover/row:text-netflix-red transition-colors flex items-center space-x-2">
+            <span>{title}</span>
+          </h3>
+          {onExplore && (
+            <span className="text-xs text-netflix-red font-bold flex items-center space-x-1 opacity-0 group-hover/row:opacity-100 transition-opacity ml-2">
+              <span>Explorar</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Row Carousel */}
@@ -64,10 +74,10 @@ export default function MovieRow({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => handleScroll('left')}
-            className="absolute left-0 top-0 bottom-8 z-30 w-10 sm:w-12 bg-black/70 hover:bg-black/95 backdrop-blur-md text-white flex items-center justify-center transition-all opacity-0 group-hover/row:opacity-100 rounded-r-md border-r border-white/10"
+            className="absolute left-0 top-0 bottom-8 z-30 w-10 sm:w-12 bg-black/80 hover:bg-black text-white flex items-center justify-center transition-all opacity-0 group-hover/row:opacity-100 rounded-r-xl border-r border-white/10 shadow-2xl backdrop-blur-md"
             aria-label="Desplazar a la izquierda"
           >
-            <ChevronLeft className="w-8 h-8" />
+            <ChevronLeft className="w-7 h-7" />
           </motion.button>
         )}
 
@@ -94,10 +104,10 @@ export default function MovieRow({
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => handleScroll('right')}
-          className="absolute right-0 top-0 bottom-8 z-30 w-10 sm:w-12 bg-black/70 hover:bg-black/95 backdrop-blur-md text-white flex items-center justify-center transition-all opacity-0 group-hover/row:opacity-100 rounded-l-md border-l border-white/10"
+          className="absolute right-0 top-0 bottom-8 z-30 w-10 sm:w-12 bg-black/80 hover:bg-black text-white flex items-center justify-center transition-all opacity-0 group-hover/row:opacity-100 rounded-l-xl border-l border-white/10 shadow-2xl backdrop-blur-md"
           aria-label="Desplazar a la derecha"
         >
-          <ChevronRight className="w-8 h-8" />
+          <ChevronRight className="w-7 h-7" />
         </motion.button>
 
       </div>

@@ -1,9 +1,9 @@
 import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Play, Plus, Check, ChevronDown, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, Plus, Check, ChevronDown, Star, Zap } from 'lucide-react';
 
 export default function Top10Row({ 
-  title = "Las 10 Más Vistas Hoy en 4K",
+  title = "Las 10 Más Vistas Hoy en 4K Ultra HD",
   movies = [], 
   onPlay, 
   onOpenDetails, 
@@ -13,7 +13,6 @@ export default function Top10Row({
   const rowRef = useRef(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
 
-  // Tomamos solo los 10 primeros
   const top10List = movies.slice(0, 10);
   if (top10List.length === 0) return null;
 
@@ -62,9 +61,10 @@ export default function Top10Row({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => handleScroll('left')}
-            className="absolute left-0 top-0 bottom-8 z-30 w-12 bg-black/85 hover:bg-black text-white flex items-center justify-center transition-all opacity-0 group-hover/top10:opacity-100 rounded-r-xl border-r border-white/10 shadow-2xl backdrop-blur-md"
+            className="absolute left-0 top-0 bottom-8 z-30 w-12 bg-black/85 hover:bg-black text-white flex items-center justify-center transition-all opacity-0 group-hover/top10:opacity-100 rounded-r-2xl border-r border-white/10 shadow-2xl backdrop-blur-md"
+            aria-label="Anterior"
           >
-            <ChevronLeft className="w-8 h-8" />
+            <ChevronLeft className="w-7 h-7" />
           </motion.button>
         )}
 
@@ -84,12 +84,12 @@ export default function Top10Row({
                 className="relative shrink-0 flex items-center group/card cursor-pointer"
                 onClick={() => onOpenDetails(movie)}
               >
-                {/* Netflix / Apple TV Stylized Giant Rank Number */}
+                {/* Giant Stylized Rank Number */}
                 <div className="relative -mr-5 sm:-mr-8 z-0 pointer-events-none select-none">
                   <span 
-                    className="text-8xl sm:text-9xl md:text-[145px] font-black tracking-tighter leading-none text-[#070709] transition-all duration-300 drop-shadow-2xl group-hover/card:text-[#0f0f14]"
+                    className="text-8xl sm:text-9xl md:text-[145px] font-black tracking-tighter leading-none text-[#070709] transition-all duration-300 drop-shadow-2xl group-hover/card:text-[#0f0f16]"
                     style={{
-                      WebkitTextStroke: '4px rgba(255, 255, 255, 0.28)',
+                      WebkitTextStroke: '4px rgba(255, 255, 255, 0.32)',
                       paintOrder: 'stroke fill',
                     }}
                   >
@@ -98,29 +98,29 @@ export default function Top10Row({
                 </div>
 
                 {/* Poster Card */}
-                <div className="relative w-36 sm:w-44 md:w-52 aspect-[2/3] rounded-xl overflow-hidden bg-[#121216] border border-white/10 shadow-2xl z-10 transition-all duration-400 group-hover/card:border-netflix-red/70 group-hover/card:shadow-[0_12px_32px_rgba(229,9,20,0.25)]">
+                <div className="relative w-36 sm:w-44 md:w-52 aspect-[2/3] rounded-2xl overflow-hidden bg-[#101016] border border-white/10 shadow-2xl z-10 transition-all duration-300 group-hover/card:border-netflix-red/70 group-hover/card:shadow-[0_16px_36px_rgba(229,9,20,0.3)]">
                   <img 
                     src={movie.poster_path} 
                     alt={movie.title}
                     loading="lazy"
-                    className="w-full h-full object-cover filter brightness-[0.9] group-hover/card:brightness-105 transition-all duration-500 group-hover/card:scale-105"
+                    className="w-full h-full object-cover filter brightness-[0.92] group-hover/card:brightness-105 transition-all duration-500 group-hover/card:scale-105"
                   />
 
                   {/* Top 10 Corner Ribbon */}
-                  <div className="absolute top-0 right-0 bg-netflix-red text-white text-[9px] font-black px-2 py-1 rounded-bl-lg shadow-md uppercase tracking-wider">
+                  <div className="absolute top-0 right-0 bg-netflix-red text-white text-[9px] font-black px-2.5 py-1 rounded-bl-xl shadow-md uppercase tracking-wider">
                     TOP {rank}
                   </div>
 
                   {/* 4K Badge */}
-                  <div className="absolute top-2 left-2">
-                    <span className="bg-black/70 backdrop-blur-md text-[9px] font-black px-1.5 py-0.5 rounded text-amber-400 border border-amber-400/30 flex items-center">
-                      4K UHD
+                  <div className="absolute top-2.5 left-2.5">
+                    <span className="bg-black/80 backdrop-blur-md text-[9px] font-black px-1.5 py-0.5 rounded-md text-amber-300 border border-amber-300/30 flex items-center shadow">
+                      <Zap className="w-2.5 h-2.5 mr-0.5 fill-current" /> 4K UHD
                     </span>
                   </div>
 
                   {/* Hover Quick Action Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
-                    <div className="flex items-center space-x-1.5 mb-2">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/75 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3.5">
+                    <div className="flex items-center space-x-2 mb-2">
                       <motion.button 
                         whileHover={{ scale: 1.15 }}
                         whileTap={{ scale: 0.9 }}
@@ -129,6 +129,7 @@ export default function Top10Row({
                           onPlay(movie);
                         }}
                         className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center hover:bg-gray-200 shadow-md"
+                        title="Reproducir ahora en 4K"
                       >
                         <Play className="w-4 h-4 fill-current ml-0.5" />
                       </motion.button>
@@ -141,6 +142,7 @@ export default function Top10Row({
                           onToggleMyList(movie);
                         }}
                         className="w-7 h-7 rounded-full bg-zinc-800 text-white flex items-center justify-center border border-white/20"
+                        title="Mi Lista"
                       >
                         {isInMyList(movie.id) ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Plus className="w-3.5 h-3.5" />}
                       </motion.button>
@@ -153,6 +155,7 @@ export default function Top10Row({
                           onOpenDetails(movie);
                         }}
                         className="w-7 h-7 rounded-full bg-zinc-800 text-white flex items-center justify-center border border-white/20 ml-auto"
+                        title="Más información"
                       >
                         <ChevronDown className="w-4 h-4" />
                       </motion.button>
@@ -165,7 +168,7 @@ export default function Top10Row({
                     <div className="flex items-center space-x-2 text-[10px] text-gray-300 mt-1">
                       <span className="text-emerald-400 font-bold">{movie.match}% coincidencia</span>
                       <span className="text-gray-400">•</span>
-                      <span>4K HDR</span>
+                      <span className="text-amber-300 font-bold">4K HDR</span>
                     </div>
                   </div>
 
@@ -181,9 +184,10 @@ export default function Top10Row({
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => handleScroll('right')}
-          className="absolute right-0 top-0 bottom-8 z-30 w-12 bg-black/80 hover:bg-black text-white flex items-center justify-center transition-all opacity-0 group-hover/top10:opacity-100 rounded-l-md border-l border-white/10"
+          className="absolute right-0 top-0 bottom-8 z-30 w-12 bg-black/85 hover:bg-black text-white flex items-center justify-center transition-all opacity-0 group-hover/top10:opacity-100 rounded-l-2xl border-l border-white/10 shadow-2xl backdrop-blur-md"
+          aria-label="Siguiente"
         >
-          <ChevronRight className="w-8 h-8" />
+          <ChevronRight className="w-7 h-7" />
         </motion.button>
       </div>
     </motion.div>

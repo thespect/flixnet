@@ -23,31 +23,31 @@ export default function MovieCard({
       {/* Main Card Container */}
       <div 
         onClick={() => onOpenDetails(movie)}
-        className="relative aspect-[2/3] w-full rounded-xl overflow-hidden bg-[#121216] border border-white/[0.08] shadow-2xl transition-all duration-300 group hover:border-netflix-red/70 hover:shadow-2xl hover:shadow-red-900/20"
+        className="relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-[#101016] border border-white/[0.08] shadow-2xl transition-all duration-300 group hover:border-netflix-red/70 hover:shadow-[0_16px_36px_rgba(0,0,0,0.8),0_0_24px_rgba(229,9,20,0.25)]"
       >
         <img 
           src={movie.poster_path} 
           alt={movie.title}
           loading="lazy"
           decoding="async"
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 filter brightness-[0.94] group-hover:brightness-105"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 filter brightness-[0.92] group-hover:brightness-105"
           onError={(e) => {
             e.target.src = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=500&auto=format&fit=crop';
           }}
         />
 
         {/* Top Badges */}
-        <div className="absolute top-2 left-2 flex items-center space-x-1 z-10">
-          <span className="bg-netflix-red text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-md tracking-wider">
+        <div className="absolute top-2.5 left-2.5 flex items-center space-x-1.5 z-10">
+          <span className="bg-netflix-red text-white text-[9px] font-black px-1.5 py-0.5 rounded-md shadow-md tracking-wider">
             {movie.isTv ? 'SERIE' : 'N'}
           </span>
-          <span className="bg-black/75 backdrop-blur-md text-[9px] font-black px-1.5 py-0.5 rounded text-amber-300 border border-amber-300/30 flex items-center shadow">
+          <span className="bg-black/80 backdrop-blur-md text-[9px] font-black px-1.5 py-0.5 rounded-md text-amber-300 border border-amber-300/30 flex items-center shadow">
             <Zap className="w-2.5 h-2.5 mr-0.5 fill-current" /> 4K
           </span>
         </div>
 
-        <div className="absolute top-2 right-2 z-10">
-          <span className="bg-black/75 backdrop-blur-md text-white text-[10px] font-black px-1.5 py-0.5 rounded flex items-center border border-white/10 shadow">
+        <div className="absolute top-2.5 right-2.5 z-10">
+          <span className="bg-black/80 backdrop-blur-md text-white text-[10px] font-black px-1.5 py-0.5 rounded-md flex items-center border border-white/10 shadow">
             <Star className="w-2.5 h-2.5 text-amber-400 fill-current inline mr-1" />
             {movie.vote_average || '8.0'}
           </span>
@@ -61,10 +61,10 @@ export default function MovieCard({
           initial={false}
           animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 10 }}
           transition={{ duration: 0.2 }}
-          className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/90 to-transparent flex flex-col justify-end p-3 z-20 pointer-events-auto"
+          className="absolute inset-0 bg-gradient-to-t from-[#0e0e14] via-[#0e0e14]/90 to-transparent flex flex-col justify-end p-3.5 z-20 pointer-events-auto"
         >
           {/* Action Buttons Row */}
-          <div className="flex items-center space-x-1.5 mb-2.5">
+          <div className="flex items-center space-x-2 mb-2.5">
             <motion.button 
               whileHover={{ scale: 1.15 }}
               whileTap={{ scale: 0.9 }}
@@ -73,7 +73,7 @@ export default function MovieCard({
                 onPlay(movie);
               }}
               className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center hover:bg-gray-200 shadow-xl shadow-white/20"
-              title="Reproducir ahora"
+              title="Reproducir ahora en 4K"
             >
               <Play className="w-4 h-4 fill-current ml-0.5" />
             </motion.button>
@@ -85,7 +85,7 @@ export default function MovieCard({
                 e.stopPropagation();
                 onToggleMyList(movie);
               }}
-              className="w-7 h-7 rounded-full bg-[#2a2a2a] hover:bg-[#3a3a3a] text-white flex items-center justify-center border border-white/20 transition-all"
+              className="w-7 h-7 rounded-full bg-[#242430] hover:bg-[#343444] text-white flex items-center justify-center border border-white/20 transition-all"
               title={isInMyList ? "Quitar de Mi Lista" : "Añadir a Mi Lista"}
             >
               {isInMyList ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Plus className="w-3.5 h-3.5" />}
@@ -98,7 +98,7 @@ export default function MovieCard({
                 e.stopPropagation();
                 setIsLiked(!isLiked);
               }}
-              className={`w-7 h-7 rounded-full bg-[#2a2a2a] hover:bg-[#3a3a3a] flex items-center justify-center border border-white/20 transition-all ${
+              className={`w-7 h-7 rounded-full bg-[#242430] hover:bg-[#343444] flex items-center justify-center border border-white/20 transition-all ${
                 isLiked ? 'text-netflix-red border-netflix-red/50' : 'text-white'
               }`}
               title="Me gusta"
@@ -113,7 +113,7 @@ export default function MovieCard({
                 e.stopPropagation();
                 onOpenDetails(movie);
               }}
-              className="w-7 h-7 rounded-full bg-[#2a2a2a] hover:bg-[#3a3a3a] text-white flex items-center justify-center border border-white/20 transition-all ml-auto"
+              className="w-7 h-7 rounded-full bg-[#242430] hover:bg-[#343444] text-white flex items-center justify-center border border-white/20 transition-all ml-auto"
               title="Más detalles"
             >
               <ChevronDown className="w-4 h-4" />
@@ -147,13 +147,13 @@ export default function MovieCard({
       </div>
 
       {/* Title Below for rapid scanning */}
-      <div className="mt-2 px-1">
+      <div className="mt-2.5 px-1">
         <h4 className="text-gray-200 text-xs sm:text-sm font-bold truncate group-hover:text-white transition-colors">
           {movie.title}
         </h4>
-        <div className="flex items-center justify-between text-[11px] text-gray-500 mt-0.5 font-medium">
+        <div className="flex items-center justify-between text-[11px] text-gray-400 mt-0.5 font-medium">
           <span>{movie.release_date?.slice(0, 4) || '2024'}</span>
-          <span className="text-emerald-400/90 font-bold">{movie.genres?.[0] || '4K UHD'}</span>
+          <span className="text-emerald-400 font-bold">{movie.genres?.[0] || '4K UHD'}</span>
         </div>
       </div>
     </motion.div>

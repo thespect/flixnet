@@ -3,43 +3,36 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23E50914'><path d='M4 2v20l16-10L4 2z'/></svg>" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cineflex • Películas y Series en 4K</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <meta name="description" content="Cineflex Max • Plataforma de Streaming 4K Ultra HD sin anuncios, con audio en Español Latino y compatibilidad con Smart TV, AirPlay y Chromecast." />
+    <title>Cineflex • Películas y Series en 4K Ultra HD</title>
 
-    <!-- Escudo Anti-Publicidad Nativo: Neutraliza window.open y popups externos -->
-    <script>
-      (function() {
-        // Bloqueo estricto de window.open (popups, popunders)
-        window.open = function(url, target, features) {
-          console.warn('[Cineflex Ad-Shield] Ventana emergente o popup publicitario bloqueado:', url);
-          return null;
-        };
-
-        // Si una ventana intenta robar el foco, mantenerla en la app
-        window.addEventListener('blur', function() {
-          setTimeout(function() { window.focus(); }, 100);
-        });
-
-        // Intercepta clics en enlaces target="_blank" no autorizados
-        document.addEventListener('click', function(e) {
-          const a = e.target.closest('a');
-          if (a && a.target === '_blank' && !a.classList.contains('allow-external')) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.warn('[Cineflex Ad-Shield] Enlace de publicidad neutralizado:', a.href);
-          }
-        }, true);
-      })();
-    </script>
-
-    <!-- Preconnect to image CDN and Google Fonts -->
+    <!-- Google Fonts Premium: Bebas Neue (Cine), Plus Jakarta Sans & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="./assets/index-B960B1Uc.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-DluLdYZO.css">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Escudo Anti-Redirección y Anti-Popups Inteligente (Cero Interferencia con Enlaces Reales) -->
+    <script>
+      (function() {
+        // Bloquear intentos maliciosos de popunders o redirección forzada de la ventana principal
+        window.__cineflexOrigin = window.location.origin;
+
+        // Protección contra intentos de iframes no autorizados de desviar la página
+        window.addEventListener('beforeunload', function(e) {
+          // Solo advertir si una página externa intenta secuestrar la navegación
+          if (document.activeElement && document.activeElement.tagName === 'IFRAME') {
+            console.warn('[Cineflex Guard] Intento de desvío desde iframe bloqueado.');
+            e.preventDefault();
+            return (e.returnValue = '¿Deseas permanecer en Cineflex?');
+          }
+        });
+      })();
+    </script>
+    <script type="module" crossorigin src="./assets/index-Dj7EDNJI.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-D_8nnLLK.css">
   </head>
-  <body class="bg-[#141414] text-white antialiased selection:bg-[#E50914] selection:text-white overflow-x-hidden min-h-screen">
+  <body class="bg-[#050508] text-white antialiased selection:bg-[#E50914] selection:text-white overflow-x-hidden min-h-screen">
     <div id="root"></div>
   </body>
 </html>

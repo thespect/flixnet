@@ -34,7 +34,7 @@ export default function Navbar({
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 30);
+      setIsScrolled(window.scrollY > 25);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -54,7 +54,7 @@ export default function Navbar({
 
   const navItems = [
     { id: 'home', label: 'Inicio' },
-    { id: 'movies', label: 'Películas' },
+    { id: 'movies', label: 'Películas 4K', badge: 'Ultra HD' },
     { id: 'series', label: 'Series', badge: 'Completo' },
     { id: 'trending', label: 'Tendencias' },
     { id: 'mylist', label: 'Mi Lista', count: myListCount },
@@ -74,7 +74,7 @@ export default function Navbar({
       className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
         isScrolled 
           ? 'glass-chrome shadow-2xl py-3 border-b border-white/[0.08]' 
-          : 'bg-gradient-to-b from-[#070709]/95 via-[#070709]/75 to-transparent py-4'
+          : 'bg-gradient-to-b from-[#050508]/95 via-[#050508]/75 to-transparent py-4'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
@@ -147,7 +147,7 @@ export default function Navbar({
             layout
             className={`relative flex items-center transition-all ${
               searchOpen || searchQuery 
-                ? 'w-48 sm:w-72 bg-black/80 border border-white/20 rounded-full px-3 py-1.5 shadow-xl' 
+                ? 'w-48 sm:w-72 bg-black/85 border border-white/20 rounded-full px-3 py-1.5 shadow-2xl' 
                 : 'w-8 justify-center'
             }`}
           >
@@ -184,10 +184,10 @@ export default function Navbar({
           {/* Cast Smart TV Button in Navbar */}
           {onOpenCastModal && (
             <motion.button 
-              whileHover={{ scale: 1.1 }}
+              whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.95 }}
               onClick={onOpenCastModal}
-              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white border border-white/10 transition-all flex items-center justify-center"
+              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white border border-white/10 transition-all flex items-center justify-center shadow-lg"
               title="Transmitir a Smart TV (AirPlay / Chromecast)"
             >
               <Cast className="w-4 h-4" />
@@ -201,23 +201,23 @@ export default function Navbar({
             onClick={onOpenApiKeyModal}
             className={`hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
               isApiKeySet 
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20' 
+                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25' 
                 : 'bg-white/10 border-white/20 text-gray-300 hover:bg-white/20'
             }`}
           >
             <Key className="w-3.5 h-3.5" />
-            <span>{isApiKeySet ? 'TMDB Conectado' : 'Configurar Llave'}</span>
+            <span>{isApiKeySet ? 'TMDB Activo' : 'Configurar Llave'}</span>
           </motion.button>
 
-          {/* Profile Switcher Menu (Netflix / Apple TV+ Style) */}
+          {/* Profile Switcher Menu */}
           <div className="relative">
             <motion.div 
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowProfileMenu(!showProfileMenu)}
-              className="flex items-center space-x-1.5 cursor-pointer bg-white/5 hover:bg-white/10 p-1 pr-2 rounded-lg border border-white/10 transition-colors"
+              className="flex items-center space-x-1.5 cursor-pointer bg-white/5 hover:bg-white/10 p-1 pr-2 rounded-xl border border-white/10 transition-colors"
             >
-              <div className="w-7 h-7 rounded bg-gradient-to-tr from-netflix-red to-rose-600 flex items-center justify-center font-black text-xs shadow-md border border-white/20 text-white">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-netflix-red to-rose-600 flex items-center justify-center font-black text-xs shadow-md border border-white/20 text-white">
                 {currentProfile[0]}
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
@@ -229,7 +229,7 @@ export default function Navbar({
                   initial={{ opacity: 0, scale: 0.9, y: 10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                  className="absolute right-0 top-12 w-64 bg-[#161616] border border-white/15 rounded-2xl p-3 shadow-2xl z-50 space-y-2"
+                  className="absolute right-0 top-12 w-64 bg-[#14141c] border border-white/15 rounded-2xl p-3 shadow-2xl z-50 space-y-2"
                 >
                   <div className="text-[11px] font-black uppercase tracking-wider text-gray-400 px-2 py-1 border-b border-white/10">
                     Cambiar Perfil
@@ -259,13 +259,13 @@ export default function Navbar({
                   </div>
 
                   <div className="border-t border-white/10 pt-2 space-y-1 text-xs">
-                    <div className="px-2 py-1 text-[11px] text-emerald-400 font-bold flex items-center space-x-1">
+                    <div className="px-2 py-1 text-[11px] text-emerald-400 font-bold flex items-center space-x-1.5">
                       <Volume2 className="w-3.5 h-3.5" />
-                      <span>Audio Predeterminado: Latino</span>
+                      <span>Audio: Español Latino Oficial</span>
                     </div>
-                    <div className="px-2 py-1 text-[11px] text-amber-400 font-bold flex items-center space-x-1">
+                    <div className="px-2 py-1 text-[11px] text-amber-400 font-bold flex items-center space-x-1.5">
                       <Zap className="w-3.5 h-3.5" />
-                      <span>Calidad: 4K UHD Adaptativo</span>
+                      <span>Transmisión: 4K UHD Nativo</span>
                     </div>
                   </div>
                 </motion.div>

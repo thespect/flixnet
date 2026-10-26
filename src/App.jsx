@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from './components/Navbar';
 import HeroBanner from './components/HeroBanner';
@@ -13,32 +13,34 @@ import CastModal from './components/CastModal';
 import QuickLauncher from './components/QuickLauncher';
 import { 
   MovieAPI, 
-  StorageService 
+  StorageService,
+  CURATED_FALLBACK_MOVIES,
+  CURATED_FALLBACK_TV
 } from './services/movieService';
-import { Film, Sparkles, Heart, Search, ShieldCheck, Zap, Tv, Cast } from 'lucide-react';
+import { Film, Sparkles, Heart, Search, ShieldCheck, Zap, Tv, Cast, Home, Flame } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home'); // 'home' | 'movies' | 'series' | 'trending' | 'mylist'
   const [activeCategoryFilter, setActiveCategoryFilter] = useState('all');
   const [isApiKeySet, setIsApiKeySet] = useState(StorageService.hasCustomKey());
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
-  const [castItemForModal, setCastItemForModal] = useState(null); // Para abrir CastModal
+  const [castItemForModal, setCastItemForModal] = useState(null);
   const [isLoadingCatalog, setIsLoadingCatalog] = useState(true);
   
   // Categorías de Películas y Series
   const [catalog, setCatalog] = useState({
-    trendingMovies: [],
-    nowPlayingMovies: [],
-    actionMovies: [],
-    scifiMovies: [],
-    horrorMovies: [],
-    topRatedMovies: [],
-    trendingTv: [],
-    popularTv: [],
-    topRatedTv: [],
-    actionTv: [],
-    scifiTv: [],
-    animationTv: []
+    trendingMovies: CURATED_FALLBACK_MOVIES,
+    nowPlayingMovies: CURATED_FALLBACK_MOVIES,
+    actionMovies: CURATED_FALLBACK_MOVIES,
+    scifiMovies: CURATED_FALLBACK_MOVIES,
+    horrorMovies: CURATED_FALLBACK_MOVIES,
+    topRatedMovies: CURATED_FALLBACK_MOVIES,
+    trendingTv: CURATED_FALLBACK_TV,
+    popularTv: CURATED_FALLBACK_TV,
+    topRatedTv: CURATED_FALLBACK_TV,
+    actionTv: CURATED_FALLBACK_TV,
+    scifiTv: CURATED_FALLBACK_TV,
+    animationTv: CURATED_FALLBACK_TV
   });
 
   const [featuredIndex, setFeaturedIndex] = useState(0);
@@ -53,6 +55,114 @@ export default function App() {
   // Modales
   const [selectedMovieForDetails, setSelectedMovieForDetails] = useState(null);
   const [playingMedia, setPlayingMedia] = useState(null); // { movie, season, episode, episodeTitle }
+
+  // 1. GESTOR DE ENLACES Y ENRUTAMIENTO PROFUNDO (Deep Linking 100% Funcional)
+  const syncFromUrl = useCallback(async () => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const watchId = params.get('watch');
+      const isTv = params.get('isTv') === 'true' || params.get('type') === 'tv';
+      const season = parseInt(params.get('s') || params.get('season') || '1', 10);
+      const episode = parseInt(params.get('e') || params.get('episode') || '1', 10);
+      const tab = params.get('tab');
+      const cat = params.get('category');
+      const query = params.get('q');
+
+      if (tab && ['home', 'movies', 'series', 'trending', 'mylist'].includes(tab)) {
+        setActiveTab(tab);
+      }
+      if (cat) {
+        setActiveCategoryFilter(cat);
+      }
+      if (query) {
+        setSearchQuery(query);
+      }
+
+      if (watchId) {
+        const idNum = parseInt(watchId, 10);
+        // Buscar primero en el catálogo disponible
+        const allItems = [
+          ...catalog.trendingMovies,
+          ...catalog.popularTv,
+          ...catalog.nowPlayingMovies,
+          ...catalog.actionMovies,
+          ...CURATED_FALLBACK_MOVIES,
+          ...CURATED_FALLBACK_TV
+        ];
+        let found = allItems.find(m => m.id === idNum);
+
+        if (!found && idNum) {
+          // Intentar obtener desde la API de TMDB
+          found = await MovieAPI.getMediaById(idNum, isTv);
+        }
+
+        if (found) {
+          setPlayingMedia({
+            movie: found,
+            season: season,
+            episode: episode,
+            episodeTitle: `Capítulo ${episode}`
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Error leyendo parámetros de URL:', e);
+    }
+  }, [catalog]);
+
+  useEffect(() => {
+    syncFromUrl();
+    window.addEventListener('popstate', syncFromUrl);
+    return () => window.removeEventListener('popstate', syncFromUrl);
+  }, [syncFromUrl]);
+
+  // Actualizar URL cuando cambia la pestaña
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setSearchQuery('');
+    const url = new URL(window.location.href);
+    if (tabId === 'home') {
+      url.searchParams.delete('tab');
+    } else {
+      url.searchParams.set('tab', tabId);
+    }
+    window.history.pushState({}, '', url.toString());
+  };
+
+  // Abrir reproductor y actualizar enlace compartible en la barra del navegador
+  const handleStartPlay = (mediaItem, season = 1, episode = 1, episodeTitle = '') => {
+    setPlayingMedia({
+      movie: mediaItem,
+      season: season,
+      episode: episode,
+      episodeTitle: episodeTitle
+    });
+
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('watch', mediaItem.id);
+      url.searchParams.set('type', mediaItem.isTv ? 'tv' : 'movie');
+      if (mediaItem.isTv) {
+        url.searchParams.set('s', season);
+        url.searchParams.set('e', episode);
+      }
+      window.history.pushState({}, '', url.toString());
+    } catch (e) {}
+  };
+
+  const handleClosePlayer = () => {
+    setPlayingMedia(null);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('watch');
+      url.searchParams.delete('type');
+      url.searchParams.delete('s');
+      url.searchParams.delete('e');
+      url.searchParams.delete('season');
+      url.searchParams.delete('episode');
+      window.history.pushState({}, '', url.toString());
+    } catch (e) {}
+  };
 
   // Carga masiva de catálogo en paralelo
   useEffect(() => {
@@ -84,7 +194,7 @@ export default function App() {
       const results = await MovieAPI.searchMulti(searchQuery);
       setSearchResults(results);
       setIsSearching(false);
-    }, 250);
+    }, 200);
 
     return () => clearTimeout(delayTimer);
   }, [searchQuery]);
@@ -96,16 +206,6 @@ export default function App() {
   };
 
   const isInMyList = (id) => myList.some(i => i.id === id);
-
-  // Abrir reproductor con episodio específico si es serie
-  const handleStartPlay = (mediaItem, season = 1, episode = 1, episodeTitle = '') => {
-    setPlayingMedia({
-      movie: mediaItem,
-      season: season,
-      episode: episode,
-      episodeTitle: episodeTitle
-    });
-  };
 
   // Película o Serie destacada
   const allFeaturedPool = useMemo(() => {
@@ -126,15 +226,15 @@ export default function App() {
   const showMoviesOnly = activeTab === 'movies' || activeCategoryFilter === 'movies';
 
   return (
-    <div className="min-h-screen bg-[#070709] text-white flex flex-col font-sans selection:bg-netflix-red selection:text-white relative overflow-x-hidden">
-      {/* Luz ambiental Apple Glass Mesh */}
+    <div className="min-h-screen bg-[#050508] text-white flex flex-col font-sans selection:bg-netflix-red selection:text-white relative overflow-x-hidden">
+      {/* Luz ambiental cinemática */}
       <div className="ambient-mesh fixed inset-0 pointer-events-none z-0" />
       
       {/* Navigation Header */}
       <Navbar 
         onSearch={setSearchQuery}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
         onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
         onOpenCastModal={() => setCastItemForModal(featuredItem || catalog.trendingMovies[0])}
         isApiKeySet={isApiKeySet}
@@ -142,7 +242,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 pb-24">
+      <main className="flex-1 pb-24 md:pb-16">
         
         {/* VISTA 1: BÚSQUEDA EN VIVO (PELÍCULAS Y SERIES) */}
         {searchQuery.trim() ? (
@@ -157,8 +257,8 @@ export default function App() {
                 <Search className="w-6 h-6 text-netflix-red" />
                 <span>Resultados para: <span className="text-white italic font-bold">"{searchQuery}"</span></span>
               </h2>
-              <span className="text-xs text-gray-400 font-bold">
-                {isSearching ? 'Buscando en catálogo global...' : `${searchResults.length} títulos en 4K y Español Latino`}
+              <span className="text-xs text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
+                {isSearching ? 'Buscando en catálogo...' : `${searchResults.length} títulos listos en 4K`}
               </span>
             </div>
 
@@ -186,7 +286,7 @@ export default function App() {
             ) : (
               <div className="py-28 text-center space-y-3">
                 <p className="text-gray-300 text-lg font-bold">No se encontraron películas o series con ese término.</p>
-                <p className="text-xs text-gray-500">Prueba con otro título o revisa la ortografía.</p>
+                <p className="text-xs text-gray-500">Prueba con otro título o ingresa el ID de TMDB en el lanzador rápido abajo.</p>
               </div>
             )}
           </motion.div>
@@ -204,7 +304,7 @@ export default function App() {
                 <span>Mi Lista Personal</span>
               </h2>
               <p className="text-sm text-gray-400 mt-1 font-medium">
-                Tus películas y series favoritas guardadas para ver en Español Latino y 4K
+                Tus películas y series guardadas para ver en Español Latino y 4K Ultra HD
               </p>
             </div>
 
@@ -234,10 +334,10 @@ export default function App() {
                   Pasa el cursor sobre cualquier portada y presiona <span className="font-bold text-white">＋</span> para guardarla aquí.
                 </p>
                 <button 
-                  onClick={() => setActiveTab('home')}
-                  className="px-6 py-2.5 rounded-md bg-white text-black text-sm font-black hover:bg-gray-200 transition-all shadow-xl"
+                  onClick={() => handleTabChange('home')}
+                  className="px-6 py-2.5 rounded-lg bg-netflix-red text-white text-sm font-black hover:bg-red-700 transition-all shadow-xl shadow-red-900/40"
                 >
-                  Explorar Catálogo
+                  Explorar Catálogo 4K
                 </button>
               </div>
             )}
@@ -267,13 +367,13 @@ export default function App() {
             </div>
           </div>
         ) : (
-          /* VISTA 3: CATÁLOGO COMPLETO ESTILO FRANCHISE */
+          /* VISTA 3: CATÁLOGO COMPLETO */
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
-            {/* Billboard Hero con Tráiler, Audio y Transmisión */}
+            {/* Billboard Hero con Tráiler 4K, Audio Latino y Transmisión */}
             {featuredItem && (
               <HeroBanner 
                 movie={featuredItem}
@@ -286,7 +386,7 @@ export default function App() {
               />
             )}
 
-            {/* Píldoras de Filtro */}
+            {/* Píldoras de Filtro con Enlaces Rápidos */}
             <div className="-mt-10 sm:-mt-14 relative z-30 mb-4">
               <CategoryPills 
                 activeCategory={activeCategoryFilter}
@@ -410,7 +510,7 @@ export default function App() {
                   {/* TOP 10 NETFLIX OFICIAL */}
                   {(!showSeriesOnly || activeCategoryFilter === 'top10') && (
                     <Top10Row 
-                      title={showSeriesOnly ? "Top 10 Series Más Vistas Hoy" : "Las 10 Más Vistas Hoy en 4K"}
+                      title={showSeriesOnly ? "Top 10 Series Más Vistas Hoy" : "Las 10 Más Vistas Hoy en 4K Ultra HD"}
                       movies={showSeriesOnly ? catalog.popularTv : catalog.trendingMovies}
                       onPlay={(m) => handleStartPlay(m, 1, 1)}
                       onOpenDetails={(m) => setSelectedMovieForDetails(m)}
@@ -429,6 +529,7 @@ export default function App() {
                         onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                         onToggleMyList={handleToggleMyList}
                         isInMyList={isInMyList}
+                        onExplore={() => handleTabChange('series')}
                       />
 
                       <MovieRow 
@@ -438,6 +539,7 @@ export default function App() {
                         onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                         onToggleMyList={handleToggleMyList}
                         isInMyList={isInMyList}
+                        onExplore={() => handleTabChange('series')}
                       />
 
                       <MovieRow 
@@ -447,6 +549,7 @@ export default function App() {
                         onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                         onToggleMyList={handleToggleMyList}
                         isInMyList={isInMyList}
+                        onExplore={() => setActiveCategoryFilter('action')}
                       />
                     </>
                   )}
@@ -466,6 +569,7 @@ export default function App() {
                         onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                         onToggleMyList={handleToggleMyList}
                         isInMyList={isInMyList}
+                        onExplore={() => handleTabChange('movies')}
                       />
 
                       <MovieRow 
@@ -475,6 +579,7 @@ export default function App() {
                         onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                         onToggleMyList={handleToggleMyList}
                         isInMyList={isInMyList}
+                        onExplore={() => setActiveCategoryFilter('action')}
                       />
 
                       <MovieRow 
@@ -484,6 +589,7 @@ export default function App() {
                         onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                         onToggleMyList={handleToggleMyList}
                         isInMyList={isInMyList}
+                        onExplore={() => setActiveCategoryFilter('scifi')}
                       />
 
                       <MovieRow 
@@ -493,6 +599,7 @@ export default function App() {
                         onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                         onToggleMyList={handleToggleMyList}
                         isInMyList={isInMyList}
+                        onExplore={() => setActiveCategoryFilter('horror')}
                       />
 
                       <MovieRow 
@@ -502,6 +609,7 @@ export default function App() {
                         onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                         onToggleMyList={handleToggleMyList}
                         isInMyList={isInMyList}
+                        onExplore={() => setActiveCategoryFilter('topRated')}
                       />
                     </>
                   )}
@@ -515,6 +623,7 @@ export default function App() {
                       onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                       onToggleMyList={handleToggleMyList}
                       isInMyList={isInMyList}
+                      onExplore={() => setActiveCategoryFilter('animation')}
                     />
                   )}
                 </>
@@ -526,15 +635,47 @@ export default function App() {
 
       </main>
 
+      {/* Barra de Navegación Inferior Móvil (Mobile Bottom Bar) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-2xl border-t border-white/10 px-4 py-2 flex items-center justify-around text-[10px] font-bold">
+        <button 
+          onClick={() => handleTabChange('home')}
+          className={`flex flex-col items-center space-y-1 ${activeTab === 'home' && !searchQuery ? 'text-netflix-red' : 'text-gray-400'}`}
+        >
+          <Home className="w-5 h-5" />
+          <span>Inicio</span>
+        </button>
+        <button 
+          onClick={() => handleTabChange('movies')}
+          className={`flex flex-col items-center space-y-1 ${activeTab === 'movies' ? 'text-netflix-red' : 'text-gray-400'}`}
+        >
+          <Film className="w-5 h-5" />
+          <span>Películas</span>
+        </button>
+        <button 
+          onClick={() => handleTabChange('series')}
+          className={`flex flex-col items-center space-y-1 ${activeTab === 'series' ? 'text-netflix-red' : 'text-gray-400'}`}
+        >
+          <Tv className="w-5 h-5" />
+          <span>Series</span>
+        </button>
+        <button 
+          onClick={() => handleTabChange('mylist')}
+          className={`flex flex-col items-center space-y-1 ${activeTab === 'mylist' ? 'text-netflix-red' : 'text-gray-400'}`}
+        >
+          <Heart className="w-5 h-5" />
+          <span>Mi Lista</span>
+        </button>
+      </nav>
+
       {/* Footer Estilo Apple TV+ / Netflix */}
-      <footer className="bg-black border-t border-white/10 py-12 px-4 sm:px-6 lg:px-8 text-xs text-gray-500">
+      <footer className="bg-black/95 border-t border-white/[0.08] py-12 px-4 sm:px-6 lg:px-8 text-xs text-gray-500">
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center space-x-2">
               <Film className="w-5 h-5 text-netflix-red" />
               <span className="logo-font text-2xl text-white font-black tracking-wider">CINEFLEX</span>
               <span className="text-amber-400 font-bold border border-amber-400/30 px-2 py-0.5 rounded text-[10px]">
-                4K ADAPTATIVO • AIRPLAY & CHROMECAST
+                4K ULTRA HD • 100% SIN ANUNCIOS
               </span>
             </div>
             
@@ -555,8 +696,8 @@ export default function App() {
             </div>
           </div>
 
-          <p className="leading-relaxed max-w-4xl text-gray-500">
-            <strong>Aviso Legal y Descargo de Responsabilidad:</strong> Cineflex es un indexador de metadatos audiovisuales. No aloja archivos de video en servidores propios. Compatible con transmisión inalámbrica AirPlay 2 y Google Cast.
+          <p className="leading-relaxed max-w-4xl text-gray-400">
+            <strong>Cineflex Max:</strong> Reproducción cinemática 4K Ultra HD adaptativa con escudo anti-popups y cero ventanas emergentes. Compatible con Smart TVs (Samsung Tizen, LG webOS, Apple TV 4K, Android TV, Chromecast y Fire TV).
           </p>
 
           <p>© {new Date().getFullYear()} Cineflex Max. Experiencia de cine 4K de nivel internacional.</p>
@@ -584,7 +725,7 @@ export default function App() {
             initialSeason={playingMedia.season}
             initialEpisode={playingMedia.episode}
             initialEpisodeTitle={playingMedia.episodeTitle}
-            onClose={() => setPlayingMedia(null)}
+            onClose={handleClosePlayer}
           />
         )}
       </AnimatePresence>

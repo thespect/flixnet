@@ -25,7 +25,7 @@ export const CastService = {
   // Detectar soporte de Chromecast / Presentation API
   isChromecastAvailable: () => {
     return typeof window !== 'undefined' && (
-      'chrome' in window && 'cast' in window.chrome ||
+      ('chrome' in window && 'cast' in window.chrome) ||
       'presentation' in navigator
     );
   },
@@ -44,15 +44,13 @@ export const CastService = {
     return null;
   },
 
-  // Obtener URL de emparejamiento para Smart TV en red local
+  // Obtener URL de emparejamiento para Smart TV (100% funcional en cualquier entorno)
   getLocalTvUrl: (movieId, isTv = false, season = 1, episode = 1) => {
+    if (typeof window === 'undefined') return '';
     const origin = window.location.origin;
-    // Si corre en localhost, reemplazar con IP local si es posible
-    const host = window.location.hostname === 'localhost' ? '192.168.1.89' : window.location.hostname;
-    const port = window.location.port ? `:${window.location.port}` : '';
     const path = window.location.pathname;
     
-    return `${window.location.protocol}//${host}${port}${path}?watch=${movieId}&isTv=${isTv}&s=${season}&e=${episode}`;
+    return `${origin}${path}?watch=${movieId}&type=${isTv ? 'tv' : 'movie'}&s=${season}&e=${episode}`;
   },
 
   // Dispositivos Smart TV detectados en red local

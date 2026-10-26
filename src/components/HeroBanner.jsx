@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Info, Plus, Check, Volume2, VolumeX, Sparkles, Star, Zap, Cast, ShieldCheck } from 'lucide-react';
+import { Play, Info, Plus, Check, Volume2, VolumeX, Sparkles, Star, Zap, Cast, ShieldCheck, Youtube } from 'lucide-react';
 import { MovieAPI } from '../services/movieService';
 
 export default function HeroBanner({ 
@@ -31,7 +31,7 @@ export default function HeroBanner({
   if (!movie) return null;
 
   return (
-    <div className="relative h-[90vh] min-h-[660px] max-h-[980px] w-full select-none overflow-hidden bg-black">
+    <div className="relative h-[90vh] min-h-[660px] max-h-[960px] w-full select-none overflow-hidden bg-black">
       
       {/* Background: Video Trailer or High-Res Backdrop */}
       <div className="absolute inset-0 w-full h-full overflow-hidden">
@@ -39,9 +39,9 @@ export default function HeroBanner({
           <div className="relative w-full h-full pointer-events-none scale-125 md:scale-110">
             <iframe 
               key={trailerKey}
-              src={`https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&mute=${isMuted ? 1 : 0}&controls=0&showinfo=0&rel=0&loop=1&playlist=${trailerKey}&modestbranding=1&enablejsapi=1`}
-              title="Tráiler de Fondo"
-              className="w-full h-full object-cover filter brightness-[0.70] contrast-[1.10]"
+              src={`https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&mute=${isMuted ? 1 : 0}&controls=0&showinfo=0&rel=0&loop=1&playlist=${trailerKey}&modestbranding=1&enablejsapi=1&vq=hd2160`}
+              title="Tráiler de Fondo 4K"
+              className="w-full h-full object-cover filter brightness-[0.72] contrast-[1.12]"
               allow="autoplay; encrypted-media"
             />
           </div>
@@ -53,14 +53,14 @@ export default function HeroBanner({
             transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
             src={movie.backdrop_path} 
             alt={movie.title}
-            className="w-full h-full object-cover object-center filter brightness-[0.72]"
+            className="w-full h-full object-cover object-center filter brightness-[0.74]"
           />
         )}
 
         {/* Cinematic Multi-Layer Gradient Mesh */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#141414] via-[#141414]/80 to-transparent w-full md:w-3/5 z-10" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/25 to-transparent z-10" />
-        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/90 via-black/50 to-transparent z-10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#050508] via-[#050508]/85 to-transparent w-full md:w-3/5 z-10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050508] via-[#050508]/30 to-transparent z-10" />
+        <div className="absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-[#050508]/95 via-[#050508]/60 to-transparent z-10" />
       </div>
 
       {/* Main Content Container with Motion */}
@@ -80,20 +80,20 @@ export default function HeroBanner({
             transition={{ delay: 0.2, duration: 0.6 }}
             className="flex flex-wrap items-center gap-2 text-xs font-black"
           >
-            <span className="flex items-center space-x-1 px-2.5 py-0.5 rounded-sm bg-netflix-red text-white tracking-widest text-[11px] uppercase shadow-lg shadow-red-900/50">
-              <Sparkles className="w-3 h-3 mr-1 inline" /> {movie.isTv ? 'SERIE DESTACADA' : 'PELÍCULA DESTACADA'}
+            <span className="flex items-center space-x-1 px-2.5 py-0.5 rounded bg-netflix-red text-white tracking-widest text-[11px] uppercase shadow-lg shadow-red-900/50">
+              <Sparkles className="w-3 h-3 mr-1 inline" /> {movie.isTv ? 'SERIE ESTRELLA' : 'ESTRENO 4K'}
             </span>
             <span className="bg-gradient-to-r from-amber-500/20 to-amber-600/20 text-amber-300 border border-amber-400/40 text-[10px] font-black px-2 py-0.5 rounded flex items-center shadow">
               <Zap className="w-3 h-3 mr-1 fill-current" /> 4K ULTRA HD
             </span>
-            <span className="border border-white/30 text-gray-200 text-[10px] px-1.5 py-0.5 rounded font-black tracking-wider">
+            <span className="border border-white/30 text-gray-200 text-[10px] px-2 py-0.5 rounded font-black tracking-wider">
               DOLBY VISION
             </span>
-            <span className="border border-white/30 text-gray-200 text-[10px] px-1.5 py-0.5 rounded font-black tracking-wider">
+            <span className="border border-white/30 text-gray-200 text-[10px] px-2 py-0.5 rounded font-black tracking-wider">
               ATMOS 5.1
             </span>
             <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/35 text-[10px] font-black px-2 py-0.5 rounded flex items-center shadow">
-              <ShieldCheck className="w-3 h-3 mr-1 text-emerald-400" /> 100% SIN ANUNCIOS
+              <ShieldCheck className="w-3 h-3 mr-1 text-emerald-400" /> 100% CERO ANUNCIOS
             </span>
             <span className="text-emerald-400 font-extrabold flex items-center text-xs">
               {movie.match || 98}% de coincidencia
@@ -118,11 +118,11 @@ export default function HeroBanner({
             className="flex flex-wrap gap-2 text-xs text-gray-300 font-bold"
           >
             {movie.genres?.map((genre, idx) => (
-              <span key={idx} className="bg-white/10 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
+              <span key={idx} className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
                 {genre}
               </span>
             ))}
-            <span className="bg-emerald-500/15 text-emerald-300 px-2.5 py-1 rounded-full border border-emerald-500/30 font-bold">
+            <span className="bg-emerald-500/15 text-emerald-300 px-3 py-1 rounded-full border border-emerald-500/30 font-bold">
               Español Latino Nativo
             </span>
           </motion.div>
@@ -137,7 +137,7 @@ export default function HeroBanner({
             {movie.overview}
           </motion.p>
 
-          {/* Buttons CTA with Spring physics */}
+          {/* Buttons CTA */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -149,7 +149,7 @@ export default function HeroBanner({
               whileTap={{ scale: 0.95 }}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
               onClick={() => onPlay(movie, 1, 1)}
-              className="flex items-center space-x-2.5 px-8 py-3.5 rounded-md bg-white text-black font-black text-sm sm:text-base hover:bg-gray-200 shadow-2xl shadow-white/20 active:bg-gray-300"
+              className="flex items-center space-x-2.5 px-8 py-3.5 rounded-xl bg-white text-black font-black text-sm sm:text-base hover:bg-gray-200 shadow-2xl shadow-white/20 active:bg-gray-300 transition-all cursor-pointer"
             >
               <Play className="w-5 h-5 fill-current" />
               <span>{movie.isTv ? 'Ver Capítulo 1 (4K)' : 'Reproducir 4K'}</span>
@@ -160,7 +160,7 @@ export default function HeroBanner({
               whileTap={{ scale: 0.96 }}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
               onClick={() => onOpenDetails(movie)}
-              className="flex items-center space-x-2.5 px-6 py-3.5 rounded-md bg-white/25 hover:bg-white/35 backdrop-blur-md text-white font-bold text-sm sm:text-base transition-colors border border-white/10"
+              className="flex items-center space-x-2.5 px-6 py-3.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-xl text-white font-bold text-sm sm:text-base transition-colors border border-white/15 cursor-pointer shadow-lg"
             >
               <Info className="w-5 h-5" />
               <span>Más información</span>
@@ -170,7 +170,7 @@ export default function HeroBanner({
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => onToggleMyList(movie)}
-              className="p-3.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white border border-white/20 transition-all shadow-xl"
+              className="p-3.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white border border-white/20 transition-all shadow-xl cursor-pointer"
               title={isInMyList ? "Quitar de Mi Lista" : "Añadir a Mi Lista"}
             >
               {isInMyList ? <Check className="w-5 h-5 text-emerald-400" /> : <Plus className="w-5 h-5" />}
@@ -181,7 +181,7 @@ export default function HeroBanner({
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => onOpenCast(movie)}
-                className="p-3.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white border border-white/20 transition-all shadow-xl"
+                className="p-3.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white border border-white/20 transition-all shadow-xl cursor-pointer"
                 title="Transmitir a Smart TV"
               >
                 <Cast className="w-5 h-5 text-gray-200" />
@@ -193,10 +193,10 @@ export default function HeroBanner({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={onRandomizeFeatured}
-                className="hidden xl:flex items-center space-x-1.5 px-4 py-2.5 rounded-full text-xs font-bold text-gray-300 hover:text-white bg-black/50 hover:bg-white/10 border border-white/10 transition-all ml-auto"
+                className="hidden xl:flex items-center space-x-1.5 px-4 py-2.5 rounded-full text-xs font-bold text-gray-300 hover:text-white bg-black/50 hover:bg-white/10 border border-white/10 transition-all ml-auto cursor-pointer"
                 title="Explorar otra portada destacada"
               >
-                <span>Siguiente destacada &gt;</span>
+                <span>Siguiente portada &gt;</span>
               </motion.button>
             )}
           </motion.div>
@@ -212,14 +212,14 @@ export default function HeroBanner({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setIsMuted(!isMuted)}
-            className="w-10 h-10 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white border border-white/20 flex items-center justify-center shadow-xl transition-all"
+            className="w-10 h-10 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white border border-white/20 flex items-center justify-center shadow-xl transition-all cursor-pointer"
             title={isMuted ? "Activar audio del tráiler" : "Silenciar"}
           >
             {isMuted ? <VolumeX className="w-5 h-5 text-gray-300" /> : <Volume2 className="w-5 h-5 text-white" />}
           </motion.button>
         )}
 
-        <div className="border-l-4 border-netflix-red bg-black/70 backdrop-blur-md px-3.5 py-1 text-xs font-black text-gray-200">
+        <div className="border-l-4 border-netflix-red bg-black/75 backdrop-blur-md px-3.5 py-1 text-xs font-black text-gray-200 rounded-r">
           {movie.age_rating || '16+'}
         </div>
       </div>

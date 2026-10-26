@@ -13,7 +13,8 @@ import {
   Film, 
   Zap,
   Volume2,
-  ChevronDown
+  ChevronDown,
+  ShieldCheck
 } from 'lucide-react';
 import { STREAM_PROVIDERS, MovieAPI } from '../services/movieService';
 
@@ -55,7 +56,7 @@ export default function MovieDetailsModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6"
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-2xl flex items-center justify-center p-3 sm:p-6"
       onClick={onClose}
     >
       <motion.div 
@@ -63,7 +64,7 @@ export default function MovieDetailsModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
         transition={{ type: "spring", stiffness: 350, damping: 28 }}
-        className="relative w-full max-w-4xl bg-[#121217]/95 backdrop-blur-2xl rounded-2xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.85)] border border-white/15 text-white my-auto max-h-[92vh] flex flex-col"
+        className="relative w-full max-w-4xl bg-[#101016]/95 backdrop-blur-3xl rounded-3xl overflow-hidden shadow-[0_25px_70px_rgba(0,0,0,0.9)] border border-white/15 text-white my-auto max-h-[92vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
@@ -71,7 +72,7 @@ export default function MovieDetailsModal({
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={onClose}
-          className="absolute top-4 right-4 z-30 w-9 h-9 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center border border-white/20 shadow-lg"
+          className="absolute top-4 right-4 z-30 w-10 h-10 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center border border-white/20 shadow-xl"
         >
           <X className="w-5 h-5" />
         </motion.button>
@@ -84,22 +85,22 @@ export default function MovieDetailsModal({
             <img 
               src={movie.backdrop_path || movie.poster_path} 
               alt={movie.title}
-              className="w-full h-full object-cover filter brightness-[0.75]"
+              className="w-full h-full object-cover filter brightness-[0.74]"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#121217] via-[#121217]/50 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#121217]/90 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#101016] via-[#101016]/55 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#101016]/90 via-transparent to-transparent" />
 
             {/* Title & Quick Actions */}
             <div className="absolute bottom-6 left-6 right-6 space-y-4">
               <div className="flex items-center space-x-2">
-                <span className="bg-netflix-red text-white text-[9px] font-black px-2 py-0.5 rounded tracking-widest uppercase">
-                  {movie.isTv ? 'SERIE' : 'PELÍCULA'}
+                <span className="bg-netflix-red text-white text-[9px] font-black px-2 py-0.5 rounded-md tracking-widest uppercase">
+                  {movie.isTv ? 'SERIE COMPLETA' : 'PELÍCULA 4K'}
                 </span>
-                <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[9px] font-black px-2 py-0.5 rounded">
-                  4K ULTRA HD
+                <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[9px] font-black px-2 py-0.5 rounded-md flex items-center">
+                  <Zap className="w-2.5 h-2.5 mr-0.5 fill-current" /> 4K ULTRA HD
                 </span>
-                <span className="text-emerald-400 font-bold text-xs">
-                  {movie.audio}
+                <span className="text-emerald-400 font-bold text-xs flex items-center">
+                  <ShieldCheck className="w-3.5 h-3.5 mr-1" /> Cero Anuncios
                 </span>
               </div>
 
@@ -115,17 +116,17 @@ export default function MovieDetailsModal({
                     onClose();
                     onPlay(movie, 1, 1);
                   }}
-                  className="flex items-center space-x-2 px-7 py-3 rounded-md bg-white text-black font-black text-sm sm:text-base hover:bg-gray-200 transition-colors shadow-2xl"
+                  className="flex items-center space-x-2 px-8 py-3.5 rounded-xl bg-white text-black font-black text-sm sm:text-base hover:bg-gray-200 transition-colors shadow-2xl cursor-pointer"
                 >
                   <Play className="w-5 h-5 fill-current" />
-                  <span>{movie.isTv ? 'Ver Capítulo 1' : 'Ver Película'}</span>
+                  <span>{movie.isTv ? 'Ver Capítulo 1 (4K)' : 'Reproducir Película 4K'}</span>
                 </motion.button>
 
                 <motion.button 
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => onToggleMyList(movie)}
-                  className="flex items-center space-x-2 px-5 py-3 rounded-md bg-white/20 hover:bg-white/30 text-white font-bold text-sm transition-all border border-white/20"
+                  className="flex items-center space-x-2 px-6 py-3.5 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-sm transition-all border border-white/20 cursor-pointer"
                 >
                   {isInMyList ? (
                     <>
@@ -157,7 +158,7 @@ export default function MovieDetailsModal({
                 {movie.release_date?.slice(0, 4) || '2024'}
               </span>
 
-              <span className="border border-white/40 text-gray-200 text-xs px-2 py-0.5 rounded font-bold">
+              <span className="border border-white/40 text-gray-200 text-xs px-2 py-0.5 rounded-md font-bold">
                 {movie.age_rating || '16+'}
               </span>
 
@@ -189,14 +190,14 @@ export default function MovieDetailsModal({
                 )}
               </div>
 
-              <div className="space-y-4 bg-black/40 p-4 rounded-xl border border-white/5">
+              <div className="space-y-4 bg-black/40 p-4 rounded-2xl border border-white/10">
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
                     Géneros
                   </h4>
                   <div className="flex flex-wrap gap-1.5">
                     {movie.genres?.map((g, i) => (
-                      <span key={i} className="text-xs bg-white/10 px-2.5 py-1 rounded-full text-gray-200">
+                      <span key={i} className="text-xs bg-white/10 px-3 py-1 rounded-full text-gray-200 font-medium">
                         {g}
                       </span>
                     ))}
@@ -205,10 +206,10 @@ export default function MovieDetailsModal({
 
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1 flex items-center">
-                    <Volume2 className="w-3.5 h-3.5 text-emerald-400 mr-1" /> Idiomas Disponibles
+                    <Volume2 className="w-3.5 h-3.5 text-emerald-400 mr-1.5" /> Audio y Subtítulos
                   </h4>
                   <p className="text-xs text-gray-300">
-                    Español Latino (predeterminado), Castellano y Subtítulos en español.
+                    Español Latino Oficial (predeterminado), Castellano y Subtítulos completos.
                   </p>
                 </div>
               </div>
@@ -222,7 +223,7 @@ export default function MovieDetailsModal({
                   <div className="flex items-center space-x-2">
                     <Tv className="w-5 h-5 text-netflix-red" />
                     <h3 className="text-lg sm:text-xl font-black text-white">
-                      Temporadas y Episodios
+                      Temporadas y Capítulos en 4K
                     </h3>
                   </div>
 
@@ -232,7 +233,7 @@ export default function MovieDetailsModal({
                       <select
                         value={selectedSeason}
                         onChange={(e) => loadEpisodes(parseInt(e.target.value))}
-                        className="bg-black/80 border border-white/20 text-white text-xs sm:text-sm font-bold px-3 py-1.5 rounded-lg focus:outline-none focus:border-netflix-red cursor-pointer"
+                        className="bg-black/90 border border-white/20 text-white text-xs sm:text-sm font-bold px-3 py-1.5 rounded-xl focus:outline-none focus:border-netflix-red cursor-pointer"
                       >
                         {Array.from({ length: totalSeasons }, (_, i) => i + 1).map((sNum) => (
                           <option key={sNum} value={sNum} className="bg-zinc-900 text-white">
@@ -259,11 +260,11 @@ export default function MovieDetailsModal({
                           onClose();
                           onPlay(movie, selectedSeason, ep.episode_number, ep.name);
                         }}
-                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/20 transition-all cursor-pointer gap-4 group"
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 rounded-2xl bg-white/5 border border-white/5 hover:border-white/20 transition-all cursor-pointer gap-4 group"
                       >
                         <div className="flex items-center space-x-4 min-w-0 flex-1">
                           {/* Thumbnail / Número */}
-                          <div className="relative w-28 sm:w-36 aspect-video bg-zinc-900 rounded-lg overflow-hidden shrink-0 border border-white/10">
+                          <div className="relative w-28 sm:w-36 aspect-video bg-zinc-900 rounded-xl overflow-hidden shrink-0 border border-white/10">
                             {ep.still_path ? (
                               <img src={ep.still_path} alt={ep.name} className="w-full h-full object-cover" />
                             ) : (
@@ -299,10 +300,10 @@ export default function MovieDetailsModal({
             )}
 
             {/* Servidores Conectados */}
-            <div className="bg-black/50 rounded-xl p-5 border border-white/10 space-y-3">
+            <div className="bg-black/50 rounded-2xl p-5 border border-white/10 space-y-3">
               <h4 className="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center space-x-2">
                 <Tv className="w-4 h-4 text-netflix-red" />
-                <span>Servidores de Streaming en Español Latino Disponibles:</span>
+                <span>Servidores de Transmisión Disponibles:</span>
               </h4>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -314,7 +315,7 @@ export default function MovieDetailsModal({
                       onClose();
                       onPlay(movie, 1, 1);
                     }}
-                    className="bg-white/5 p-3 rounded-lg border border-white/10 cursor-pointer transition-colors space-y-1"
+                    className="bg-white/5 p-3 rounded-xl border border-white/10 cursor-pointer transition-colors space-y-1"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-white">{provider.name}</span>
