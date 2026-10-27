@@ -4,33 +4,44 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23E50914'><path d='M4 2v20l16-10L4 2z'/></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-    <meta name="description" content="Cineflex Max • Plataforma de Streaming 4K Ultra HD sin anuncios, con audio en Español Latino y compatibilidad con Smart TV, AirPlay y Chromecast." />
-    <title>Cineflex • Películas y Series en 4K Ultra HD</title>
+    <meta name="description" content="Cineflex Max • Plataforma de Streaming 4K Ultra HD 100% sin anuncios, con audio en Español Latino y detección automática de enlaces." />
+    <title>Cineflex Max • Películas y Series en 4K Ultra HD (Español Latino)</title>
 
     <!-- Google Fonts Premium: Bebas Neue (Cine), Plus Jakarta Sans & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-    <!-- Escudo Anti-Redirección y Anti-Popups Inteligente (Cero Interferencia con Enlaces Reales) -->
+    <!-- Motor HLS Nativo Local (0% Anuncios, Carga Instantánea) -->
+    <script src="./hls.min.js"></script>
+
+    <!-- Escudo Total Anti-Redirección, Anti-Popups y Anti-Anuncios -->
     <script>
       (function() {
-        // Bloquear intentos maliciosos de popunders o redirección forzada de la ventana principal
         window.__cineflexOrigin = window.location.origin;
 
-        // Protección contra intentos de iframes no autorizados de desviar la página
+        // 1. Neutralizar window.open no solicitado (popups / popunders)
+        const originalOpen = window.open;
+        window.open = function(url, target, features) {
+          if (url && typeof url === 'string' && (url.startsWith(window.location.origin) || url.includes('?watch='))) {
+            return originalOpen.call(window, url, target, features);
+          }
+          console.info('[Cineflex AdGuard] Ventana emergente bloqueada:', url);
+          return null;
+        };
+
+        // 2. Bloquear desvío de navegación provocado por iframes externos
         window.addEventListener('beforeunload', function(e) {
-          // Solo advertir si una página externa intenta secuestrar la navegación
           if (document.activeElement && document.activeElement.tagName === 'IFRAME') {
-            console.warn('[Cineflex Guard] Intento de desvío desde iframe bloqueado.');
             e.preventDefault();
-            return (e.returnValue = '¿Deseas permanecer en Cineflex?');
+            e.returnValue = '';
+            return '';
           }
         });
       })();
     </script>
   </head>
-  <body class="bg-[#050508] text-white antialiased selection:bg-[#E50914] selection:text-white overflow-x-hidden min-h-screen">
+  <body class="bg-[#040407] text-white antialiased selection:bg-[#E50914] selection:text-white overflow-x-hidden min-h-screen">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
