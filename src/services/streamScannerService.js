@@ -292,7 +292,9 @@ export const StreamScannerService = {
       timestamp: Date.now()
     };
 
-    scanCache.set(cacheKey, result);
+    if (combinedDirectStreams.length > 0) {
+      scanCache.set(cacheKey, result);
+    }
     return result;
   },
 
@@ -312,7 +314,7 @@ export const StreamScannerService = {
 
     for (const ep of endpoints) {
       try {
-        const res = await fetchWithTimeout(ep, { headers: { Accept: 'application/json' } }, 5500);
+        const res = await fetchWithTimeout(ep, { headers: { Accept: 'application/json' } }, 9000);
         if (!res.ok) continue;
         const ct = res.headers.get('content-type') || '';
         if (!ct.includes('json')) continue;

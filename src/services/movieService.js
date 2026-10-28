@@ -115,23 +115,17 @@ export const STREAM_PROVIDERS = [
   {
     id: 'embed69_latino',
     name: 'Embed69 Latino 4K',
-    subtitle: '🇲🇽 Doblaje Latino / Castellano / Sub',
+    subtitle: '🇲🇽 Doblaje Latino Directo (Sin Iframe)',
     badge: 'MULTI-LATINO',
     tag: 'Doblaje Real',
-    quality: 'Full HD / 4K',
+    quality: 'Full HD / 4K HLS',
     ping: '11ms',
-    isNative: false,
-    isDirectHls: false,
+    isNative: true,
+    isDirectHls: true,
     sandboxSafe: true,
     language: '🇲🇽 Español Latino, 🇪🇸 Castellano y Subtitulado',
-    description: 'Clúster dedicado en Español Latino con selector integrado de idioma (LAT / ESP / SUB) y múltiples servidores verificados.',
-    getUrl: (tmdbId, isTv = false, season = 1, episode = 1, imdbId = null) => {
-      const targetId = imdbId || KNOWN_IMDB_IDS[tmdbId] || `tt${tmdbId}`;
-      const epPad = String(episode).padStart(2, '0');
-      return isTv
-        ? `https://embed69.org/f/${targetId}-${season}x${epPad}`
-        : `https://embed69.org/f/${targetId}`;
-    }
+    description: 'Extrae el flujo HLS (.m3u8) directo de Embed69 en Español Latino y Castellano para reproducirlo nativamente sin iframes ni anuncios.',
+    getUrl: () => ''
   },
   {
     id: 'playlatin_es',

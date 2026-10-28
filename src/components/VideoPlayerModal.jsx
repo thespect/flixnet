@@ -414,7 +414,14 @@ export default function VideoPlayerModal({
 
   // 4. MOTOR DE REPRODUCCIÓN NATIVA HLS.JS (0% ANUNCIOS, 0% IFRAMES, ESCALADO 4K)
   const currentProvider = STREAM_PROVIDERS.find(p => p.id === selectedServer) || STREAM_PROVIDERS[0];
-  const isNativeServer = currentProvider.isNative || Boolean(movie?.customUrl);
+  const hasDirectStreamForEmbed69 =
+    directHlsStreams.some((s) => s.providerId === 'embed69' || s.isLatinoDub) ||
+    directHlsStreams.length > 0;
+  const isNativeServer =
+    Boolean(movie?.customUrl) ||
+    (selectedServer === 'embed69_latino'
+      ? isScanningLinks || hasDirectStreamForEmbed69
+      : currentProvider.isNative);
 
   const active4kDemoSource = movie?.real4kSource || REAL_4K_SOURCES[0];
   const activeDirectStream = directHlsStreams[activeHlsIndex] || null;
@@ -423,7 +430,11 @@ export default function VideoPlayerModal({
     ? movie.customUrl
     : selectedServer === 'cinema_demo_4k'
     ? active4kDemoSource.resolutions[selectedResolution] || active4kDemoSource.resolutions['2160p']
-    : activeDirectStream?.url || active4kDemoSource.resolutions['2160p'];
+    : activeDirectStream?.url
+    ? activeDirectStream.url
+    : isScanningLinks
+    ? ''
+    : active4kDemoSource.resolutions['2160p'];
 
   const isHlsStream = Boolean(
     resolvedNativeUrl &&
@@ -704,7 +715,13 @@ export default function VideoPlayerModal({
     setActiveMenu(null);
     setIsLoading(true);
     setIframeKey(prev => prev + 1);
-    if (serverId === 'playlatin_es' && selectedAudioMode === 'en_original_sub_es') {
+    if (serverId === 'embed69_latino' || serverId === 'native_hls_4k') {
+      const latinoIdx = directHlsStreams.findIndex(s => s.isLatinoDub);
+      if (latinoIdx >= 0) {
+        setActiveHlsIndex(latinoIdx);
+        setSelectedAudioMode('es_latino_dub');
+      }
+    } else if (serverId === 'playlatin_es' && selectedAudioMode === 'en_original_sub_es') {
       setSelectedAudioMode('es_latino_dub');
     }
     StorageService.addToHistory(movie, serverId, currentSeason, currentEpisode);
@@ -1626,7 +1643,6 @@ export default function VideoPlayerModal({
                 allowFullScreen
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
                 referrerPolicy="origin"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                 onLoad={() => setIsLoading(false)}
               />
             </div>
