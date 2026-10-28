@@ -3,15 +3,60 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    background-color: #050508;
+  html, body {
+    background-color: #040407;
     color: #ffffff;
     font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     overflow-x: hidden;
     letter-spacing: -0.012em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
   }
+}
+
+/* Soporte 100% responsivo para móviles, tablets y pantallas con notch */
+.h-dvh-safe {
+  height: 100vh;
+  height: 100dvh;
+}
+
+.pt-safe {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+}
+
+.pb-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+.px-safe {
+  padding-left: max(0.75rem, env(safe-area-inset-left));
+  padding-right: max(0.75rem, env(safe-area-inset-right));
+}
+
+/* Slider táctil optimizado para móviles y tablets */
+input[type="range"].touch-scrubber {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+}
+
+input[type="range"].touch-scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #e50914;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 10px rgba(229, 9, 20, 0.8);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+input[type="range"].touch-scrubber:active::-webkit-slider-thumb {
+  transform: scale(1.3);
 }
 
 /* Glassmorphism y Materiales Cinemáticos estilo Apple TV+ y Netflix Max */

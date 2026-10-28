@@ -125,11 +125,12 @@ export const STREAM_PROVIDERS = [
     sandboxSafe: true,
     language: 'Español Latino / Castellano / Sub',
     description: 'Servidor especializado con audio en Español Latino oficial, Castellano y Subtitulado. Incluye selector de idioma integrado y bloqueo de anuncios.',
-    getUrl: (tmdbId, isTv = false, season = 1, episode = 1, imdbId = null) => {
+    getUrl: (tmdbId, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
       const targetId = imdbId || KNOWN_IMDB_IDS[tmdbId] || tmdbId;
+      const safeLang = ['latino', 'castellano', 'subtitulado'].includes(lang) ? lang : 'latino';
       return isTv
-        ? `https://playlatinsrc.co/custom/serial/${targetId}/${season}/${episode}?lang=latino&autoplay=1`
-        : `https://playlatinsrc.co/custom/movie/${targetId}?lang=latino&autoplay=1`;
+        ? `https://playlatinsrc.co/custom/serial/${targetId}/${season}/${episode}?lang=${safeLang}&autoplay=1`
+        : `https://playlatinsrc.co/custom/movie/${targetId}?lang=${safeLang}&autoplay=1`;
     }
   },
   {
