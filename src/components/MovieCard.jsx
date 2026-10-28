@@ -30,9 +30,9 @@ export default function MovieCard({
       whileHover={{ y: -8 }}
       transition={{ type: "spring", stiffness: 360, damping: 25 }}
     >
-      {/* Main Card Container */}
+      {/* Main Card Container - Al dar clic abre el selector de Temporadas, Capítulos y Versiones */}
       <div 
-        onClick={() => onPlay(movie)}
+        onClick={() => onOpenDetails(movie)}
         className="relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-[#0d0d14] border border-white/[0.08] shadow-2xl transition-all duration-300 group hover:border-netflix-red/80 hover:shadow-[0_16px_40px_rgba(0,0,0,0.85),0_0_28px_rgba(229,9,20,0.3)]"
       >
         <img 
@@ -76,16 +76,17 @@ export default function MovieCard({
           {/* Action Buttons Row */}
           <div className="flex items-center space-x-2 mb-2.5">
             <motion.button 
-              whileHover={{ scale: 1.15 }}
-              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
               onClick={(e) => {
                 e.stopPropagation();
-                onPlay(movie);
+                onOpenDetails(movie);
               }}
-              className="w-9 h-9 rounded-full bg-netflix-red text-white flex items-center justify-center hover:bg-red-700 shadow-xl shadow-red-900/50"
-              title="Reproducir ahora en 4K Español"
+              className="flex-1 h-8 px-2.5 rounded-xl bg-netflix-red text-white flex items-center justify-center space-x-1.5 hover:bg-red-700 shadow-xl shadow-red-900/50 text-[10px] font-black"
+              title={movie.isTv ? "Seleccionar Temporada y Capítulo" : "Seleccionar Versión / Reproducir"}
             >
-              <Play className="w-4 h-4 fill-current ml-0.5" />
+              <Play className="w-3.5 h-3.5 fill-current shrink-0" />
+              <span className="truncate">{movie.isTv ? 'Temp / Cap' : 'Ver / Elegir'}</span>
             </motion.button>
 
             <motion.button 
@@ -95,7 +96,7 @@ export default function MovieCard({
                 e.stopPropagation();
                 onToggleMyList(movie);
               }}
-              className="w-7 h-7 rounded-full bg-[#1e1e2a] hover:bg-[#2e2e3e] text-white flex items-center justify-center border border-white/20 transition-all"
+              className="w-7 h-7 rounded-full bg-[#1e1e2a] hover:bg-[#2e2e3e] text-white flex items-center justify-center border border-white/20 transition-all shrink-0"
               title={isInMyList ? "Quitar de Mi Lista" : "Añadir a Mi Lista"}
             >
               {isInMyList ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Plus className="w-3.5 h-3.5" />}
@@ -106,25 +107,10 @@ export default function MovieCard({
               whileTap={{ scale: 0.9 }}
               onClick={(e) => {
                 e.stopPropagation();
-                setIsLiked(!isLiked);
-              }}
-              className={`w-7 h-7 rounded-full bg-[#1e1e2a] hover:bg-[#2e2e3e] flex items-center justify-center border border-white/20 transition-all ${
-                isLiked ? 'text-netflix-red border-netflix-red/50' : 'text-white'
-              }`}
-              title="Me gusta"
-            >
-              <ThumbsUp className="w-3.5 h-3.5" />
-            </motion.button>
-
-            <motion.button 
-              whileHover={{ scale: 1.15 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={(e) => {
-                e.stopPropagation();
                 onOpenDetails(movie);
               }}
-              className="w-7 h-7 rounded-full bg-[#1e1e2a] hover:bg-[#2e2e3e] text-white flex items-center justify-center border border-white/20 transition-all ml-auto"
-              title="Ver temporadas y servidores"
+              className="w-7 h-7 rounded-full bg-[#1e1e2a] hover:bg-[#2e2e3e] text-white flex items-center justify-center border border-white/20 transition-all shrink-0"
+              title="Seleccionar temporada, capítulo y servidor"
             >
               <ChevronDown className="w-4 h-4" />
             </motion.button>

@@ -123,11 +123,11 @@ export default function HeroBanner({
             <motion.button 
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.96 }}
-              onClick={() => onPlay(movie, 1, 1)}
-              className="flex items-center space-x-2.5 px-8 py-3.5 rounded-2xl bg-netflix-red hover:bg-red-700 text-white font-black text-sm sm:text-base shadow-[0_12px_35px_rgba(229,9,20,0.45)] transition-all cursor-pointer"
+              onClick={() => movie.isTv ? onOpenDetails(movie) : onPlay(movie, 1, 1)}
+              className="flex items-center space-x-2.5 px-7 py-3.5 rounded-2xl bg-netflix-red hover:bg-red-700 text-white font-black text-sm sm:text-base shadow-[0_12px_35px_rgba(229,9,20,0.45)] transition-all cursor-pointer"
             >
               <Play className="w-5 h-5 fill-current" />
-              <span>{movie.isTv ? 'Ver Capítulo 1 (4K)' : 'Ver Ahora en 4K'}</span>
+              <span>{movie.isTv ? 'Elegir Temporada / Capítulo' : 'Ver Ahora en 4K'}</span>
             </motion.button>
 
             <motion.button 
@@ -137,7 +137,7 @@ export default function HeroBanner({
               className="flex items-center space-x-2.5 px-6 py-3.5 rounded-2xl bg-white/15 hover:bg-white/25 backdrop-blur-xl text-white font-bold text-sm sm:text-base transition-colors border border-white/20 cursor-pointer shadow-lg"
             >
               <Info className="w-5 h-5" />
-              <span>Servidores y Detalles</span>
+              <span>{movie.isTv ? 'Ver Todas las Temporadas' : 'Capítulos / Saga y Servidores'}</span>
             </motion.button>
 
             <motion.button 

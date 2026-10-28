@@ -24,10 +24,12 @@ import {
   Radio,
   Globe,
   Headphones,
-  Sliders
+  Sliders,
+  Airplay
 } from 'lucide-react';
 import { STREAM_PROVIDERS, StorageService, MovieAPI, REAL_4K_SOURCES, KNOWN_IMDB_IDS } from '../services/movieService';
 import { StreamScannerService } from '../services/streamScannerService';
+import { CastService } from '../services/castService';
 import CastModal from './CastModal';
 
 // Opciones de Resolución y Escalado 4K Real
@@ -37,13 +39,13 @@ const RESOLUTION_OPTIONS = [
   { id: '720p', label: 'HD Rápido (720p)', badge: 'Ahorro Datos', bitrate: '6.2 Mbps', res: '1280 x 720', fps: '30 FPS', filter: 'none' },
 ];
 
-// Pistas de Idioma / Audio Universales (Permite cambiar idioma siempre, incluso si el Servidor 1 solo trae pista en inglés)
+// Pistas de Idioma / Audio Universales (Priorizando Español Latino Directo en 4K compatible con Chromecast y AirPlay)
 const AUDIO_LANGUAGE_TRACKS = [
   {
     id: 'es_latino_dub',
-    label: '🇲🇽 Español Latino (Doblaje Oficial)',
+    label: '🇲🇽 Español Latino (Doblaje Oficial 4K)',
     shortLabel: '🇲🇽 Español Latino',
-    desc: 'Audio doblado al Español Latino de estudio (conmuta al nodo Latino verificado)',
+    desc: 'Flujo HLS .m3u8 directo con doblaje Español Latino oficial (100% compatible con Chromecast y AirPlay)',
     badge: 'DOBLAJE OFICIAL',
     langCode: 'latino'
   },
@@ -51,7 +53,7 @@ const AUDIO_LANGUAGE_TRACKS = [
     id: 'es_castellano_dub',
     label: '🇪🇸 Español Castellano (España)',
     shortLabel: '🇪🇸 Castellano',
-    desc: 'Audio doblado al Español de España (nodo Castellano)',
+    desc: 'Flujo HLS .m3u8 directo con audio doblado al Español de España',
     badge: 'ESPAÑA',
     langCode: 'castellano'
   },
@@ -59,8 +61,8 @@ const AUDIO_LANGUAGE_TRACKS = [
     id: 'es_ai_voiceover',
     label: '🇲🇽 Español Latino (Voz IA en Servidor 1)',
     shortLabel: '🇲🇽 Voz IA Español',
-    desc: 'Mantiene el Servidor 1 (4K Nativo HLS) y traduce los diálogos con voz en Español en tiempo real',
-    badge: '4K NATIVO + VOZ ES',
+    desc: 'Mantiene el flujo Master 4K y traduce los diálogos con voz en Español en tiempo real',
+    badge: '4K + VOZ ES',
     langCode: 'ai_es'
   },
   {
@@ -81,12 +83,12 @@ export default function VideoPlayerModal({
   initialEpisodeTitle = ''
 }) {
   const [selectedServer, setSelectedServer] = useState(STREAM_PROVIDERS[0].id);
-  const [selectedAudioMode, setSelectedAudioMode] = useState('en_original_sub_es');
+  const [selectedAudioMode, setSelectedAudioMode] = useState('es_latino_dub');
   const [playLatinLang, setPlayLatinLang] = useState('latino');
   const [selectedResolution, setSelectedResolution] = useState('2160p');
 
-  // Menús desplegables (Audio/Idioma, Subtítulos, Calidad 4K)
-  const [activeMenu, setActiveMenu] = useState(null); // 'audio' | 'subs' | 'quality' | null
+  // Menús desplegables (Temporadas/Capítulos, Audio/Idioma, Subtítulos, Calidad 4K)
+  const [activeMenu, setActiveMenu] = useState(null); // 'episodes' | 'audio' | 'subs' | 'quality' | null
   const [isCastModalOpen, setIsCastModalOpen] = useState(false);
   const [showStatsHud, setShowStatsHud] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -95,10 +97,14 @@ export default function VideoPlayerModal({
   const [trailerKey, setTrailerKey] = useState(movie?.trailer_id || null);
   const [resolvedImdbId, setResolvedImdbId] = useState(movie?.imdb_id || KNOWN_IMDB_IDS[movie?.id] || null);
 
-  // Estado de Serie
+  // Estado de Serie y Selector de Temporadas / Capítulos dentro del Reproductor
   const [currentSeason, setCurrentSeason] = useState(initialSeason);
   const [currentEpisode, setCurrentEpisode] = useState(initialEpisode);
   const [episodeTitle, setEpisodeTitle] = useState(initialEpisodeTitle);
+  const [pickerSeason, setPickerSeason] = useState(initialSeason);
+  const [totalSeasonsCount, setTotalSeasonsCount] = useState(movie?.isTv ? 4 : 1);
+  const [seasonEpisodes, setSeasonEpisodes] = useState([]);
+  const [isLoadingSeasonEpisodes, setIsLoadingSeasonEpisodes] = useState(false);
 
   // Estados del Auto-Detector Inteligente de Links y Streams HLS
   const [isScanningLinks, setIsScanningLinks] = useState(true);
@@ -150,6 +156,44 @@ export default function VideoPlayerModal({
     return () => stopSpeechSynthesis();
   }, [stopSpeechSynthesis]);
 
+  // Cargar Temporadas y Capítulos para el Selector Integrado del Reproductor
+  useEffect(() => {
+    if (!movie) return;
+    let cancelled = false;
+
+    if (movie.isTv || activeMenu === 'episodes') {
+      MovieAPI.fetchSeriesDetails(movie.id).then((details) => {
+        if (!cancelled && details?.number_of_seasons) {
+          setTotalSeasonsCount(Math.max(details.number_of_seasons, 1));
+        }
+      });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [movie, activeMenu]);
+
+  useEffect(() => {
+    if (!movie || (!movie.isTv && activeMenu !== 'episodes')) return;
+    let cancelled = false;
+    setIsLoadingSeasonEpisodes(true);
+
+    MovieAPI.fetchSeasonEpisodes(
+      movie.id,
+      pickerSeason,
+      movie.backdrop_path || movie.poster_path
+    ).then((eps) => {
+      if (!cancelled) {
+        setSeasonEpisodes(eps || []);
+        setIsLoadingSeasonEpisodes(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [movie, pickerSeason, activeMenu]);
+
   // 1. AUTO-DETECTOR INTELIGENTE DE LINKS Y SERVIDORES FUNCIONALES
   useEffect(() => {
     if (!movie) return;
@@ -184,23 +228,31 @@ export default function VideoPlayerModal({
 
       setScanReport(report);
       if (report.imdbId) setResolvedImdbId(report.imdbId);
-      setDirectHlsStreams(report.directHlsStreams || []);
-      setActiveHlsIndex(0);
+      const streams = report.directHlsStreams || [];
+      setDirectHlsStreams(streams);
       setSubtitlesList(report.subtitles || []);
       setIsScanningLinks(false);
 
-      if (
-        !movie.customUrl &&
-        selectedServer === 'native_hls_4k' &&
-        (!report.directHlsStreams || report.directHlsStreams.length === 0)
-      ) {
-        setSelectedServer('playlatin_es');
+      // Priorizar siempre el nodo HLS directo en Español Latino (isLatinoDub) si existe
+      const latinoIdx = streams.findIndex((s) => s.isLatinoDub);
+      if (latinoIdx >= 0) {
+        setActiveHlsIndex(latinoIdx);
         setSelectedAudioMode('es_latino_dub');
-        showToast('🇲🇽 Auto-Detector: Conectado a Español Latino Oficial');
-      } else if (report.directHlsStreams?.length > 0 && selectedServer === 'native_hls_4k') {
-        showToast(
-          `⚡ 4K Directo listo (${report.directHlsStreams.length} nodos). Puedes cambiar el audio a 🇲🇽 Español Latino en "Audio / Idioma"`
-        );
+        if (selectedServer === 'native_hls_4k') {
+          showToast('🇲🇽 Español Latino 4K Directo conectado (Compatible con Chromecast y AirPlay)');
+        }
+      } else if (streams.length > 0) {
+        setActiveHlsIndex(0);
+        setSelectedAudioMode('en_original_sub_es');
+        if (selectedServer === 'native_hls_4k') {
+          showToast(
+            `⚡ 4K Directo listo (${streams.length} nodos). Puedes cambiar idioma en "Audio / Idioma"`
+          );
+        }
+      } else if (!movie.customUrl && selectedServer === 'native_hls_4k') {
+        setSelectedServer('embed69_latino');
+        setSelectedAudioMode('es_latino_dub');
+        showToast('🇲🇽 Auto-Detector: Conectado a Embed69 Español Latino 4K');
       }
     })();
 
@@ -223,11 +275,10 @@ export default function VideoPlayerModal({
         if (selectedServer === 'playlatin_es') {
           if (directHlsStreams.length > 0) {
             setSelectedServer('native_hls_4k');
-            setSelectedAudioMode('es_ai_voiceover');
-            showToast('🔄 Auto-Detector: Conmutando a Servidor 1 (4K Nativo con Audio Español)...');
+            showToast('🔄 Auto-Detector: Conmutando a Cineflex 4K Latino Directo...');
           } else {
-            setSelectedServer('cinesrc_4k');
-            showToast('🔄 Auto-Detector: Conmutando a CineSrc 4K Multi-Audio...');
+            setSelectedServer('embed69_latino');
+            showToast('🔄 Auto-Detector: Conmutando a Embed69 Latino 4K...');
           }
         }
       }
@@ -237,7 +288,7 @@ export default function VideoPlayerModal({
     return () => window.removeEventListener('message', handleMessage);
   }, [selectedServer, directHlsStreams, showToast]);
 
-  // 3. CAMBIO DE PISTA DE AUDIO / IDIOMA (Funciona en Servidor 1 y en todos los servidores)
+  // 3. CAMBIO DE PISTA DE AUDIO / IDIOMA (Prioriza Streams HLS .m3u8 Directos en Español Latino para Chromecast/AirPlay)
   const handleSelectAudioTrack = (trackId) => {
     stopSpeechSynthesis();
     setSelectedAudioMode(trackId);
@@ -245,38 +296,53 @@ export default function VideoPlayerModal({
 
     if (trackId === 'es_latino_dub') {
       setPlayLatinLang('latino');
-      // Verificar si el stream HLS nativo actual ya incluye una pista en español nativa
-      const esNativeIdx = hlsAudioTracks.findIndex(t =>
+      // 1. Buscar primero si tenemos un flujo HLS .m3u8 directo con doblaje Español Latino (Embed69 LAT)
+      const directLatinoIdx = directHlsStreams.findIndex((s) => s.isLatinoDub);
+      const esNativeIdx = hlsAudioTracks.findIndex((t) =>
         /es|spa|lat|español|spanish/i.test(`${t.name || ''} ${t.lang || ''}`)
       );
-      if (selectedServer === 'native_hls_4k' && esNativeIdx >= 0 && hlsRef.current) {
+
+      if (directLatinoIdx >= 0) {
+        setSelectedServer('native_hls_4k');
+        setShowTrailer(false);
+        setActiveHlsIndex(directLatinoIdx);
+        loadSubtitleTrack(-1);
+        showToast('🇲🇽 Pista activa: Español Latino Oficial (4K Directo • Chromecast & AirPlay)');
+      } else if (selectedServer === 'native_hls_4k' && esNativeIdx >= 0 && hlsRef.current) {
         hlsRef.current.audioTrack = esNativeIdx;
         setActiveHlsAudioTrack(esNativeIdx);
+        loadSubtitleTrack(-1);
         showToast('🇲🇽 Pista de Audio HLS Español Latino activada');
       } else {
-        // Conmutar automáticamente al servidor con doblaje Español Latino real
-        setSelectedServer('playlatin_es');
+        setSelectedServer('embed69_latino');
         setShowTrailer(false);
         setIsLoading(true);
-        setIframeKey(prev => prev + 1);
-        showToast('🇲🇽 Cambiado a Pista de Audio: Español Latino (Doblaje Oficial)');
+        setIframeKey((prev) => prev + 1);
+        showToast('🇲🇽 Cambiado a Servidor Español Latino (Doblaje Oficial)');
       }
     } else if (trackId === 'es_castellano_dub') {
       setPlayLatinLang('castellano');
-      setSelectedServer('playlatin_es');
-      setShowTrailer(false);
-      setIsLoading(true);
-      setIframeKey(prev => prev + 1);
-      showToast('🇪🇸 Cambiado a Pista de Audio: Español Castellano (España)');
+      const directCastIdx = directHlsStreams.findIndex((s) => s.isCastellanoDub);
+      if (directCastIdx >= 0) {
+        setSelectedServer('native_hls_4k');
+        setShowTrailer(false);
+        setActiveHlsIndex(directCastIdx);
+        loadSubtitleTrack(-1);
+        showToast('🇪🇸 Pista activa: Español Castellano (4K Directo)');
+      } else {
+        setSelectedServer('playlatin_es');
+        setShowTrailer(false);
+        setIsLoading(true);
+        setIframeKey((prev) => prev + 1);
+        showToast('🇪🇸 Cambiado a Pista de Audio: Español Castellano (España)');
+      }
     } else if (trackId === 'es_ai_voiceover') {
-      // Mantiene o vuelve al Servidor 1 (4K Directo Nativo) y activa el doblaje por voz IA sincronizado con subtítulos en español
       if (selectedServer !== 'native_hls_4k') {
         setSelectedServer('native_hls_4k');
         setShowTrailer(false);
       }
-      // Asegurar que haya un subtítulo en español activo para leer las líneas
       if (activeSubIndex < 0 && subtitlesList.length > 0) {
-        const esIdx = subtitlesList.findIndex(s => s.isLatino || s.isSpanish);
+        const esIdx = subtitlesList.findIndex((s) => s.isLatino || s.isSpanish);
         loadSubtitleTrack(esIdx >= 0 ? esIdx : 0);
       }
       showToast('🇲🇽 Voz IA en Español Latino activada sobre Servidor 1 (4K Nativo)');
@@ -285,14 +351,18 @@ export default function VideoPlayerModal({
         setSelectedServer('native_hls_4k');
         setShowTrailer(false);
       }
+      const origIdx = directHlsStreams.findIndex((s) => !s.isLatinoDub && !s.isCastellanoDub);
+      if (origIdx >= 0) {
+        setActiveHlsIndex(origIdx);
+      }
       if (videoRef.current) {
         videoRef.current.volume = volume;
       }
-      if (activeSubIndex < 0 && subtitlesList.length > 0) {
-        const esIdx = subtitlesList.findIndex(s => s.isLatino || s.isSpanish);
+      if (subtitlesList.length > 0) {
+        const esIdx = subtitlesList.findIndex((s) => s.isLatino || s.isSpanish);
         loadSubtitleTrack(esIdx >= 0 ? esIdx : 0);
       }
-      showToast('🇺🇸 Pista de Audio: Inglés Original 4K + Subtítulos en Español');
+      showToast('🇺🇸 Pista activa: Inglés Original 4K + Subtítulos en Español');
     }
   };
 
@@ -454,17 +524,27 @@ export default function VideoPlayerModal({
     };
   }, [isNativeServer, showTrailer, resolvedNativeUrl, isHlsStream, activeHlsIndex, directHlsStreams, showToast]);
 
-  // 5. CARGAR SUBTÍTULOS EN ESPAÑOL LATINO AUTOMÁTICAMENTE EN REPRODUCTOR NATIVO
+  // 5. CARGAR SUBTÍTULOS EN ESPAÑOL LATINO AUTOMÁTICAMENTE CUANDO EL AUDIO ES INGLÉS O VOZ IA
   useEffect(() => {
     if (!isNativeServer || showTrailer || !videoRef.current || subtitlesList.length === 0) {
       setActiveCueText('');
       return;
     }
 
+    // Si el nodo actual ya tiene Doblaje Español Latino o Castellano real, no forzar subtítulos encima a menos que sea Voz IA
+    if (
+      (activeDirectStream?.isLatinoDub || activeDirectStream?.isCastellanoDub) &&
+      selectedAudioMode !== 'es_ai_voiceover' &&
+      selectedAudioMode !== 'en_original_sub_es'
+    ) {
+      loadSubtitleTrack(-1);
+      return;
+    }
+
     const spanishIdx = subtitlesList.findIndex(s => s.isLatino || s.isSpanish);
     const targetIdx = spanishIdx >= 0 ? spanishIdx : 0;
     loadSubtitleTrack(targetIdx);
-  }, [subtitlesList, isNativeServer, showTrailer]);
+  }, [subtitlesList, isNativeServer, showTrailer, activeDirectStream, selectedAudioMode]);
 
   const loadSubtitleTrack = async (index) => {
     setActiveSubIndex(index);
@@ -648,21 +728,38 @@ export default function VideoPlayerModal({
     }
   };
 
-  const handleNextEpisode = () => {
+  const handleSelectSeasonAndEpisode = (seasonNum, epNum, epName = '') => {
     stopSpeechSynthesis();
-    setCurrentEpisode(prev => prev + 1);
-    setEpisodeTitle(`Capítulo ${currentEpisode + 1}`);
+    setCurrentSeason(seasonNum);
+    setPickerSeason(seasonNum);
+    setCurrentEpisode(epNum);
+    setEpisodeTitle(epName || `Capítulo ${epNum}`);
+    setActiveMenu(null);
+    setShowTrailer(false);
     setIsLoading(true);
     setIframeKey(prev => prev + 1);
+    showToast(`📺 Reproduciendo Temporada ${seasonNum} • Capítulo ${epNum}`);
+  };
+
+  const handleNextEpisode = () => {
+    stopSpeechSynthesis();
+    const nextEp = currentEpisode + 1;
+    setCurrentEpisode(nextEp);
+    setEpisodeTitle(`Capítulo ${nextEp}`);
+    setIsLoading(true);
+    setIframeKey(prev => prev + 1);
+    showToast(`📺 Siguiente: Temporada ${currentSeason} • Capítulo ${nextEp}`);
   };
 
   const handlePrevEpisode = () => {
     if (currentEpisode > 1) {
       stopSpeechSynthesis();
-      setCurrentEpisode(prev => prev - 1);
-      setEpisodeTitle(`Capítulo ${currentEpisode - 1}`);
+      const prevEp = currentEpisode - 1;
+      setCurrentEpisode(prevEp);
+      setEpisodeTitle(`Capítulo ${prevEp}`);
       setIsLoading(true);
       setIframeKey(prev => prev + 1);
+      showToast(`📺 Anterior: Temporada ${currentSeason} • Capítulo ${prevEp}`);
     }
   };
 
@@ -861,9 +958,28 @@ export default function VideoPlayerModal({
           </div>
         </div>
 
-        {/* Derecha: Botón Principal de Audio/Idioma + Subtítulos + Calidad 4K + Cerrar */}
+        {/* Derecha: Botón de Temporadas/Capítulos + Audio/Idioma + Subtítulos + Calidad 4K + Cerrar */}
         <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
           
+          {/* BOTÓN DE TEMPORADAS Y CAPÍTULOS (Permite cambiar de Temporada o Capítulo sin salir del reproductor) */}
+          <button
+            onClick={() => {
+              setPickerSeason(currentSeason);
+              setActiveMenu(activeMenu === 'episodes' ? null : 'episodes');
+            }}
+            className={`flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-black border transition-all shadow-lg ${
+              activeMenu === 'episodes'
+                ? 'bg-netflix-red text-white border-netflix-red shadow-red-900/50'
+                : 'bg-netflix-red/20 hover:bg-netflix-red/35 text-white border-netflix-red/50'
+            }`}
+            title="Seleccionar Temporada y Capítulo"
+          >
+            <Tv className="w-3.5 h-3.5 text-netflix-red shrink-0" />
+            <span>
+              {movie.isTv ? `T${currentSeason}:E${currentEpisode} • Capítulos` : 'Temp / Cap'}
+            </span>
+          </button>
+
           {/* BOTÓN DESTACADO DE PISTA DE AUDIO / IDIOMA (Siempre visible en Celular, Tablet y PC) */}
           <button
             onClick={() => setActiveMenu(activeMenu === 'audio' ? null : 'audio')}
@@ -899,20 +1015,21 @@ export default function VideoPlayerModal({
           {/* Botón de Calidad 4K */}
           <button 
             onClick={() => setActiveMenu(activeMenu === 'quality' ? null : 'quality')}
-            className="flex items-center space-x-1 px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-[11px] sm:text-xs font-black text-amber-300 border border-amber-400/30"
+            className="hidden sm:flex items-center space-x-1 px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-[11px] sm:text-xs font-black text-amber-300 border border-amber-400/30"
             title="Resolución 4K y Nitidez HDR"
           >
             <Zap className="w-3.5 h-3.5 text-amber-400 fill-current shrink-0" />
             <span>{selectedResolution}</span>
           </button>
 
-          {/* Smart TV Cast */}
+          {/* Botón Chromecast & AirPlay (Siempre visible en Celular, Tablet y PC) */}
           <button 
             onClick={() => setIsCastModalOpen(true)}
-            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/15 hidden sm:flex"
-            title="Transmitir a Smart TV"
+            className="flex items-center space-x-1 px-2.5 sm:px-3 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-400/40 text-[11px] sm:text-xs font-black shadow-lg"
+            title="Transmitir por Chromecast o AirPlay a Smart TV"
           >
-            <Cast className="w-4 h-4" />
+            <Cast className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden md:inline">TV Cast</span>
           </button>
 
           {/* Recargar */}
@@ -955,10 +1072,12 @@ export default function VideoPlayerModal({
               {/* Encabezado del Menú */}
               <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
                 <div className="flex items-center space-x-2">
+                  {activeMenu === 'episodes' && <Tv className="w-4 h-4 text-netflix-red" />}
                   {activeMenu === 'audio' && <Headphones className="w-4 h-4 text-emerald-400" />}
                   {activeMenu === 'subs' && <Subtitles className="w-4 h-4 text-emerald-400" />}
                   {activeMenu === 'quality' && <Zap className="w-4 h-4 text-amber-400" />}
                   <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                    {activeMenu === 'episodes' && 'Seleccionar Temporada y Capítulo'}
                     {activeMenu === 'audio' && 'Cambiar Pista de Audio / Idioma'}
                     {activeMenu === 'subs' && 'Subtítulos en Español e Idiomas'}
                     {activeMenu === 'quality' && 'Resolución 4K Real y Motor HDR'}
@@ -971,6 +1090,88 @@ export default function VideoPlayerModal({
                   <X className="w-4 h-4" />
                 </button>
               </div>
+
+              {/* CONTENIDO 0: SELECTOR DE TEMPORADAS Y CAPÍTULOS */}
+              {activeMenu === 'episodes' && (
+                <div className="space-y-3">
+                  {/* Píldoras de Temporadas */}
+                  <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar pb-1">
+                    {Array.from({ length: Math.max(totalSeasonsCount, 5) }, (_, i) => i + 1).map((sNum) => (
+                      <button
+                        key={sNum}
+                        onClick={() => setPickerSeason(sNum)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black shrink-0 transition-all border ${
+                          pickerSeason === sNum
+                            ? 'bg-netflix-red text-white border-netflix-red shadow-lg'
+                            : 'bg-white/5 text-gray-300 hover:text-white hover:bg-white/10 border-white/10'
+                        }`}
+                      >
+                        Temp. {sNum}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Lista de Capítulos de la Temporada Seleccionada */}
+                  {isLoadingSeasonEpisodes ? (
+                    <div className="py-8 flex flex-col items-center justify-center space-y-2">
+                      <div className="w-7 h-7 border-3 border-netflix-red border-t-transparent rounded-full animate-spin" />
+                      <span className="text-xs text-gray-400 font-bold">Cargando capítulos de Temporada {pickerSeason}...</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[55dvh] overflow-y-auto pr-1">
+                      {(seasonEpisodes.length > 0
+                        ? seasonEpisodes
+                        : Array.from({ length: 12 }, (_, idx) => ({
+                            episode_number: idx + 1,
+                            name: `Capítulo ${idx + 1}`,
+                            overview: `Episodio ${idx + 1} de la Temporada ${pickerSeason} en 4K y Español Latino.`,
+                            still_path: movie.backdrop_path || movie.poster_path,
+                            runtime: '48m'
+                          }))
+                      ).map((ep) => {
+                        const isCurrentEp = currentSeason === pickerSeason && currentEpisode === ep.episode_number;
+                        return (
+                          <button
+                            key={ep.episode_number}
+                            onClick={() => handleSelectSeasonAndEpisode(pickerSeason, ep.episode_number, ep.name)}
+                            className={`w-full text-left p-2.5 rounded-2xl border transition-all flex items-center gap-3 group ${
+                              isCurrentEp
+                                ? 'bg-netflix-red/25 border-netflix-red text-white shadow-lg'
+                                : 'bg-white/[0.04] hover:bg-white/10 border-white/10 text-gray-200'
+                            }`}
+                          >
+                            <div className="relative w-24 aspect-video bg-zinc-900 rounded-xl overflow-hidden shrink-0 border border-white/10">
+                              {ep.still_path ? (
+                                <img src={ep.still_path} alt={ep.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-gray-400">
+                                  T{pickerSeason}:E{ep.episode_number}
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                <Play className="w-4 h-4 text-white fill-current" />
+                              </div>
+                            </div>
+                            <div className="min-w-0 flex-1 space-y-0.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-black uppercase text-netflix-red">
+                                  Cap. {ep.episode_number} • T{pickerSeason}
+                                </span>
+                                <span className="text-[10px] text-gray-400 font-bold">{ep.runtime}</span>
+                              </div>
+                              <h4 className="text-xs font-black text-white truncate">{ep.name}</h4>
+                              <p className="text-[11px] text-gray-400 line-clamp-1">{ep.overview}</p>
+                            </div>
+                            {isCurrentEp && (
+                              <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* CONTENIDO 1: MENÚ DE PISTAS DE AUDIO E IDIOMA */}
               {activeMenu === 'audio' && (
@@ -1386,9 +1587,21 @@ export default function VideoPlayerModal({
                     <span className="hidden xs:inline">Sub</span>
                   </button>
 
-                  <span className="hidden md:inline text-[10px] font-black bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded">
-                    4K HDR
-                  </span>
+                  {/* Botón Directo AirPlay 2 / Chromecast en la Barra del Reproductor */}
+                  <button
+                    onClick={() => {
+                      if (CastService.isAirPlayAvailable() && videoRef.current) {
+                        CastService.triggerAirPlay(videoRef.current, resolvedNativeUrl);
+                      } else {
+                        setIsCastModalOpen(true);
+                      }
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/40 text-sky-300 text-[10px] sm:text-xs font-black flex items-center space-x-1 active:scale-95"
+                    title="Transmitir a Smart TV por AirPlay o Chromecast"
+                  >
+                    <Airplay className="w-3.5 h-3.5 shrink-0" />
+                    <span className="hidden sm:inline">AirPlay / Cast</span>
+                  </button>
 
                   <button
                     onClick={toggleFullscreen}
@@ -1499,21 +1712,48 @@ export default function VideoPlayerModal({
             )}
           </div>
 
-          {/* Botón Siguiente Episodio (Compacto en Móvil/Tablet) */}
+          {/* Controles Rápidos de Temporadas y Capítulos en la Barra Inferior */}
           {movie.isTv && (
-            <button
-              onClick={handleNextEpisode}
-              className="px-3 sm:px-4 py-1.5 rounded-xl bg-netflix-red hover:bg-red-700 text-white font-black text-[11px] sm:text-xs flex items-center space-x-1 shadow-lg shadow-red-900/40 shrink-0"
-            >
-              <span className="hidden sm:inline">Sig. Cap.</span>
-              <span>E{currentEpisode + 1}</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+            <div className="flex items-center space-x-1.5 shrink-0">
+              {currentEpisode > 1 && (
+                <button
+                  onClick={handlePrevEpisode}
+                  className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] sm:text-xs flex items-center space-x-0.5 border border-white/15"
+                  title="Capítulo Anterior"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>E{currentEpisode - 1}</span>
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  setPickerSeason(currentSeason);
+                  setActiveMenu(activeMenu === 'episodes' ? null : 'episodes');
+                }}
+                className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-black text-[11px] sm:text-xs flex items-center space-x-1 border border-white/20"
+                title="Elegir Temporada o Capítulo"
+              >
+                <Tv className="w-3.5 h-3.5 text-netflix-red shrink-0" />
+                <span className="hidden md:inline">Capítulos</span>
+                <span>(T{currentSeason}:E{currentEpisode})</span>
+              </button>
+
+              <button
+                onClick={handleNextEpisode}
+                className="px-3 sm:px-4 py-1.5 rounded-xl bg-netflix-red hover:bg-red-700 text-white font-black text-[11px] sm:text-xs flex items-center space-x-1 shadow-lg shadow-red-900/40"
+                title="Siguiente Capítulo"
+              >
+                <span className="hidden sm:inline">Sig.</span>
+                <span>E{currentEpisode + 1}</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           )}
         </div>
       </motion.footer>
 
-      {/* Modal de Transmisión a Smart TV */}
+      {/* Modal de Transmisión a Smart TV (Chromecast y AirPlay 2 en Español Latino 4K) */}
       <AnimatePresence>
         {isCastModalOpen && (
           <CastModal 
@@ -1522,6 +1762,8 @@ export default function VideoPlayerModal({
             movie={movie}
             season={currentSeason}
             episode={currentEpisode}
+            directStreamUrl={resolvedNativeUrl}
+            videoElement={videoRef.current}
           />
         )}
       </AnimatePresence>

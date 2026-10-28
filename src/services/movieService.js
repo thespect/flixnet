@@ -95,22 +95,43 @@ export const KNOWN_IMDB_IDS = {
   94605: 'tt11126994'    // Arcane
 };
 
-// Servidores 100% verificados, ordenados por velocidad, 0% anuncios y soporte de Español Latino
+// Servidores 100% verificados, ordenados por velocidad, 0% anuncios y soporte de Español Latino + Chromecast / AirPlay
 export const STREAM_PROVIDERS = [
   {
     id: 'native_hls_4k',
-    name: 'Cineflex 4K Directo',
-    subtitle: 'HLS Nativo • 0% Anuncios',
-    badge: '4K REAL • 0% ADS',
+    name: 'Cineflex 4K Latino Directo',
+    subtitle: '🇲🇽 Español Latino • Chromecast & AirPlay',
+    badge: '🇲🇽 LATINO 4K • 0% ADS',
     tag: 'Auto-Verificado',
     quality: '4K UHD / 1080p HLS Directo',
     ping: '9ms',
     isNative: true,
     isDirectHls: true,
     sandboxSafe: true,
-    language: 'Subtítulos Español Latino Auto & Multi-Audio',
-    description: 'Reproductor HTML5 + HLS directo sin iframes, 0% anuncios, 0% redirecciones, con motor de escalado 4K HDR y subtítulos en Español Latino automáticos.',
+    language: '🇲🇽 Español Latino Oficial, Castellano e Inglés 4K',
+    description: 'Reproductor HTML5 + HLS directo en Español Latino real sin iframes, 0% anuncios y transmisión directa nativa por Chromecast y AirPlay.',
     getUrl: () => ''
+  },
+  {
+    id: 'embed69_latino',
+    name: 'Embed69 Latino 4K',
+    subtitle: '🇲🇽 Doblaje Latino / Castellano / Sub',
+    badge: 'MULTI-LATINO',
+    tag: 'Doblaje Real',
+    quality: 'Full HD / 4K',
+    ping: '11ms',
+    isNative: false,
+    isDirectHls: false,
+    sandboxSafe: true,
+    language: '🇲🇽 Español Latino, 🇪🇸 Castellano y Subtitulado',
+    description: 'Clúster dedicado en Español Latino con selector integrado de idioma (LAT / ESP / SUB) y múltiples servidores verificados.',
+    getUrl: (tmdbId, isTv = false, season = 1, episode = 1, imdbId = null) => {
+      const targetId = imdbId || KNOWN_IMDB_IDS[tmdbId] || `tt${tmdbId}`;
+      const epPad = String(episode).padStart(2, '0');
+      return isTv
+        ? `https://embed69.org/f/${targetId}-${season}x${epPad}`
+        : `https://embed69.org/f/${targetId}`;
+    }
   },
   {
     id: 'playlatin_es',
@@ -124,7 +145,7 @@ export const STREAM_PROVIDERS = [
     isDirectHls: false,
     sandboxSafe: true,
     language: 'Español Latino / Castellano / Sub',
-    description: 'Servidor especializado con audio en Español Latino oficial, Castellano y Subtitulado. Incluye selector de idioma integrado y bloqueo de anuncios.',
+    description: 'Servidor especializado con audio en Español Latino oficial, Castellano y Subtitulado. Incluye selector de idioma integrado.',
     getUrl: (tmdbId, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
       const targetId = imdbId || KNOWN_IMDB_IDS[tmdbId] || tmdbId;
       const safeLang = ['latino', 'castellano', 'subtitulado'].includes(lang) ? lang : 'latino';
@@ -622,37 +643,123 @@ export const MovieAPI = {
   },
 
   async fetchSeriesDetails(tvId) {
+    const cacheKey = `tv_details_${tvId}`;
+    if (memoryCache.has(cacheKey)) return memoryCache.get(cacheKey);
+
     const apiKey = StorageService.getApiKey();
     const url = `${TMDB_BASE_URL}/tv/${tvId}?api_key=${apiKey}&language=es-MX`;
 
     try {
       const res = await fetch(url);
-      if (!res.ok) return null;
-      return await res.json();
+      if (!res.ok) throw new Error('TMDB TV details error');
+      const data = await res.json();
+      const validSeasons = (data.seasons || []).filter(s => s.season_number >= 1);
+      const enriched = {
+        ...data,
+        number_of_seasons: Math.max(data.number_of_seasons || 1, validSeasons.length || 1),
+        seasons: validSeasons
+      };
+      memoryCache.set(cacheKey, enriched);
+      return enriched;
     } catch {
-      return null;
+      const fallbackTv = CURATED_FALLBACK_TV.find(t => Number(t.id) === Number(tvId));
+      const parsedSeasons = fallbackTv?.duration ? parseInt(fallbackTv.duration, 10) : 4;
+      const numSeasons = !isNaN(parsedSeasons) && parsedSeasons > 0 ? parsedSeasons : 4;
+      return {
+        id: tvId,
+        number_of_seasons: numSeasons,
+        seasons: Array.from({ length: numSeasons }, (_, i) => ({
+          season_number: i + 1,
+          name: `Temporada ${i + 1}`,
+          episode_count: 10
+        }))
+      };
     }
   },
 
-  async fetchSeasonEpisodes(tvId, seasonNumber = 1) {
+  async fetchSeasonEpisodes(tvId, seasonNumber = 1, fallbackBackdrop = null) {
+    const cacheKey = `tv_ep_${tvId}_s${seasonNumber}`;
+    if (memoryCache.has(cacheKey)) return memoryCache.get(cacheKey);
+
     const apiKey = StorageService.getApiKey();
     const url = `${TMDB_BASE_URL}/tv/${tvId}/season/${seasonNumber}?api_key=${apiKey}&language=es-MX`;
 
     try {
       const res = await fetch(url);
-      if (!res.ok) return [];
+      if (!res.ok) throw new Error('TMDB season error');
       const data = await res.json();
-      return (data.episodes || []).map(ep => ({
+      const episodes = (data.episodes || []).map(ep => ({
         episode_number: ep.episode_number,
-        season_number: ep.season_number,
-        name: ep.name || `Episodio ${ep.episode_number}`,
-        overview: ep.overview || 'Capítulo completo disponible en 4K Ultra HD y Español Latino.',
-        still_path: ep.still_path ? `${IMAGE_BASE_URL}/w500${ep.still_path}` : null,
+        season_number: ep.season_number || seasonNumber,
+        name: ep.name || `Capítulo ${ep.episode_number}`,
+        overview: ep.overview || `Capítulo ${ep.episode_number} de la Temporada ${seasonNumber} disponible en 4K Ultra HD y Español Latino.`,
+        still_path: ep.still_path ? `${IMAGE_BASE_URL}/w500${ep.still_path}` : fallbackBackdrop,
         runtime: ep.runtime ? `${ep.runtime}m` : '48m',
         air_date: ep.air_date || ''
       }));
+
+      if (episodes.length > 0) {
+        memoryCache.set(cacheKey, episodes);
+        return episodes;
+      }
+      throw new Error('Empty episodes');
     } catch {
-      return [];
+      return Array.from({ length: 10 }, (_, idx) => ({
+        episode_number: idx + 1,
+        season_number: seasonNumber,
+        name: `Capítulo ${idx + 1} - Temporada ${seasonNumber}`,
+        overview: `Episodio ${idx + 1} de la Temporada ${seasonNumber} listo para reproducir en 4K Ultra HD y Español Latino.`,
+        still_path: fallbackBackdrop,
+        runtime: '48m',
+        air_date: ''
+      }));
+    }
+  },
+
+  async fetchMoviePartsAndSimilar(movieId) {
+    const cacheKey = `movie_parts_${movieId}`;
+    if (memoryCache.has(cacheKey)) return memoryCache.get(cacheKey);
+
+    const apiKey = StorageService.getApiKey();
+    try {
+      const res = await fetch(`${TMDB_BASE_URL}/movie/${movieId}?api_key=${apiKey}&language=es-MX&append_to_response=recommendations,similar`);
+      if (!res.ok) return { collectionName: null, parts: [], similar: [] };
+      const data = await res.json();
+
+      let collectionName = null;
+      let parts = [];
+
+      if (data.belongs_to_collection?.id) {
+        collectionName = data.belongs_to_collection.name;
+        const colRes = await fetch(`${TMDB_BASE_URL}/collection/${data.belongs_to_collection.id}?api_key=${apiKey}&language=es-MX`);
+        if (colRes.ok) {
+          const colData = await colRes.json();
+          parts = (colData.parts || [])
+            .sort((a, b) => (a.release_date || '9999').localeCompare(b.release_date || '9999'))
+            .map(p => formatMedia(p, false, 'collection'));
+        }
+      }
+
+      const rawSimilar = [
+        ...(data.recommendations?.results || []),
+        ...(data.similar?.results || [])
+      ];
+      const seen = new Set(parts.map(p => p.id));
+      seen.add(Number(movieId));
+      const similar = [];
+      for (const item of rawSimilar) {
+        if (!seen.has(item.id) && item.poster_path) {
+          seen.add(item.id);
+          similar.push(formatMedia(item, false, 'similar'));
+          if (similar.length >= 8) break;
+        }
+      }
+
+      const result = { collectionName, parts, similar };
+      memoryCache.set(cacheKey, result);
+      return result;
+    } catch {
+      return { collectionName: null, parts: [], similar: [] };
     }
   },
 

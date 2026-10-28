@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23E50914'><path d='M4 2v20l16-10L4 2z'/></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-    <meta name="description" content="Cineflex Max • Plataforma de Streaming 4K Ultra HD 100% sin anuncios, con audio en Español Latino y detección automática de enlaces." />
+    <meta name="description" content="Cineflex Max • Plataforma de Streaming 4K Ultra HD 100% sin anuncios, con audio en Español Latino, Chromecast y AirPlay nativos." />
     <title>Cineflex Max • Películas y Series en 4K Ultra HD (Español Latino)</title>
 
     <!-- Google Fonts Premium: Bebas Neue (Cine), Plus Jakarta Sans & Inter -->
@@ -15,15 +15,41 @@
     <!-- Motor HLS Nativo Local (0% Anuncios, Carga Instantánea) -->
     <script src="./hls.min.js"></script>
 
+    <!-- SDK Oficial de Google Cast (Chromecast / Google TV / Android TV para PC, Celular y Tablet) -->
+    <script>
+      window['__onGCastApiAvailable'] = function(isAvailable) {
+        if (isAvailable && window.cast && window.cast.framework) {
+          try {
+            const context = window.cast.framework.CastContext.getInstance();
+            context.setOptions({
+              receiverApplicationId: window.chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+              autoJoinPolicy: window.chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+            });
+            window.__CINEFLEX_CAST_READY__ = true;
+          } catch (e) {}
+        }
+      };
+    </script>
+    <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1" async defer></script>
+
     <!-- Escudo Total Anti-Redirección, Anti-Popups y Anti-Anuncios -->
     <script>
       (function() {
         window.__cineflexOrigin = window.location.origin;
 
-        // 1. Neutralizar window.open no solicitado (popups / popunders)
+        // 1. Neutralizar window.open no solicitado (popups / popunders), permitiendo Cast y enlaces locales
         const originalOpen = window.open;
         window.open = function(url, target, features) {
-          if (url && typeof url === 'string' && (url.startsWith(window.location.origin) || url.includes('?watch='))) {
+          if (
+            url &&
+            typeof url === 'string' &&
+            (url.startsWith(window.location.origin) ||
+              url.includes('?watch=') ||
+              url.startsWith('wvc-x-callback:') ||
+              url.startsWith('vlc:') ||
+              url.startsWith('intent:') ||
+              /^https?:\/\/(192\.168\.|10\.|172\.)/.test(url))
+          ) {
             return originalOpen.call(window, url, target, features);
           }
           console.info('[Cineflex AdGuard] Ventana emergente bloqueada:', url);
@@ -40,8 +66,8 @@
         });
       })();
     </script>
-    <script type="module" crossorigin src="./assets/index-1HMnmcWl.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-TW3AGwMt.css">
+    <script type="module" crossorigin src="./assets/index-Co6kQaMp.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-Bf3gCdiP.css">
   </head>
   <body class="bg-[#040407] text-white antialiased selection:bg-[#E50914] selection:text-white overflow-x-hidden min-h-screen">
     <div id="root"></div>

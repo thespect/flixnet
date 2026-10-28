@@ -1,6 +1,6 @@
-// Servicio Inteligente de Detección Automática de Links, Streams HLS Nativos (0% Anuncios) y Audio Español Latino
-// Verifica en paralelo qué servidores tienen la película/serie activa, extrae streams HLS (.m3u8) directos
-// sin iframes ni redirecciones, y carga subtítulos y pistas en Español Latino automáticamente.
+// Servicio Inteligente de Detección Automática de Links, Streams HLS Nativos (.m3u8 en Español Latino 4K)
+// Extrae streams .m3u8 directos en Español Latino (LAT), Castellano (ESP) e Inglés 4K sin anuncios ni iframes,
+// 100% compatibles con Chromecast, AirPlay 2 y Reproductor HTML5 Nativo en Celular, Tablet y PC.
 
 const VIDRACK_API = 'https://vidrack.created.app/api/sources';
 const VIDRACK_PROXY = 'https://colourful-orange-pl68dlfc.edgeone.dev/px.php';
@@ -11,9 +11,9 @@ const SUB_HOSTS = {
 const SUB_CORS_PROXY = 'https://little-field-fe85.instafashion662-3d4.workers.dev/?url=';
 
 const HLS_PROVIDERS = [
-  { id: 'vidora', label: 'Nodo 1 • Ultra CDN (Directo)', endpoint: 'vidora', alreadyProxied: true },
-  { id: 'nova', label: 'Nodo 2 • Nova 4K (Directo)', endpoint: 'nova', alreadyProxied: false },
-  { id: 'movy', label: 'Nodo 3 • Movy Pro (Directo)', endpoint: 'movy', alreadyProxied: false }
+  { id: 'vidora', label: '🇺🇸 Nodo 4K Master (Audio Original)', endpoint: 'vidora', alreadyProxied: true },
+  { id: 'nova', label: '🇺🇸 Nodo Nova 4K (Audio Original)', endpoint: 'nova', alreadyProxied: false },
+  { id: 'movy', label: '🇺🇸 Nodo Movy Pro (Audio Original)', endpoint: 'movy', alreadyProxied: false }
 ];
 
 const scanCache = new Map();
@@ -28,7 +28,12 @@ function b64Encode(str) {
 
 export function wrapWithStreamProxy(rawUrl, headers) {
   if (!rawUrl) return '';
-  if (rawUrl.indexOf(VIDRACK_PROXY) === 0 || rawUrl.indexOf('vidrack.created.app/proxy') !== -1) {
+  if (
+    rawUrl.indexOf(VIDRACK_PROXY) === 0 ||
+    rawUrl.indexOf('vidrack.created.app/proxy') !== -1 ||
+    rawUrl.indexOf('acek-cdn.com') !== -1 ||
+    rawUrl.indexOf('dramiyos-cdn.com') !== -1
+  ) {
     return rawUrl;
   }
   const params = [];
@@ -49,7 +54,7 @@ function isDeadStream(url, quality) {
   return false;
 }
 
-async function fetchWithTimeout(url, options = {}, timeoutMs = 4500) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = 4800) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -60,19 +65,21 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 4500) {
   }
 }
 
-// Convierte SRT a WebVTT para soporte nativo en <video>
+// Convierte SRT a WebVTT para soporte nativo en <video> y AirPlay / Chromecast
 export function srtToVtt(srtText) {
   if (!srtText) return 'WEBVTT\n\n';
   if (/^\s*WEBVTT/.test(srtText)) return srtText;
-  return 'WEBVTT\n\n' + srtText
-    .replace(/\r/g, '')
-    .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+  return (
+    'WEBVTT\n\n' +
+    srtText
+      .replace(/\r/g, '')
+      .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2')
+  );
 }
 
 export const StreamScannerService = {
   /**
-   * Extrae streams HLS (.m3u8) directos para reproducir la película o serie real
-   * en el reproductor HTML5 nativo con 0% anuncios, 0% popups y 0% iframes.
+   * Extrae streams HLS (.m3u8) directos internacionales de respaldo
    */
   async fetchDirectHlsStreams(tmdbId, isTv = false, season = 1, episode = 1) {
     const query = isTv
@@ -111,9 +118,13 @@ export const StreamScannerService = {
               url: finalUrl,
               rawUrl: st.url,
               type: (st.type || 'hls').toLowerCase(),
+              lang: 'en',
+              isLatinoDub: false,
+              isCastellanoDub: false,
               quality: qLabel,
               ping: `${ping}ms`,
               isDirectHls: true,
+              castCompatible: true,
               verified: true
             };
           });
@@ -135,18 +146,6 @@ export const StreamScannerService = {
           }
         }
       }
-    });
-
-    // Priorizar 1080p/4K directos y menor latencia
-    allStreams.sort((a, b) => {
-      const score = (q) => {
-        const s = String(q || '').toLowerCase();
-        if (s.includes('2160') || s.includes('4k')) return 1;
-        if (s.includes('1080')) return 2;
-        if (s.includes('auto')) return 3;
-        return 4;
-      };
-      return score(a.quality) - score(b.quality);
     });
 
     return {
@@ -204,7 +203,6 @@ export const StreamScannerService = {
       }
 
       const list = [...merged.values()];
-      // Ordenar poniendo Español Latino primero, luego Español, luego el resto
       list.sort((a, b) => {
         if (a.isLatino !== b.isLatino) return a.isLatino ? -1 : 1;
         if (a.isSpanish !== b.isSpanish) return a.isSpanish ? -1 : 1;
@@ -218,7 +216,7 @@ export const StreamScannerService = {
   },
 
   /**
-   * Descarga y convierte un archivo de subtítulos en Blob URL VTT local para evitar bloqueos CORS en <track>
+   * Descarga y convierte un archivo de subtítulos en Blob URL VTT local
    */
   async resolveSubtitleBlobUrl(subUrl) {
     const candidates = [
@@ -241,8 +239,10 @@ export const StreamScannerService = {
   },
 
   /**
-   * Escaneo integral automático: combina el backend local (/api/scan-streams si está activo)
-   * con el escáner directo HLS y verifica qué servidores funcionan para esta película/serie.
+   * Escaneo integral automático:
+   * 1. Extrae streams HLS (.m3u8) directos en 🇲🇽 Español Latino (LAT) y 🇪🇸 Castellano (ESP) desde el backend
+   * 2. Los coloca en la posición #1 para que el reproductor nativo 4K y Chromecast / AirPlay transmitan en Español Latino real
+   * 3. Agrega los nodos HLS 4K originales + subtítulos en Español Latino como respaldo
    */
   async scanAllWorkingLinks(movie, season = 1, episode = 1, imdbId = null) {
     if (!movie?.id) return null;
@@ -255,26 +255,38 @@ export const StreamScannerService = {
 
     const startTime = performance.now();
 
-    // Ejecutar en paralelo:
-    // 1. Extracción de streams HLS directos (.m3u8) 0% anuncios
-    // 2. Subtítulos en Español Latino
-    // 3. Escaneo de backend local (Vite middleware / PHP) para verificar PlayLatinSRC (Español Latino Doblado) y servidores embed
     const [hlsResult, subtitles, backendScan] = await Promise.all([
       this.fetchDirectHlsStreams(movie.id, isTv, season, episode),
       this.fetchSubtitles(movie.id, isTv, season, episode),
-      this.fetchBackendVerification(movie.id, isTv, season, episode, imdbId)
+      this.fetchBackendVerification(movie.id, isTv, season, episode, imdbId || movie.imdb_id)
     ]);
+
+    if (backendScan?.lanIp && typeof window !== 'undefined') {
+      window.__CINEFLEX_LAN_IP__ = backendScan.lanIp;
+    }
+
+    // Unir primero los streams HLS directos en Español Latino (LAT) y Castellano (ESP), y luego los internacionales
+    const latinoDirect = Array.isArray(backendScan?.latinoDirectStreams)
+      ? backendScan.latinoDirectStreams
+      : [];
+    const combinedDirectStreams = [
+      ...latinoDirect,
+      ...(hlsResult.streams || [])
+    ];
 
     const result = {
       tmdbId: movie.id,
       imdbId: backendScan?.imdbId || imdbId || movie.imdb_id || null,
+      lanIp: backendScan?.lanIp || null,
       isTv,
       season,
       episode,
-      directHlsStreams: hlsResult.streams || [],
+      directHlsStreams: combinedDirectStreams,
+      latinoDirectStreams: latinoDirect,
       subtitles: subtitles || [],
       latinoSources: backendScan?.latinoSources || [],
-      hasConfirmedLatinoDub: (backendScan?.latinoSources?.length || 0) > 0,
+      hasConfirmedLatinoDub:
+        latinoDirect.some((s) => s.isLatinoDub) || (backendScan?.latinoSources?.length || 0) > 0,
       serverStatuses: backendScan?.serverStatuses || {},
       scanDurationMs: Math.round(performance.now() - startTime),
       timestamp: Date.now()
@@ -293,7 +305,6 @@ export const StreamScannerService = {
       ...(imdbId ? { imdbId } : {})
     });
 
-    // Intentar primero el middleware de Vite (/api/scan-streams) y luego api.php (XAMPP)
     const endpoints = [
       `/api/scan-streams?${params.toString()}`,
       `./api.php?action=scan&${params.toString()}`
@@ -301,7 +312,7 @@ export const StreamScannerService = {
 
     for (const ep of endpoints) {
       try {
-        const res = await fetchWithTimeout(ep, { headers: { Accept: 'application/json' } }, 3800);
+        const res = await fetchWithTimeout(ep, { headers: { Accept: 'application/json' } }, 5500);
         if (!res.ok) continue;
         const ct = res.headers.get('content-type') || '';
         if (!ct.includes('json')) continue;
@@ -312,4 +323,3 @@ export const StreamScannerService = {
     return null;
   }
 };
-
