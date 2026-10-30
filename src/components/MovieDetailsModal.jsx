@@ -178,7 +178,8 @@ export default function MovieDetailsModal({
                   <Zap className="w-2.5 h-2.5 mr-0.5 fill-current" /> 4K HDR
                 </span>
                 <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9px] font-black px-2.5 py-0.5 rounded-md flex items-center">
-                  <ShieldCheck className="w-3 h-3 mr-1 text-emerald-400" /> 🇲🇽 ESPAÑOL LATINO • 0% ADS
+                  <ShieldCheck className="w-3 h-3 mr-1 text-emerald-400" />
+                  <Globe className="w-3 h-3 mr-1 text-emerald-400" /> ESPAÑOL LATINO • 0% ADS
                 </span>
               </div>
 
@@ -564,7 +565,7 @@ export default function MovieDetailsModal({
                     <Globe className="w-3.5 h-3.5 text-emerald-400 mr-1.5" /> Audio y Subtítulos
                   </h4>
                   <p className="text-xs text-gray-300">
-                    🇲🇽 Español Latino Oficial, 🇪🇸 Castellano, Voz IA en Español y Subtítulos automáticos.
+                    Español Latino Oficial (4K), Castellano, Doblaje Neutro y Subtítulos automáticos.
                   </p>
                 </div>
               </div>

@@ -14,7 +14,8 @@ import {
   Airplay,
   Radio,
   Share2,
-  QrCode
+  QrCode,
+  Globe
 } from 'lucide-react';
 import { CastService } from '../services/castService';
 import { StreamScannerService } from '../services/streamScannerService';
@@ -175,8 +176,9 @@ export default function CastModal({
           <div>
             <h3 className="text-base sm:text-xl font-black text-white flex flex-wrap items-center gap-2">
               <span>Chromecast & AirPlay 4K</span>
-              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9px] font-black px-2 py-0.5 rounded">
-                🇲🇽 ESPAÑOL LATINO DIRECTO
+              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9px] font-black px-2 py-0.5 rounded flex items-center">
+                <Globe className="w-2.5 h-2.5 mr-1 text-emerald-400" />
+                <span>ESPAÑOL LATINO DIRECTO</span>
               </span>
             </h3>
             <p className="text-[11px] sm:text-xs text-gray-400 flex items-center space-x-1.5 mt-0.5">
@@ -195,7 +197,7 @@ export default function CastModal({
           <div className="min-w-0">
             <h4 className="text-xs sm:text-sm font-black text-white truncate">{movie.title}</h4>
             <p className="text-[11px] text-emerald-400 font-bold">
-              {movie.isTv ? `Temporada ${season} • Capítulo ${episode}` : 'Película Completa'} • 🇲🇽 Audio Español Latino 4K
+              {movie.isTv ? `Temporada ${season} • Capítulo ${episode}` : 'Película Completa'} • Audio Español Latino 4K
             </p>
           </div>
           <span className="text-[9px] bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2 py-1 rounded-lg font-black shrink-0">
@@ -431,7 +433,7 @@ export default function CastModal({
           <span className="flex items-center">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 mr-1" /> AirPlay 2 • Google Cast • DLNA
           </span>
-          <span className="text-emerald-400 font-bold">🇲🇽 Español Latino 4K</span>
+          <span className="text-emerald-400 font-bold">Audio Oficial Latino 4K</span>
         </div>
 
       </motion.div>

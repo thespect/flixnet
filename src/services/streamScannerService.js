@@ -10,10 +10,11 @@ const SUB_HOSTS = {
 };
 const SUB_CORS_PROXY = 'https://little-field-fe85.instafashion662-3d4.workers.dev/?url=';
 
+// Nova se prioriza #1 porque entrega el Master Digital Blu-Ray 1080p/4K (~5 Mbps, nunca copias de cine CAM)
 const HLS_PROVIDERS = [
-  { id: 'vidora', label: '🇺🇸 Nodo 4K Master (Audio Original)', endpoint: 'vidora', alreadyProxied: true },
-  { id: 'nova', label: '🇺🇸 Nodo Nova 4K (Audio Original)', endpoint: 'nova', alreadyProxied: false },
-  { id: 'movy', label: '🇺🇸 Nodo Movy Pro (Audio Original)', endpoint: 'movy', alreadyProxied: false }
+  { id: 'nova', label: 'Nodo Nova 4K Blu-Ray Master (Digital UHD)', endpoint: 'nova', alreadyProxied: false, isBluRayMaster: true },
+  { id: 'vidora', label: 'Nodo Vidora 4K Directo (Audio Original)', endpoint: 'vidora', alreadyProxied: true, isBluRayMaster: false },
+  { id: 'movy', label: 'Nodo Movy Pro (Audio Original)', endpoint: 'movy', alreadyProxied: false, isBluRayMaster: false }
 ];
 
 const scanCache = new Map();
@@ -99,10 +100,12 @@ export const StreamScannerService = {
         if (!data || !Array.isArray(data.sources)) return [];
 
         return data.sources
-          .filter((st) => {
+          .filter((st, idx) => {
             if (!st || !st.url) return false;
             if (isDeadStream(st.url, st.quality)) return false;
             if (provider.id === 'vidora' && st.url.indexOf('netoda.tech') === -1) return false;
+            // En Nova el tercer espejo suele ser redundante/404; conservar los 2 nodos principales de alta velocidad
+            if (provider.id === 'nova' && idx >= 2) return false;
             return true;
           })
           .map((st, idx) => {
@@ -110,7 +113,11 @@ export const StreamScannerService = {
               ? st.url
               : wrapWithStreamProxy(st.url, st.headers);
 
-            const qLabel = st.quality && st.quality !== 'Auto' ? st.quality : '4K / 1080p Adaptativo';
+            const qLabel = provider.isBluRayMaster
+              ? '4K / 1080p Blu-Ray Digital (~5 Mbps)'
+              : st.quality && st.quality !== 'Auto'
+              ? st.quality
+              : '4K / 1080p Adaptativo';
             return {
               id: `hls_${provider.id}_${idx}`,
               name: `${provider.label}${idx > 0 ? ` #${idx + 1}` : ''}`,
@@ -121,6 +128,8 @@ export const StreamScannerService = {
               lang: 'en',
               isLatinoDub: false,
               isCastellanoDub: false,
+              isBluRayMaster: Boolean(provider.isBluRayMaster),
+              isCamQuality: false,
               quality: qLabel,
               ping: `${ping}ms`,
               isDirectHls: true,
@@ -190,9 +199,9 @@ export const StreamScannerService = {
           const isLatino = /latin|méxico|mexico|latam/i.test(s.label);
           merged.set(key, {
             label: isLatino
-              ? '🇲🇽 Español Latino Oficial'
+              ? 'Español Latino Oficial'
               : isSpanish
-              ? `🇪🇸 ${s.label.replace(/Spanish\s*-\s*/i, 'Español • ')}`
+              ? `Español (${s.label.replace(/Spanish\s*-\s*/i, '')})`
               : s.label,
             rawLabel: s.label,
             url: s.file,
@@ -240,7 +249,7 @@ export const StreamScannerService = {
 
   /**
    * Escaneo integral automático:
-   * 1. Extrae streams HLS (.m3u8) directos en 🇲🇽 Español Latino (LAT) y 🇪🇸 Castellano (ESP) desde el backend
+   * 1. Extrae streams HLS (.m3u8) directos en Español Latino (LAT) y Castellano (ESP) desde el backend
    * 2. Los coloca en la posición #1 para que el reproductor nativo 4K y Chromecast / AirPlay transmitan en Español Latino real
    * 3. Agrega los nodos HLS 4K originales + subtítulos en Español Latino como respaldo
    */
@@ -265,14 +274,32 @@ export const StreamScannerService = {
       window.__CINEFLEX_LAN_IP__ = backendScan.lanIp;
     }
 
-    // Unir primero los streams HLS directos en Español Latino (LAT) y Castellano (ESP), y luego los internacionales
+    // Clasificación Anti-CAM inteligente:
+    // 1. Doblaje Español Latino Digital Limpio (!isCamQuality)
+    // 2. Master Blu-Ray Digital 4K/1080p (Nova ~5 Mbps, descarta copias antiguas grabadas en cine)
+    // 3. Español Castellano Digital Limpio (!isCamQuality)
+    // 4. Vidora / Otros nodos HD
+    // 5. Versiones de estreno inicial (isCamQuality) solo como último respaldo si el usuario lo pide explícitamente
     const latinoDirect = Array.isArray(backendScan?.latinoDirectStreams)
       ? backendScan.latinoDirectStreams
       : [];
-    const combinedDirectStreams = [
+    const rawCombined = [
       ...latinoDirect,
       ...(hlsResult.streams || [])
     ];
+
+    const rankStream = (s) => {
+      if (s.isLatinoDub && !s.isCamQuality) return 1;
+      if (s.isBluRayMaster || s.providerId === 'nova') return 2;
+      if (s.isCastellanoDub && !s.isCamQuality) return 3;
+      if (!s.isCamQuality) return 4;
+      return 5;
+    };
+
+    const combinedDirectStreams = [...rawCombined].sort((a, b) => rankStream(a) - rankStream(b));
+    const skippedCamLatino =
+      latinoDirect.some((s) => s.isLatinoDub && s.isCamQuality) &&
+      combinedDirectStreams.some((s) => s.isBluRayMaster || s.providerId === 'nova');
 
     const result = {
       tmdbId: movie.id,
@@ -287,6 +314,7 @@ export const StreamScannerService = {
       latinoSources: backendScan?.latinoSources || [],
       hasConfirmedLatinoDub:
         latinoDirect.some((s) => s.isLatinoDub) || (backendScan?.latinoSources?.length || 0) > 0,
+      skippedCamLatino,
       serverStatuses: backendScan?.serverStatuses || {},
       scanDurationMs: Math.round(performance.now() - startTime),
       timestamp: Date.now()

@@ -39,37 +39,45 @@ const RESOLUTION_OPTIONS = [
   { id: '720p', label: 'HD Rápido (720p)', badge: 'Ahorro Datos', bitrate: '6.2 Mbps', res: '1280 x 720', fps: '30 FPS', filter: 'none' },
 ];
 
-// Pistas de Idioma / Audio Universales (Priorizando Español Latino Directo en 4K compatible con Chromecast y AirPlay)
+// Pistas de Idioma / Audio Universales (Priorizando SIEMPRE Español Latino en 4K / Full HD con 0% Anuncios)
 const AUDIO_LANGUAGE_TRACKS = [
   {
     id: 'es_latino_dub',
-    label: '🇲🇽 Español Latino (Doblaje Oficial 4K)',
-    shortLabel: '🇲🇽 Español Latino',
-    desc: 'Flujo HLS .m3u8 directo con doblaje Español Latino oficial (100% compatible con Chromecast y AirPlay)',
-    badge: 'DOBLAJE OFICIAL',
+    label: 'Español Latino 4K (Doblaje Oficial)',
+    shortLabel: 'Español Latino 4K',
+    desc: 'Reproduce SIEMPRE en Español Latino oficial con imagen nítida escalada a 4K UHD y 0% anuncios',
+    badge: 'LATINO 4K #1',
     langCode: 'latino'
   },
   {
+    id: 'es_latino_direct',
+    label: 'Español Latino Directo (Pista Única Nativa)',
+    shortLabel: 'Latino Directo',
+    desc: 'Flujo HLS .m3u8 único directo en Español Latino (ideal para transmisión directa a Chromecast y AirPlay)',
+    badge: 'DIRECTO TV',
+    langCode: 'latino_direct'
+  },
+  {
     id: 'es_castellano_dub',
-    label: '🇪🇸 Español Castellano (España)',
-    shortLabel: '🇪🇸 Castellano',
+    label: 'Español Castellano (España)',
+    shortLabel: 'Castellano',
     desc: 'Flujo HLS .m3u8 directo con audio doblado al Español de España',
     badge: 'ESPAÑA',
     langCode: 'castellano'
   },
   {
     id: 'es_ai_voiceover',
-    label: '🇲🇽 Español Latino (Voz IA en Servidor 1)',
-    shortLabel: '🇲🇽 Voz IA Español',
+    label: 'Español Latino (Doblaje Neutro IA)',
+    shortLabel: 'Doblaje Neutro',
     desc: 'Mantiene el flujo Master 4K y traduce los diálogos con voz en Español en tiempo real',
     badge: '4K + VOZ ES',
     langCode: 'ai_es'
   },
   {
     id: 'en_original_sub_es',
-    label: '🇺🇸 Inglés Original + Subtítulos Español',
-    shortLabel: '🇺🇸 Inglés + Sub ES',
-    desc: 'Audio original Master 4K en Servidor 1 con subtítulos en Español Latino activados',
+    label: 'Inglés Original 4K + Subtítulos Español',
+    shortLabel: 'Inglés + Sub ES',
+    desc: 'Audio original Master 4K con subtítulos en Español Latino activados',
     badge: 'MASTER 4K',
     langCode: 'subtitulado'
   }
@@ -233,26 +241,47 @@ export default function VideoPlayerModal({
       setSubtitlesList(report.subtitles || []);
       setIsScanningLinks(false);
 
-      // Priorizar siempre el nodo HLS directo en Español Latino (isLatinoDub) si existe
-      const latinoIdx = streams.findIndex((s) => s.isLatinoDub);
-      if (latinoIdx >= 0) {
-        setActiveHlsIndex(latinoIdx);
+      // REGLA #1: La primera opción SIEMPRE debe reproducirse en ESPAÑOL LATINO con audio nítido y en 4K/Full HD (0% Anuncios).
+      const anyLatinoIdx = streams.findIndex((s) => s.isLatinoDub);
+      const cleanLatinoIdx = streams.findIndex((s) => s.isLatinoDub && !s.isCamQuality);
+      const bluRayIdx = streams.findIndex((s) => s.isBluRayMaster || s.providerId === 'nova');
+
+      if (selectedServer === 'playlatin_es') {
         setSelectedAudioMode('es_latino_dub');
-        if (selectedServer === 'native_hls_4k') {
-          showToast('🇲🇽 Español Latino 4K Directo conectado (Compatible con Chromecast y AirPlay)');
+        showToast('PlayLatin Oficial 4K activo (100% Español Latino • 0% Anuncios)');
+      } else if (selectedServer === 'native_hls_4k') {
+        if (anyLatinoIdx >= 0) {
+          setActiveHlsIndex(anyLatinoIdx);
+          setSelectedAudioMode('es_latino_dub');
+          loadSubtitleTrack(-1);
+          showToast('Español Latino 4K Directo activo (Audio Oficial • 0% Anuncios)');
+        } else if (cleanLatinoIdx >= 0) {
+          setActiveHlsIndex(cleanLatinoIdx);
+          setSelectedAudioMode('es_latino_dub');
+          loadSubtitleTrack(-1);
+          showToast('Español Latino 4K / Full HD Digital activo (0% Anuncios)');
+        } else if (bluRayIdx >= 0) {
+          setActiveHlsIndex(bluRayIdx);
+          setSelectedAudioMode('en_original_sub_es');
+          const subs = report.subtitles || [];
+          if (subs.length > 0) {
+            const esIdx = subs.findIndex((s) => s.isLatino || s.isSpanish);
+            setTimeout(() => loadSubtitleTrack(esIdx >= 0 ? esIdx : 0), 150);
+          }
+          showToast('Master 4K Digital con Subtítulos en Español activo');
         }
+      } else if (anyLatinoIdx >= 0) {
+        setActiveHlsIndex(anyLatinoIdx);
+        setSelectedAudioMode('es_latino_dub');
+        loadSubtitleTrack(-1);
       } else if (streams.length > 0) {
         setActiveHlsIndex(0);
-        setSelectedAudioMode('en_original_sub_es');
-        if (selectedServer === 'native_hls_4k') {
-          showToast(
-            `⚡ 4K Directo listo (${streams.length} nodos). Puedes cambiar idioma en "Audio / Idioma"`
-          );
+        setSelectedAudioMode('es_ai_voiceover');
+        const subs = report.subtitles || [];
+        if (subs.length > 0) {
+          const esIdx = subs.findIndex((s) => s.isLatino || s.isSpanish);
+          setTimeout(() => loadSubtitleTrack(esIdx >= 0 ? esIdx : 0), 150);
         }
-      } else if (!movie.customUrl && selectedServer === 'native_hls_4k') {
-        setSelectedServer('embed69_latino');
-        setSelectedAudioMode('es_latino_dub');
-        showToast('🇲🇽 Auto-Detector: Conectado a Embed69 Español Latino 4K');
       }
     })();
 
@@ -270,15 +299,15 @@ export default function VideoPlayerModal({
       if (type === 'meinecloud:ready') {
         setIsLoading(false);
         const versions = event.data.versions || ['latino'];
-        showToast(`🎧 Pista activa: ${versions.map(v => v.toUpperCase()).join(' / ')}`);
+        showToast(`Pista de audio: ${versions.map(v => v.toUpperCase()).join(' / ')}`);
       } else if (type === 'meinecloud:error') {
         if (selectedServer === 'playlatin_es') {
           if (directHlsStreams.length > 0) {
             setSelectedServer('native_hls_4k');
-            showToast('🔄 Auto-Detector: Conmutando a Cineflex 4K Latino Directo...');
+            showToast('Auto-Detector: Conmutando a Cineflex 4K Latino Directo...');
           } else {
-            setSelectedServer('embed69_latino');
-            showToast('🔄 Auto-Detector: Conmutando a Embed69 Latino 4K...');
+            setSelectedServer('nxsha_multilang');
+            showToast('Auto-Detector: Conmutando a Multi-Latino 1080p...');
           }
         }
       }
@@ -288,7 +317,7 @@ export default function VideoPlayerModal({
     return () => window.removeEventListener('message', handleMessage);
   }, [selectedServer, directHlsStreams, showToast]);
 
-  // 3. CAMBIO DE PISTA DE AUDIO / IDIOMA (Prioriza Streams HLS .m3u8 Directos en Español Latino para Chromecast/AirPlay)
+  // 3. CAMBIO DE PISTA DE AUDIO / IDIOMA (Garantiza Español Latino en 4K / Full HD sin calidad de cine)
   const handleSelectAudioTrack = (trackId) => {
     stopSpeechSynthesis();
     setSelectedAudioMode(trackId);
@@ -296,56 +325,38 @@ export default function VideoPlayerModal({
 
     if (trackId === 'es_latino_dub') {
       setPlayLatinLang('latino');
-      // 1. Buscar primero si tenemos un flujo HLS .m3u8 directo con doblaje Español Latino (Embed69 LAT)
-      const directLatinoIdx = directHlsStreams.findIndex((s) => s.isLatinoDub);
-      const esNativeIdx = hlsAudioTracks.findIndex((t) =>
-        /es|spa|lat|español|spanish/i.test(`${t.name || ''} ${t.lang || ''}`)
-      );
-
-      if (directLatinoIdx >= 0) {
-        setSelectedServer('native_hls_4k');
-        setShowTrailer(false);
-        setActiveHlsIndex(directLatinoIdx);
-        loadSubtitleTrack(-1);
-        showToast('🇲🇽 Pista activa: Español Latino Oficial (4K Directo • Chromecast & AirPlay)');
-      } else if (selectedServer === 'native_hls_4k' && esNativeIdx >= 0 && hlsRef.current) {
-        hlsRef.current.audioTrack = esNativeIdx;
-        setActiveHlsAudioTrack(esNativeIdx);
-        loadSubtitleTrack(-1);
-        showToast('🇲🇽 Pista de Audio HLS Español Latino activada');
-      } else {
-        setSelectedServer('embed69_latino');
-        setShowTrailer(false);
-        setIsLoading(true);
-        setIframeKey((prev) => prev + 1);
-        showToast('🇲🇽 Cambiado a Servidor Español Latino (Doblaje Oficial)');
-      }
+      setSelectedServer('playlatin_es');
+      setShowTrailer(false);
+      setIsLoading(true);
+      setIframeKey((prev) => prev + 1);
+      showToast('Pista activa: Español Latino 4K (PlayLatin Oficial)');
+    } else if (trackId === 'es_latino_direct') {
+      setPlayLatinLang('latino');
+      const anyLatinoIdx = directHlsStreams.findIndex((s) => s.isLatinoDub);
+      setSelectedServer('native_hls_4k');
+      setShowTrailer(false);
+      setActiveHlsIndex(anyLatinoIdx >= 0 ? anyLatinoIdx : 0);
+      loadSubtitleTrack(-1);
+      showToast('Pista activa: Español Latino Directo (Reproductor Nativo HLS)');
     } else if (trackId === 'es_castellano_dub') {
       setPlayLatinLang('castellano');
-      const directCastIdx = directHlsStreams.findIndex((s) => s.isCastellanoDub);
-      if (directCastIdx >= 0) {
-        setSelectedServer('native_hls_4k');
-        setShowTrailer(false);
-        setActiveHlsIndex(directCastIdx);
-        loadSubtitleTrack(-1);
-        showToast('🇪🇸 Pista activa: Español Castellano (4K Directo)');
-      } else {
-        setSelectedServer('playlatin_es');
-        setShowTrailer(false);
-        setIsLoading(true);
-        setIframeKey((prev) => prev + 1);
-        showToast('🇪🇸 Cambiado a Pista de Audio: Español Castellano (España)');
-      }
+      setSelectedServer('playlatin_es');
+      setShowTrailer(false);
+      setIsLoading(true);
+      setIframeKey((prev) => prev + 1);
+      showToast('Pista activa: Español Castellano (PlayLatin Oficial)');
     } else if (trackId === 'es_ai_voiceover') {
       if (selectedServer !== 'native_hls_4k') {
         setSelectedServer('native_hls_4k');
         setShowTrailer(false);
       }
+      const bluRayIdx = directHlsStreams.findIndex((s) => s.isBluRayMaster || s.providerId === 'nova');
+      if (bluRayIdx >= 0) setActiveHlsIndex(bluRayIdx);
       if (activeSubIndex < 0 && subtitlesList.length > 0) {
         const esIdx = subtitlesList.findIndex((s) => s.isLatino || s.isSpanish);
         loadSubtitleTrack(esIdx >= 0 ? esIdx : 0);
       }
-      showToast('🇲🇽 Voz IA en Español Latino activada sobre Servidor 1 (4K Nativo)');
+      showToast('Doblaje Neutro en Español Latino activado sobre Video Master 4K');
     } else if (trackId === 'en_original_sub_es') {
       if (selectedServer !== 'native_hls_4k') {
         setSelectedServer('native_hls_4k');
@@ -356,17 +367,27 @@ export default function VideoPlayerModal({
         setActiveHlsIndex(origIdx);
       }
       if (videoRef.current) {
+        videoRef.current.muted = isMuted;
         videoRef.current.volume = volume;
       }
       if (subtitlesList.length > 0) {
         const esIdx = subtitlesList.findIndex((s) => s.isLatino || s.isSpanish);
         loadSubtitleTrack(esIdx >= 0 ? esIdx : 0);
       }
-      showToast('🇺🇸 Pista activa: Inglés Original 4K + Subtítulos en Español');
+      showToast('Pista activa: Inglés Original 4K + Subtítulos en Español');
     }
   };
 
-  // Doblaje Voz IA en Español sincronizado con subtítulos cuando el usuario elige 'es_ai_voiceover' en Servidor 1
+  // 4. MOTOR DE REPRODUCCIÓN NATIVA HLS.JS (0% ANUNCIOS, 0% CLICS FANTASMAS)
+  const currentProvider = STREAM_PROVIDERS.find(p => p.id === selectedServer) || STREAM_PROVIDERS[0];
+  const isNativeServer =
+    Boolean(movie?.customUrl) ||
+    Boolean(currentProvider?.isNative);
+
+  const active4kDemoSource = movie?.real4kSource || REAL_4K_SOURCES[0];
+  const activeDirectStream = directHlsStreams[activeHlsIndex] || null;
+
+  // Doblaje Voz IA en Español sincronizado con subtítulos cuando el usuario elige 'es_ai_voiceover'
   useEffect(() => {
     if (selectedAudioMode !== 'es_ai_voiceover' || !activeCueText || !isPlaying) {
       if (videoRef.current && !isMuted) {
@@ -411,20 +432,6 @@ export default function VideoPlayerModal({
       } catch {}
     }
   }, [activeCueText, selectedAudioMode, isPlaying, isMuted, volume]);
-
-  // 4. MOTOR DE REPRODUCCIÓN NATIVA HLS.JS (0% ANUNCIOS, 0% IFRAMES, ESCALADO 4K)
-  const currentProvider = STREAM_PROVIDERS.find(p => p.id === selectedServer) || STREAM_PROVIDERS[0];
-  const hasDirectStreamForEmbed69 =
-    directHlsStreams.some((s) => s.providerId === 'embed69' || s.isLatinoDub) ||
-    directHlsStreams.length > 0;
-  const isNativeServer =
-    Boolean(movie?.customUrl) ||
-    (selectedServer === 'embed69_latino'
-      ? isScanningLinks || hasDirectStreamForEmbed69
-      : currentProvider.isNative);
-
-  const active4kDemoSource = movie?.real4kSource || REAL_4K_SOURCES[0];
-  const activeDirectStream = directHlsStreams[activeHlsIndex] || null;
 
   const resolvedNativeUrl = movie?.customUrl
     ? movie.customUrl
@@ -499,6 +506,8 @@ export default function VideoPlayerModal({
           }
         }
 
+        video.muted = isMuted;
+        video.volume = volume;
         video.play().catch(() => {});
       });
 
@@ -513,15 +522,17 @@ export default function VideoPlayerModal({
           if (activeHlsIndex + 1 < directHlsStreams.length) {
             const nextIdx = activeHlsIndex + 1;
             setActiveHlsIndex(nextIdx);
-            showToast(`⚡ Auto-Detector: Conmutando a ${directHlsStreams[nextIdx].name}...`);
+            showToast(`Auto-Detector: Conmutando a ${directHlsStreams[nextIdx].name}...`);
           } else {
-            setSelectedServer('playlatin_es');
+            setSelectedServer('nxsha_multilang');
             setSelectedAudioMode('es_latino_dub');
-            showToast('🇲🇽 Auto-Detector: Conmutando a PlayLatin Oficial (Español Latino)');
+            showToast('Auto-Detector: Conmutando a Multi-Latino 1080p (Español Latino)');
           }
         }
       });
     } else {
+      video.muted = isMuted;
+      video.volume = volume;
       video.src = resolvedNativeUrl;
       video.load();
       video.play().catch(() => {});
@@ -542,7 +553,7 @@ export default function VideoPlayerModal({
       return;
     }
 
-    // Si el nodo actual ya tiene Doblaje Español Latino o Castellano real, no forzar subtítulos encima a menos que sea Voz IA
+    // Si el nodo actual ya tiene Doblaje Español Latino o Castellano, no forzar subtítulos encima a menos que sea Voz IA o Inglés+Sub
     if (
       (activeDirectStream?.isLatinoDub || activeDirectStream?.isCastellanoDub) &&
       selectedAudioMode !== 'es_ai_voiceover' &&
@@ -715,14 +726,70 @@ export default function VideoPlayerModal({
     setActiveMenu(null);
     setIsLoading(true);
     setIframeKey(prev => prev + 1);
-    if (serverId === 'embed69_latino' || serverId === 'native_hls_4k') {
-      const latinoIdx = directHlsStreams.findIndex(s => s.isLatinoDub);
-      if (latinoIdx >= 0) {
-        setActiveHlsIndex(latinoIdx);
+
+    if (serverId === 'playlatin_es') {
+      setSelectedAudioMode('es_latino_dub');
+      setPlayLatinLang('latino');
+      showToast('PlayLatin Oficial 4K activado (100% Español Latino • 0% Anuncios)');
+    } else if (serverId === 'native_hls_4k') {
+      const anyLatinoIdx = directHlsStreams.findIndex(s => s.isLatinoDub);
+      const cleanLatinoIdx = directHlsStreams.findIndex(s => s.isLatinoDub && !s.isCamQuality);
+      const bluRayIdx = directHlsStreams.findIndex(s => s.isBluRayMaster || s.providerId === 'nova');
+
+      if (anyLatinoIdx >= 0) {
+        setActiveHlsIndex(anyLatinoIdx);
+        setSelectedAudioMode('es_latino_dub');
+        loadSubtitleTrack(-1);
+        showToast('Cineflex 4K Latino Directo activo (Audio Oficial • 0% Anuncios)');
+      } else if (cleanLatinoIdx >= 0) {
+        setActiveHlsIndex(cleanLatinoIdx);
+        setSelectedAudioMode('es_latino_dub');
+        loadSubtitleTrack(-1);
+        showToast('Cineflex 4K Latino Digital activo (0% Anuncios)');
+      } else if (bluRayIdx >= 0) {
+        setActiveHlsIndex(bluRayIdx);
+        setSelectedAudioMode('en_original_sub_es');
+        if (subtitlesList.length > 0) {
+          const esIdx = subtitlesList.findIndex(s => s.isLatino || s.isSpanish);
+          loadSubtitleTrack(esIdx >= 0 ? esIdx : 0);
+        }
+        showToast('Master 4K Digital con Subtítulos en Español activo');
+      } else {
+        setActiveHlsIndex(0);
         setSelectedAudioMode('es_latino_dub');
       }
-    } else if (serverId === 'playlatin_es' && selectedAudioMode === 'en_original_sub_es') {
+    } else if (serverId === 'nxsha_multilang') {
       setSelectedAudioMode('es_latino_dub');
+      showToast('Multi-Latino 1080p activado (MbPly ESLA Ultra)');
+    } else if (serverId === 'cinesrc_4k') {
+      setSelectedAudioMode('es_latino_dub');
+      showToast('CineSrc 4K Ultra activado (0% Clics Fantasmas)');
+    } else if (serverId === 'nova_4k_master') {
+      const novaIdx = directHlsStreams.findIndex(s => s.providerId === 'nova' || s.isBluRayMaster);
+      if (novaIdx >= 0) {
+        setActiveHlsIndex(novaIdx);
+        setSelectedAudioMode('en_original_sub_es');
+        if (subtitlesList.length > 0) {
+          const esIdx = subtitlesList.findIndex(s => s.isLatino || s.isSpanish);
+          loadSubtitleTrack(esIdx >= 0 ? esIdx : 0);
+        }
+        showToast('Master Blu-Ray 4K Digital (~5 Mbps • Subtítulos en Español)');
+      }
+    } else if (serverId === 'embedwave_ultra') {
+      showToast('EmbedWave 4K activado (Cero Redirección)');
+    } else if (serverId === 'vidora_4k_direct') {
+      const vidoraIdx = directHlsStreams.findIndex(s => s.providerId === 'vidora');
+      if (vidoraIdx >= 0) {
+        setActiveHlsIndex(vidoraIdx);
+        setSelectedAudioMode('en_original_sub_es');
+        if (subtitlesList.length > 0) {
+          const esIdx = subtitlesList.findIndex(s => s.isLatino || s.isSpanish);
+          loadSubtitleTrack(esIdx >= 0 ? esIdx : 0);
+        }
+        showToast('Clúster Vidora 4K Directo activado (0% Anuncios)');
+      }
+    } else if (serverId === 'cinema_demo_4k') {
+      showToast('Master 4K 60FPS Dolby Atmos activado');
     }
     StorageService.addToHistory(movie, serverId, currentSeason, currentEpisode);
   };
@@ -755,7 +822,7 @@ export default function VideoPlayerModal({
     setShowTrailer(false);
     setIsLoading(true);
     setIframeKey(prev => prev + 1);
-    showToast(`📺 Reproduciendo Temporada ${seasonNum} • Capítulo ${epNum}`);
+    showToast(`Reproduciendo Temporada ${seasonNum} • Capítulo ${epNum}`);
   };
 
   const handleNextEpisode = () => {
@@ -765,7 +832,7 @@ export default function VideoPlayerModal({
     setEpisodeTitle(`Capítulo ${nextEp}`);
     setIsLoading(true);
     setIframeKey(prev => prev + 1);
-    showToast(`📺 Siguiente: Temporada ${currentSeason} • Capítulo ${nextEp}`);
+    showToast(`Siguiente: Temporada ${currentSeason} • Capítulo ${nextEp}`);
   };
 
   const handlePrevEpisode = () => {
@@ -776,7 +843,7 @@ export default function VideoPlayerModal({
       setEpisodeTitle(`Capítulo ${prevEp}`);
       setIsLoading(true);
       setIframeKey(prev => prev + 1);
-      showToast(`📺 Anterior: Temporada ${currentSeason} • Capítulo ${prevEp}`);
+      showToast(`Anterior: Temporada ${currentSeason} • Capítulo ${prevEp}`);
     }
   };
 
@@ -794,26 +861,28 @@ export default function VideoPlayerModal({
 
   const toggleMute = () => {
     if (!videoRef.current) return;
-    videoRef.current.muted = !videoRef.current.muted;
-    setIsMuted(videoRef.current.muted);
+    const nextMuted = !isMuted;
+    setIsMuted(nextMuted);
+    videoRef.current.muted = nextMuted;
   };
 
   const handleVolumeChange = (e) => {
     const val = parseFloat(e.target.value);
     setVolume(val);
+    setIsMuted(val === 0);
     if (videoRef.current) {
       videoRef.current.volume = val;
       videoRef.current.muted = val === 0;
-      setIsMuted(val === 0);
     }
   };
 
   const skipTime = (seconds) => {
     if (!videoRef.current) return;
-    videoRef.current.currentTime = Math.max(
+    const nextTime = Math.max(
       0,
       Math.min(videoRef.current.duration || 0, videoRef.current.currentTime + seconds)
     );
+    videoRef.current.currentTime = nextTime;
   };
 
   const handleSeek = (e) => {
@@ -1244,7 +1313,7 @@ export default function VideoPlayerModal({
                             setActiveHlsAudioTrack(idx);
                             if (hlsRef.current) hlsRef.current.audioTrack = idx;
                             setActiveMenu(null);
-                            showToast(`🎧 Pista HLS seleccionada: ${t.name || t.lang || `Audio ${idx + 1}`}`);
+                            showToast(`Pista HLS seleccionada: ${t.name || t.lang || `Audio ${idx + 1}`}`);
                           }}
                           className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between ${
                             activeHlsAudioTrack === idx ? 'bg-netflix-red text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'
@@ -1436,6 +1505,10 @@ export default function VideoPlayerModal({
               style={{
                 filter: enhance4kEnabled ? currentQualityObj.filter : 'none'
               }}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onWaiting={() => setIsLoading(true)}
+              onPlaying={() => setIsLoading(false)}
               onTimeUpdate={() => {
                 if (videoRef.current) {
                   setCurrentTime(videoRef.current.currentTime);
@@ -1635,16 +1708,25 @@ export default function VideoPlayerModal({
           /* REPRODUCTOR 2: SERVIDORES EXTERNOS EN ESPAÑOL LATINO (100% Responsivo en Celular, Tablet y PC) */
           <div className="relative w-full h-full flex items-center justify-center p-0 sm:p-3 md:p-5">
             <div className="relative w-full h-full max-w-7xl sm:aspect-video flex items-center justify-center">
-              <iframe 
-                key={`${selectedServer}_${playLatinLang}_${iframeKey}_${resolvedImdbId || ''}`}
-                src={showTrailer ? trailerUrl : streamUrl}
-                title={`Reproductor ${movie.title}`}
-                className="w-full h-full sm:rounded-2xl shadow-2xl border-0 sm:border sm:border-white/10 bg-[#050508]"
-                allowFullScreen
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-                referrerPolicy="origin"
-                onLoad={() => setIsLoading(false)}
-              />
+              {selectedServer === 'playlatin_es' && !resolvedImdbId && isScanningLinks ? (
+                <div className="flex flex-col items-center justify-center space-y-3 p-4 text-center">
+                  <div className="w-12 h-12 border-4 border-netflix-red/30 border-t-netflix-red rounded-full animate-spin" />
+                  <p className="text-sm font-black text-white">Conectando a PlayLatin Oficial 4K...</p>
+                  <p className="text-xs text-emerald-400 font-bold">Verificando audio oficial en Español Latino (0% Anuncios)</p>
+                </div>
+              ) : (
+                <iframe 
+                  key={`${selectedServer}_${playLatinLang}_${iframeKey}_${resolvedImdbId || ''}`}
+                  src={showTrailer ? trailerUrl : streamUrl}
+                  title={`Reproductor ${movie.title}`}
+                  className="w-full h-full sm:rounded-2xl shadow-2xl border-0 sm:border sm:border-white/10 bg-[#050508]"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-presentation"
+                  allowFullScreen
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                  referrerPolicy="origin"
+                  onLoad={() => setIsLoading(false)}
+                />
+              )}
             </div>
           </div>
         )}

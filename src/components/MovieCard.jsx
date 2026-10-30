@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Plus, Check, ChevronDown, Star, ThumbsUp, Zap } from 'lucide-react';
+import { Play, Plus, Check, ChevronDown, Star, Zap, Globe } from 'lucide-react';
 import { StreamScannerService } from '../services/streamScannerService';
 
 export default function MovieCard({ 
@@ -11,12 +11,11 @@ export default function MovieCard({
   isInMyList 
 }) {
   const [isHovered, setIsHovered] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
 
   const handleMouseEnter = () => {
     setIsHovered(true);
     // Pre-detectar y almacenar en caché los enlaces funcionales al pasar el cursor
-    // para que al dar clic en Reproducir inicie en 0 milisegundos
+    // para que al dar clic en Reproducir inicie de inmediato
     if (movie?.id) {
       StreamScannerService.scanAllWorkingLinks(movie, 1, 1).catch(() => {});
     }
@@ -27,13 +26,13 @@ export default function MovieCard({
       className="relative shrink-0 w-36 sm:w-44 md:w-52 select-none cursor-pointer"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setIsHovered(false)}
-      whileHover={{ y: -8 }}
-      transition={{ type: "spring", stiffness: 360, damping: 25 }}
+      whileHover={{ y: -6, scale: 1.02 }}
+      transition={{ type: "spring", stiffness: 380, damping: 26 }}
     >
       {/* Main Card Container - Al dar clic abre el selector de Temporadas, Capítulos y Versiones */}
       <div 
         onClick={() => onOpenDetails(movie)}
-        className="relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-[#0d0d14] border border-white/[0.08] shadow-2xl transition-all duration-300 group hover:border-netflix-red/80 hover:shadow-[0_16px_40px_rgba(0,0,0,0.85),0_0_28px_rgba(229,9,20,0.3)]"
+        className="relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-[#0d0d14] border border-white/[0.08] shadow-xl transition-all duration-300 group hover:border-netflix-red/70 hover:shadow-[0_16px_36px_rgba(229,9,20,0.25)]"
       >
         <img 
           src={movie.poster_path} 
@@ -47,12 +46,13 @@ export default function MovieCard({
         />
 
         {/* Top Badges */}
-        <div className="absolute top-2.5 left-2.5 flex items-center space-x-1 z-10">
+        <div className="absolute top-2.5 left-2.5 flex items-center space-x-1.5 z-10">
           <span className="bg-netflix-red text-white text-[9px] font-black px-1.5 py-0.5 rounded-md shadow-md tracking-wider">
             {movie.isTv ? 'SERIE' : '4K'}
           </span>
           <span className="bg-black/85 backdrop-blur-md text-[9px] font-black px-1.5 py-0.5 rounded-md text-emerald-300 border border-emerald-400/30 flex items-center shadow">
-            🇲🇽 LAT
+            <Globe className="w-2.5 h-2.5 mr-1 text-emerald-400 shrink-0" />
+            <span>LAT</span>
           </span>
         </div>
 
@@ -69,15 +69,15 @@ export default function MovieCard({
         {/* Hover Quick Action Panel */}
         <motion.div 
           initial={false}
-          animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 10 }}
+          animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 8 }}
           transition={{ duration: 0.18 }}
           className="absolute inset-0 bg-gradient-to-t from-[#09090f] via-[#09090f]/90 to-transparent flex flex-col justify-end p-3.5 z-20 pointer-events-auto"
         >
           {/* Action Buttons Row */}
           <div className="flex items-center space-x-2 mb-2.5">
             <motion.button 
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.92 }}
+              whileHover={{ scale: 1.06 }}
+              whileTap={{ scale: 0.94 }}
               onClick={(e) => {
                 e.stopPropagation();
                 onOpenDetails(movie);
@@ -90,7 +90,7 @@ export default function MovieCard({
             </motion.button>
 
             <motion.button 
-              whileHover={{ scale: 1.15 }}
+              whileHover={{ scale: 1.12 }}
               whileTap={{ scale: 0.9 }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -103,7 +103,7 @@ export default function MovieCard({
             </motion.button>
 
             <motion.button 
-              whileHover={{ scale: 1.15 }}
+              whileHover={{ scale: 1.12 }}
               whileTap={{ scale: 0.9 }}
               onClick={(e) => {
                 e.stopPropagation();

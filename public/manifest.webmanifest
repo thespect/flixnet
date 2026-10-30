@@ -1,0 +1,60 @@
+{
+  "name": "Cineflex Max • Películas y Series en 4K Ultra HD (Español Latino)",
+  "short_name": "Cineflex 4K",
+  "description": "Plataforma de Streaming 4K Ultra HD 100% sin anuncios, con audio en Español Latino, Chromecast y AirPlay nativos.",
+  "lang": "es-MX",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#040407",
+  "theme_color": "#E50914",
+  "categories": ["entertainment", "video", "movies"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Películas 4K Ultra HD",
+      "short_name": "Películas 4K",
+      "description": "Explorar estrenos en 4K Digital y Español Latino",
+      "url": "./?tab=movies",
+      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Series Completas",
+      "short_name": "Series",
+      "description": "Ver temporadas y capítulos completos en Español Latino",
+      "url": "./?tab=series",
+      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mi Lista Personal",
+      "short_name": "Mi Lista",
+      "description": "Tus películas y series guardadas",
+      "url": "./?tab=mylist",
+      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
+

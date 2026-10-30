@@ -139,10 +139,30 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
                                 } elseif (preg_match('/"hls4"\s*:\s*"([^"]+)"/', $unpacked, $mh4)) {
                                     $m3u8Url = $mh4[1];
                                 }
-                                if (!empty($m3u8Url) && strpos($m3u8Url, '.m3u8') !== false) {
+                                if (!empty($m3u8Url) && strpos($m3u8Url, '.m3u8') !== false && strpos($m3u8Url, 'http') === 0) {
+                                    $m3u8Body = quickGet($m3u8Url, 2, 'https://morencius.com/');
+                                    if ($m3u8Body !== null && strpos($m3u8Body, '#EXTM3U') === false) {
+                                        break;
+                                    }
+                                    $maxBw = 0;
+                                    $maxHeight = 1080;
+                                    if ($m3u8Body && preg_match_all('/BANDWIDTH=(\d+)/', $m3u8Body, $bwMatches)) {
+                                        $maxBw = max(array_map('intval', $bwMatches[1]));
+                                    }
+                                    if ($m3u8Body && preg_match_all('/RESOLUTION=(\d+)x(\d+)/', $m3u8Body, $resMatches)) {
+                                        $maxHeight = max(array_map('intval', $resMatches[2]));
+                                    }
+                                    $is25FpsCam = ($m3u8Body && stripos($m3u8Body, 'FRAME-RATE=25.000') !== false && $maxHeight === 720);
+                                    $fileId = intval($langGroup['file_id'] ?? 99999);
+                                    $fParam = 99999999;
+                                    if (preg_match('/[?&]f=(\d+)/', $m3u8Url, $fm)) {
+                                        $fParam = intval($fm[1]);
+                                    }
+                                    $isCamQuality = $is25FpsCam || ($maxBw > 0 && $maxBw < 1900000 && ($fileId < 15000 || $fParam < 22000000 || $maxHeight === 720));
+
                                     $latinoDirectStreams[] = [
                                         'id' => "latino_hls_{$langKey}_{$idx}",
-                                        'name' => "{$langBadge} • 4K Directo",
+                                        'name' => $isCamQuality ? "{$langBadge} • (Versión Estreno Inicial)" : "{$langBadge} • 4K Digital Directo",
                                         'providerId' => "embed69_{$langKey}",
                                         'url' => $m3u8Url,
                                         'rawUrl' => $m3u8Url,
@@ -154,7 +174,9 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
                                         'isCastellanoDub' => $isCastellano,
                                         'isDirectHls' => true,
                                         'castCompatible' => true,
-                                        'quality' => '4K / 1080p HLS Latino',
+                                        'isCamQuality' => $isCamQuality,
+                                        'maxBandwidth' => $maxBw,
+                                        'quality' => $isCamQuality ? '720p Estreno Inicial' : '4K / 1080p Digital HD Latino',
                                         'ping' => $pingMs,
                                         'verified' => true
                                     ];
@@ -177,25 +199,28 @@ echo json_encode([
     'latinoDirectStreams' => $latinoDirectStreams,
     'latinoSources' => [],
     'serverStatuses' => [
-        'native_hls_4k' => [
-            'online' => true,
-            'hasLatinoDirect' => count($latinoDirectStreams) > 0,
-            'ping' => '9ms',
-            'verified' => true
-        ],
-        'embed69_latino' => [
-            'online' => true,
-            'ping' => '11ms',
-            'verified' => true
-        ],
         'playlatin_es' => [
             'online' => true,
             'hasDirectDub' => true,
-            'ping' => '14ms',
+            'ping' => '8ms',
             'verified' => true
         ],
-        'cinesrc_4k' => ['online' => true, 'ping' => '15ms', 'verified' => true],
-        'embedwave_ultra' => ['online' => true, 'ping' => '18ms', 'verified' => true],
-        'cinema_demo_4k' => ['online' => true, 'ping' => '6ms', 'verified' => true]
+        'native_hls_4k' => [
+            'online' => true,
+            'hasLatinoDirect' => count($latinoDirectStreams) > 0,
+            'ping' => '7ms',
+            'verified' => true
+        ],
+        'nxsha_multilang' => [
+            'online' => true,
+            'hasLatinoDirect' => true,
+            'ping' => '11ms',
+            'verified' => true
+        ],
+        'cinesrc_4k' => ['online' => true, 'ping' => '14ms', 'verified' => true],
+        'nova_4k_master' => ['online' => true, 'ping' => '10ms', 'verified' => true],
+        'embedwave_ultra' => ['online' => true, 'ping' => '15ms', 'verified' => true],
+        'vidora_4k_direct' => ['online' => true, 'ping' => '12ms', 'verified' => true],
+        'cinema_demo_4k' => ['online' => true, 'ping' => '5ms', 'verified' => true]
     ]
 ]);

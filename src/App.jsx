@@ -17,7 +17,24 @@ import {
   CURATED_FALLBACK_MOVIES,
   CURATED_FALLBACK_TV
 } from './services/movieService';
-import { Film, Sparkles, Heart, Search, ShieldCheck, Zap, Tv, Cast, Home, Flame } from 'lucide-react';
+import { 
+  Film, 
+  Sparkles, 
+  Heart, 
+  Search, 
+  ShieldCheck, 
+  Zap, 
+  Tv, 
+  Cast, 
+  Home, 
+  Flame,
+  Rocket,
+  Compass,
+  Skull,
+  Star,
+  Clock,
+  Radio
+} from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home'); // 'home' | 'movies' | 'series' | 'trending' | 'mylist'
@@ -377,6 +394,9 @@ export default function App() {
             {featuredItem && (
               <HeroBanner 
                 movie={featuredItem}
+                featuredPool={allFeaturedPool}
+                featuredIndex={featuredIndex}
+                onSelectFeaturedIndex={(idx) => setFeaturedIndex(idx)}
                 onPlay={(m) => handleStartPlay(m, 1, 1)}
                 onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                 onToggleMyList={handleToggleMyList}
@@ -387,11 +407,35 @@ export default function App() {
             )}
 
             {/* Píldoras de Filtro con Enlaces Rápidos */}
-            <div className="-mt-10 sm:-mt-14 relative z-30 mb-4">
+            <div className="-mt-10 sm:-mt-14 relative z-30 mb-3">
               <CategoryPills 
                 activeCategory={activeCategoryFilter}
                 onSelectCategory={setActiveCategoryFilter}
               />
+            </div>
+
+            {/* Barra de Estado de Calidad Digital 4K, Anti-CAM y 0% Anuncios */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 relative z-20">
+              <div className="glass-card rounded-2xl px-3.5 py-2.5 sm:px-5 sm:py-3 flex flex-wrap items-center justify-between gap-2 text-[11px] sm:text-xs border border-white/10 shadow-xl">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+                  <span className="inline-flex items-center space-x-1.5 text-amber-300 font-black">
+                    <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
+                    <span>Filtro Anti-CAM Activo: Prioriza Master 4K / Blu-Ray Digital</span>
+                  </span>
+                  <span className="hidden md:inline text-white/20">|</span>
+                  <span className="inline-flex items-center space-x-1.5 text-emerald-300 font-bold">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>5 Clústeres Nativos Directos (0% Anuncios • 0% Iframes)</span>
+                  </span>
+                </div>
+                <button
+                  onClick={() => setCastItemForModal(featuredItem || catalog.trendingMovies[0])}
+                  className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold border border-white/10 transition-colors ml-auto"
+                >
+                  <Cast className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Chromecast & AirPlay 2</span>
+                </button>
+              </div>
             </div>
 
             {/* Filas de Contenido Dinámico */}
@@ -400,7 +444,9 @@ export default function App() {
               {/* Continuar Viendo */}
               {history.length > 0 && activeCategoryFilter === 'all' && (
                 <MovieRow 
-                  title="🕒 Continuar Viendo"
+                  icon={Clock}
+                  title="Continuar Viendo"
+                  badgeText="Historial"
                   movies={history}
                   onPlay={(m) => handleStartPlay(m, m.lastSeason || 1, m.lastEpisode || 1)}
                   onOpenDetails={(m) => setSelectedMovieForDetails(m)}
@@ -413,7 +459,9 @@ export default function App() {
               {activeCategoryFilter === 'action' ? (
                 <>
                   <MovieRow 
-                    title="💥 Películas de Acción y Adrenalina Pura"
+                    icon={Rocket}
+                    title="Películas de Acción y Adrenalina"
+                    badgeText="Master 4K"
                     movies={catalog.actionMovies}
                     onPlay={(m) => handleStartPlay(m, 1, 1)}
                     onOpenDetails={(m) => setSelectedMovieForDetails(m)}
@@ -421,7 +469,9 @@ export default function App() {
                     isInMyList={isInMyList}
                   />
                   <MovieRow 
-                    title="💥 Series de Acción y Aventura Épica"
+                    icon={Rocket}
+                    title="Series de Acción y Aventura Épica"
+                    badgeText="Temporadas"
                     movies={catalog.actionTv}
                     onPlay={(m) => handleStartPlay(m, 1, 1)}
                     onOpenDetails={(m) => setSelectedMovieForDetails(m)}
@@ -432,7 +482,9 @@ export default function App() {
               ) : activeCategoryFilter === 'scifi' ? (
                 <>
                   <MovieRow 
-                    title="🌌 Ciencia Ficción y Multiversos Cinemáticos"
+                    icon={Compass}
+                    title="Ciencia Ficción & Multiversos"
+                    badgeText="Digital UHD"
                     movies={catalog.scifiMovies}
                     onPlay={(m) => handleStartPlay(m, 1, 1)}
                     onOpenDetails={(m) => setSelectedMovieForDetails(m)}
@@ -440,7 +492,9 @@ export default function App() {
                     isInMyList={isInMyList}
                   />
                   <MovieRow 
-                    title="🚀 Series de Ficción Futurista"
+                    icon={Compass}
+                    title="Series de Ficción Futurista"
+                    badgeText="Completas"
                     movies={catalog.scifiTv}
                     onPlay={(m) => handleStartPlay(m, 1, 1)}
                     onOpenDetails={(m) => setSelectedMovieForDetails(m)}
@@ -450,7 +504,9 @@ export default function App() {
                 </>
               ) : activeCategoryFilter === 'horror' ? (
                 <MovieRow 
-                  title="🎃 Noches de Terror, Suspenso y Misterio"
+                  icon={Skull}
+                  title="Terror, Suspenso y Misterio"
+                  badgeText="HDR10+"
                   movies={catalog.horrorMovies}
                   onPlay={(m) => handleStartPlay(m, 1, 1)}
                   onOpenDetails={(m) => setSelectedMovieForDetails(m)}
@@ -459,7 +515,9 @@ export default function App() {
                 />
               ) : activeCategoryFilter === 'animation' ? (
                 <MovieRow 
-                  title="🎨 Series Animadas, Animación 3D y Anime"
+                  icon={Sparkles}
+                  title="Animación 3D, Dibujos y Anime"
+                  badgeText="Audio Latino"
                   movies={catalog.animationTv}
                   onPlay={(m) => handleStartPlay(m, 1, 1)}
                   onOpenDetails={(m) => setSelectedMovieForDetails(m)}
@@ -469,7 +527,9 @@ export default function App() {
               ) : activeCategoryFilter === 'topRated' ? (
                 <>
                   <MovieRow 
-                    title="⭐ Obras Maestras del Cine (Mejor Calificadas)"
+                    icon={Star}
+                    title="Obras Maestras del Cine"
+                    badgeText="Aclamadas"
                     movies={catalog.topRatedMovies}
                     onPlay={(m) => handleStartPlay(m, 1, 1)}
                     onOpenDetails={(m) => setSelectedMovieForDetails(m)}
@@ -477,7 +537,9 @@ export default function App() {
                     isInMyList={isInMyList}
                   />
                   <MovieRow 
-                    title="⭐ Series de TV Aclamadas por la Crítica"
+                    icon={Tv}
+                    title="Series de TV Aclamadas por la Crítica"
+                    badgeText="Premios de Oro"
                     movies={catalog.topRatedTv}
                     onPlay={(m) => handleStartPlay(m, 1, 1)}
                     onOpenDetails={(m) => setSelectedMovieForDetails(m)}
@@ -523,7 +585,9 @@ export default function App() {
                   {(!showMoviesOnly) && (
                     <>
                       <MovieRow 
-                        title="📺 Series Más Aclamadas en 4K (Temporadas Completas)"
+                        icon={Tv}
+                        title="Series Más Aclamadas en 4K"
+                        badgeText="Temporadas"
                         movies={catalog.popularTv}
                         onPlay={(m) => handleStartPlay(m, 1, 1)}
                         onOpenDetails={(m) => setSelectedMovieForDetails(m)}
@@ -533,7 +597,9 @@ export default function App() {
                       />
 
                       <MovieRow 
-                        title="🔥 Series en Tendencia Global (Español Latino)"
+                        icon={Flame}
+                        title="Series en Tendencia Global"
+                        badgeText="Top Latino"
                         movies={catalog.trendingTv}
                         onPlay={(m) => handleStartPlay(m, 1, 1)}
                         onOpenDetails={(m) => setSelectedMovieForDetails(m)}
@@ -543,7 +609,9 @@ export default function App() {
                       />
 
                       <MovieRow 
-                        title="💥 Series de Acción y Aventura Épica"
+                        icon={Rocket}
+                        title="Series de Acción y Aventura Épica"
+                        badgeText="Temporadas"
                         movies={catalog.actionTv}
                         onPlay={(m) => handleStartPlay(m, 1, 1)}
                         onOpenDetails={(m) => setSelectedMovieForDetails(m)}
@@ -563,7 +631,9 @@ export default function App() {
                   {(!showSeriesOnly) && (
                     <>
                       <MovieRow 
-                        title="💎 Estrenos en Cine y Cartelera (4K Ultra HD)"
+                        icon={Film}
+                        title="Estrenos en Cine y Cartelera"
+                        badgeText="Digital 4K"
                         movies={catalog.nowPlayingMovies}
                         onPlay={(m) => handleStartPlay(m, 1, 1)}
                         onOpenDetails={(m) => setSelectedMovieForDetails(m)}
@@ -573,7 +643,9 @@ export default function App() {
                       />
 
                       <MovieRow 
-                        title="💥 Películas de Acción y Adrenalina Pura"
+                        icon={Rocket}
+                        title="Películas de Acción y Adrenalina Pura"
+                        badgeText="Master 4K"
                         movies={catalog.actionMovies}
                         onPlay={(m) => handleStartPlay(m, 1, 1)}
                         onOpenDetails={(m) => setSelectedMovieForDetails(m)}
@@ -583,7 +655,9 @@ export default function App() {
                       />
 
                       <MovieRow 
-                        title="🌌 Ciencia Ficción y Multiversos Cinemáticos"
+                        icon={Compass}
+                        title="Ciencia Ficción y Multiversos Cinemáticos"
+                        badgeText="Digital UHD"
                         movies={catalog.scifiMovies}
                         onPlay={(m) => handleStartPlay(m, 1, 1)}
                         onOpenDetails={(m) => setSelectedMovieForDetails(m)}
@@ -593,7 +667,9 @@ export default function App() {
                       />
 
                       <MovieRow 
-                        title="🎃 Noches de Terror y Suspenso"
+                        icon={Skull}
+                        title="Noches de Terror, Suspenso y Misterio"
+                        badgeText="HDR10+"
                         movies={catalog.horrorMovies}
                         onPlay={(m) => handleStartPlay(m, 1, 1)}
                         onOpenDetails={(m) => setSelectedMovieForDetails(m)}
@@ -603,7 +679,9 @@ export default function App() {
                       />
 
                       <MovieRow 
-                        title="⭐ Obras Maestras Mejor Calificadas de la Historia"
+                        icon={Star}
+                        title="Obras Maestras Mejor Calificadas de la Historia"
+                        badgeText="Aclamadas"
                         movies={catalog.topRatedMovies}
                         onPlay={(m) => handleStartPlay(m, 1, 1)}
                         onOpenDetails={(m) => setSelectedMovieForDetails(m)}
@@ -617,7 +695,9 @@ export default function App() {
                   {/* Series de Animación & Anime */}
                   {(!showMoviesOnly) && (
                     <MovieRow 
-                      title="🎨 Series Animadas y Anime Populares"
+                      icon={Sparkles}
+                      title="Series Animadas y Anime Populares"
+                      badgeText="Audio Latino"
                       movies={catalog.animationTv}
                       onPlay={(m) => handleStartPlay(m, 1, 1)}
                       onOpenDetails={(m) => setSelectedMovieForDetails(m)}
@@ -635,36 +715,46 @@ export default function App() {
 
       </main>
 
-      {/* Barra de Navegación Inferior Móvil (Mobile Bottom Bar) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-2xl border-t border-white/10 px-4 py-2 flex items-center justify-around text-[10px] font-bold">
-        <button 
-          onClick={() => handleTabChange('home')}
-          className={`flex flex-col items-center space-y-1 ${activeTab === 'home' && !searchQuery ? 'text-netflix-red' : 'text-gray-400'}`}
-        >
-          <Home className="w-5 h-5" />
-          <span>Inicio</span>
-        </button>
-        <button 
-          onClick={() => handleTabChange('movies')}
-          className={`flex flex-col items-center space-y-1 ${activeTab === 'movies' ? 'text-netflix-red' : 'text-gray-400'}`}
-        >
-          <Film className="w-5 h-5" />
-          <span>Películas</span>
-        </button>
-        <button 
-          onClick={() => handleTabChange('series')}
-          className={`flex flex-col items-center space-y-1 ${activeTab === 'series' ? 'text-netflix-red' : 'text-gray-400'}`}
-        >
-          <Tv className="w-5 h-5" />
-          <span>Series</span>
-        </button>
-        <button 
-          onClick={() => handleTabChange('mylist')}
-          className={`flex flex-col items-center space-y-1 ${activeTab === 'mylist' ? 'text-netflix-red' : 'text-gray-400'}`}
-        >
-          <Heart className="w-5 h-5" />
-          <span>Mi Lista</span>
-        </button>
+      {/* Barra de Navegación Inferior Flotante Móvil y Tablet (Apple Liquid Glass PWA) */}
+      <nav className="lg:hidden fixed bottom-3 inset-x-3 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md z-40 pointer-events-none">
+        <div className="pointer-events-auto bg-[#0a0a14]/85 backdrop-blur-2xl border border-white/15 rounded-2xl p-1.5 shadow-[0_14px_45px_rgba(0,0,0,0.92)] flex items-center justify-around text-[10px] font-bold">
+          {[
+            { id: 'home', label: 'Inicio', icon: Home },
+            { id: 'movies', label: 'Películas', icon: Film },
+            { id: 'series', label: 'Series', icon: Tv },
+            { id: 'trending', label: 'Top 4K', icon: Flame },
+            { id: 'mylist', label: 'Mi Lista', icon: Heart, badgeCount: myList.length }
+          ].map((nav) => {
+            const IconComp = nav.icon;
+            const isActive = activeTab === nav.id && !searchQuery;
+            return (
+              <button
+                key={nav.id}
+                onClick={() => handleTabChange(nav.id)}
+                className={`relative flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition-all ${
+                  isActive ? 'text-white font-black' : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="mobileBottomNavPill"
+                    className="absolute inset-0 bg-netflix-red rounded-xl shadow-lg shadow-red-950/50"
+                    transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                  />
+                )}
+                <div className="relative z-10">
+                  <IconComp className={`w-4 h-4 ${isActive ? 'text-white' : ''}`} />
+                  {nav.badgeCount > 0 && (
+                    <span className="absolute -top-1.5 -right-2.5 bg-netflix-red text-white text-[9px] font-black px-1.5 rounded-full border border-black">
+                      {nav.badgeCount}
+                    </span>
+                  )}
+                </div>
+                <span className="relative z-10 mt-0.5 text-[10px] tracking-tight">{nav.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </nav>
 
       {/* Footer Estilo Apple TV+ / Netflix */}
