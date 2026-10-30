@@ -88,3 +88,6 @@ cineflex/
 ## ⚖️ Nota Legal
 Esta aplicación es un proyecto educativo de indexación de enlaces multimedia. No aloja, distribuye ni almacena ningún contenido audiovisual en servidores propios.
 # flixnet
+
+
+pinche ia jaja
