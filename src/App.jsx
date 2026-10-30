@@ -11,6 +11,9 @@ import VideoPlayerModal from './components/VideoPlayerModal';
 import ApiKeyModal from './components/ApiKeyModal';
 import CastModal from './components/CastModal';
 import QuickLauncher from './components/QuickLauncher';
+import BrandHubs from './components/BrandHubs';
+import AdBlockModal from './components/AdBlockModal';
+import { AdBlockerService } from './services/adBlockerService';
 import { 
   MovieAPI, 
   StorageService,
@@ -37,12 +40,22 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('home'); // 'home' | 'movies' | 'series' | 'trending' | 'mylist'
+  const [activeTab, setActiveTab] = useState('home'); // 'home' | 'movies' | 'series' | 'brands' | 'trending' | 'mylist'
   const [activeCategoryFilter, setActiveCategoryFilter] = useState('all');
+  const [activeBrandHub, setActiveBrandHub] = useState(null);
   const [isApiKeySet, setIsApiKeySet] = useState(StorageService.hasCustomKey());
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [isAdBlockModalOpen, setIsAdBlockModalOpen] = useState(false);
+  const [blockedAdsCount, setBlockedAdsCount] = useState(AdBlockerService.getBlockedCount());
   const [castItemForModal, setCastItemForModal] = useState(null);
   const [isLoadingCatalog, setIsLoadingCatalog] = useState(true);
+
+  useEffect(() => {
+    const unsub = AdBlockerService.subscribe((count) => {
+      setBlockedAdsCount(count);
+    });
+    return () => unsub();
+  }, []);
   
   // Categorías de Películas y Series
   const [catalog, setCatalog] = useState({
@@ -85,7 +98,7 @@ export default function App() {
       const cat = params.get('category');
       const query = params.get('q');
 
-      if (tab && ['home', 'movies', 'series', 'trending', 'mylist'].includes(tab)) {
+      if (tab && ['home', 'movies', 'series', 'brands', 'trending', 'mylist'].includes(tab)) {
         setActiveTab(tab);
       }
       if (cat) {
@@ -254,6 +267,8 @@ export default function App() {
         setActiveTab={handleTabChange}
         onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
         onOpenCastModal={() => setCastItemForModal(featuredItem || catalog.trendingMovies[0])}
+        onOpenAdBlockModal={() => setIsAdBlockModalOpen(true)}
+        blockedAdsCount={blockedAdsCount}
         isApiKeySet={isApiKeySet}
         myListCount={myList.length}
       />
@@ -359,6 +374,80 @@ export default function App() {
               </div>
             )}
           </motion.div>
+        ) : activeTab === 'brands' ? (
+          /* VISTA: UNIVERSOS Y FRANQUICIAS (DISNEY+, MARVEL, HBO MAX, STAR WARS, NETFLIX, DC) */
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+            className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 space-y-8"
+          >
+            <div className="border-b border-white/10 pb-4">
+              <span className="text-[10px] font-black uppercase tracking-widest text-netflix-red bg-netflix-red/10 border border-netflix-red/30 px-2.5 py-0.5 rounded-full inline-block mb-2">
+                ESTUDIOS Y FRANQUICIAS OFICIALES
+              </span>
+              <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
+                Universos Cinematográficos 4K
+              </h2>
+              <p className="text-sm text-gray-400 mt-1">
+                Explora el catálogo oficial de Marvel, Disney+, Star Wars, HBO Max, DC y Netflix Originals con doblaje al Español Latino y cero publicidad.
+              </p>
+            </div>
+
+            <BrandHubs 
+              activeHub={activeBrandHub}
+              onSelectHub={(hub) => {
+                setActiveBrandHub(hub.id);
+                if (hub.filterKey) {
+                  setActiveCategoryFilter(hub.filterKey);
+                }
+              }}
+            />
+
+            {/* Filas destacadas según el universo */}
+            <div className="space-y-6">
+              <MovieRow 
+                icon={Zap}
+                title="Marvel Cinematic Universe (UCM 4K)"
+                badgeText="Acción 4K"
+                movies={catalog.actionMovies}
+                onPlay={(m) => handleStartPlay(m, 1, 1)}
+                onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                onToggleMyList={handleToggleMyList}
+                isInMyList={isInMyList}
+              />
+              <MovieRow 
+                icon={Flame}
+                title="Warner Bros & HBO Max Originals"
+                badgeText="Prestige TV"
+                movies={catalog.topRatedTv}
+                onPlay={(m) => handleStartPlay(m, 1, 1)}
+                onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                onToggleMyList={handleToggleMyList}
+                isInMyList={isInMyList}
+              />
+              <MovieRow 
+                icon={Sparkles}
+                title="Disney & Animación Pixar 4K"
+                badgeText="Familiar"
+                movies={catalog.animationTv}
+                onPlay={(m) => handleStartPlay(m, 1, 1)}
+                onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                onToggleMyList={handleToggleMyList}
+                isInMyList={isInMyList}
+              />
+              <MovieRow 
+                icon={Compass}
+                title="Star Wars Saga & Ficción Espacial"
+                badgeText="Digital UHD"
+                movies={catalog.scifiMovies}
+                onPlay={(m) => handleStartPlay(m, 1, 1)}
+                onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                onToggleMyList={handleToggleMyList}
+                isInMyList={isInMyList}
+              />
+            </div>
+          </motion.div>
         ) : isLoadingCatalog ? (
           /* SKELETON SCREEN FLUIDO ESTILO APPLE DESIGN */
           <div className="pt-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 animate-pulse">
@@ -414,27 +503,51 @@ export default function App() {
               />
             </div>
 
-            {/* Barra de Estado de Calidad Digital 4K, Anti-CAM y 0% Anuncios */}
+            {/* Franquicias y Estudios Oficiales Estilo Disney+ y HBO Max */}
+            <BrandHubs 
+              activeHub={activeBrandHub}
+              onSelectHub={(hub) => {
+                setActiveBrandHub(hub.id);
+                if (hub.filterKey) {
+                  setActiveCategoryFilter(hub.filterKey);
+                }
+              }}
+            />
+
+            {/* Barra de Estado de Calidad Digital 4K, Anti-CAM y CineShield 0% Anuncios */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 relative z-20">
               <div className="glass-card rounded-2xl px-3.5 py-2.5 sm:px-5 sm:py-3 flex flex-wrap items-center justify-between gap-2 text-[11px] sm:text-xs border border-white/10 shadow-xl">
                 <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                   <span className="inline-flex items-center space-x-1.5 text-amber-300 font-black">
                     <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
-                    <span>Filtro Anti-CAM Activo: Prioriza Master 4K / Blu-Ray Digital</span>
+                    <span>Filtro Anti-CAM Activo: Prioriza Master 4K Digital</span>
                   </span>
                   <span className="hidden md:inline text-white/20">|</span>
-                  <span className="inline-flex items-center space-x-1.5 text-emerald-300 font-bold">
+                  <button 
+                    onClick={() => setIsAdBlockModalOpen(true)}
+                    className="inline-flex items-center space-x-1.5 text-emerald-300 font-bold hover:text-emerald-200 transition-colors cursor-pointer"
+                    title="Ver registro de anuncios bloqueados"
+                  >
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>5 Clústeres Nativos Directos (0% Anuncios • 0% Iframes)</span>
-                  </span>
+                    <span>CineShield™ Activo: {blockedAdsCount} Popups y Anuncios Bloqueados</span>
+                  </button>
                 </div>
-                <button
-                  onClick={() => setCastItemForModal(featuredItem || catalog.trendingMovies[0])}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold border border-white/10 transition-colors ml-auto"
-                >
-                  <Cast className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Chromecast & AirPlay 2</span>
-                </button>
+                <div className="flex items-center space-x-2 ml-auto">
+                  <button
+                    onClick={() => setIsAdBlockModalOpen(true)}
+                    className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 font-black border border-emerald-500/35 transition-colors"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Bloqueador 4K</span>
+                  </button>
+                  <button
+                    onClick={() => setCastItemForModal(featuredItem || catalog.trendingMovies[0])}
+                    className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold border border-white/10 transition-colors"
+                  >
+                    <Cast className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Chromecast & AirPlay 2</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -722,7 +835,7 @@ export default function App() {
             { id: 'home', label: 'Inicio', icon: Home },
             { id: 'movies', label: 'Películas', icon: Film },
             { id: 'series', label: 'Series', icon: Tv },
-            { id: 'trending', label: 'Top 4K', icon: Flame },
+            { id: 'brands', label: 'Estudios', icon: Sparkles },
             { id: 'mylist', label: 'Mi Lista', icon: Heart, badgeCount: myList.length }
           ].map((nav) => {
             const IconComp = nav.icon;
@@ -840,6 +953,16 @@ export default function App() {
             isOpen={isApiKeyModalOpen}
             onClose={() => setIsApiKeyModalOpen(false)}
             onKeySaved={(hasKey) => setIsApiKeySet(hasKey)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Control CineShield™ AdBlocker */}
+      <AnimatePresence>
+        {isAdBlockModalOpen && (
+          <AdBlockModal 
+            isOpen={isAdBlockModalOpen}
+            onClose={() => setIsAdBlockModalOpen(false)}
           />
         )}
       </AnimatePresence>

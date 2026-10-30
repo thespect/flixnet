@@ -30,7 +30,9 @@ import {
 import { STREAM_PROVIDERS, StorageService, MovieAPI, REAL_4K_SOURCES, KNOWN_IMDB_IDS } from '../services/movieService';
 import { StreamScannerService } from '../services/streamScannerService';
 import { CastService } from '../services/castService';
+import { AdBlockerService } from '../services/adBlockerService';
 import CastModal from './CastModal';
+import AdBlockModal from './AdBlockModal';
 
 // Opciones de Resolución y Escalado 4K Real
 const RESOLUTION_OPTIONS = [
@@ -143,6 +145,18 @@ export default function VideoPlayerModal({
   const [realResolution, setRealResolution] = useState('3840 x 2160 (4K UHD)');
   const [touchSeekIndicator, setTouchSeekIndicator] = useState(null); // 'left' | 'right' | null
   const lastTapRef = useRef({ time: 0, side: null });
+  const [isAdBlockModalOpen, setIsAdBlockModalOpen] = useState(false);
+  const [blockedAdsCount, setBlockedAdsCount] = useState(AdBlockerService.getBlockedCount());
+
+  useEffect(() => {
+    const unsub = AdBlockerService.subscribe((count, ev) => {
+      setBlockedAdsCount(count);
+      if (ev?.reason) {
+        showToast(`CineShield: ${ev.reason}`);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   const showToast = useCallback((msg) => {
     setAutoSwitchNotice(msg);
@@ -1025,10 +1039,17 @@ export default function VideoPlayerModal({
                   T{currentSeason}:E{currentEpisode}
                 </span>
               )}
-              <span className="hidden md:inline-flex bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[9px] font-black px-2 py-0.5 rounded-full items-center shrink-0">
-                <ShieldCheck className="w-3 h-3 mr-1 text-emerald-400" /> 
-                0% ANUNCIOS
-              </span>
+              <button
+                onClick={() => setIsAdBlockModalOpen(true)}
+                className="hidden sm:inline-flex items-center space-x-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/35 text-[9px] font-black px-2.5 py-0.5 rounded-full shadow-sm transition-all cursor-pointer shrink-0"
+                title="CineShield™ 4K AdBlocker Activo (Clic para ver amenazas neutralizadas)"
+              >
+                <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0" />
+                <span>CineShield™ 0% ADS</span>
+                <span className="bg-emerald-500/25 text-emerald-200 px-1 py-0.1 rounded font-mono text-[8px]">
+                  {blockedAdsCount}
+                </span>
+              </button>
             </div>
 
             <div className="flex items-center space-x-1.5 text-[10px] sm:text-[11px] text-gray-400 font-medium truncate">
@@ -1862,6 +1883,16 @@ export default function VideoPlayerModal({
             episode={currentEpisode}
             directStreamUrl={resolvedNativeUrl}
             videoElement={videoRef.current}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Control CineShield™ AdBlocker */}
+      <AnimatePresence>
+        {isAdBlockModalOpen && (
+          <AdBlockModal 
+            isOpen={isAdBlockModalOpen}
+            onClose={() => setIsAdBlockModalOpen(false)}
           />
         )}
       </AnimatePresence>

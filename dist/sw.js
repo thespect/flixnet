@@ -1,8 +1,8 @@
-// Service Worker Oficial de Cineflex Max 4K PWA
-// Almacena en caché la interfaz adaptativa y pósters para arranque instantáneo,
+// Service Worker Oficial de Cineflex Max 4K PWA + CineShield™ AdBlock Filter
+// Almacena en caché la interfaz adaptativa y bloquea redes publicitarias a nivel de red,
 // sin interceptar flujos de video .m3u8/.ts ni llamadas dinámicas de streaming.
 
-const CACHE_NAME = 'cineflex-max-4k-v3';
+const CACHE_NAME = 'cineflex-max-4k-v4';
 const APP_SHELL = [
   './',
   './index.html',
@@ -12,6 +12,31 @@ const APP_SHELL = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png'
+];
+
+// Lista negra de dominios y palabras clave de publicidad / popups para neutralizar a nivel de red
+const AD_PATTERNS = [
+  'adsterra',
+  'monetag',
+  'propellerads',
+  'popcash',
+  'popads',
+  'clickadu',
+  'exoclick',
+  'trafficjunky',
+  'hilltopads',
+  'admaven',
+  'adnxs',
+  'doubleclick',
+  'taboola',
+  'outbrain',
+  'mgid',
+  '1xbet',
+  'bet365',
+  'betano',
+  'caliente.mx',
+  'adservice',
+  'popunder'
 ];
 
 self.addEventListener('install', (event) => {
@@ -39,9 +64,23 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
-  if (req.method !== 'GET') return;
-
   const url = new URL(req.url);
+  const hrefLower = url.href.toLowerCase();
+
+  // 1. CINESHIELD AD-BLOCK: Neutraliza peticiones a dominios de publicidad y rastreo a nivel de red
+  for (const adPattern of AD_PATTERNS) {
+    if (hrefLower.includes(adPattern)) {
+      event.respondWith(
+        new Response('', {
+          status: 204,
+          statusText: 'No Content (Blocked by CineShield 4K)'
+        })
+      );
+      return;
+    }
+  }
+
+  if (req.method !== 'GET') return;
 
   // Nunca interceptar streams de video (.m3u8, .ts, .mp4), API de escaneo ni SDK de Cast
   if (
@@ -100,4 +139,3 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
-

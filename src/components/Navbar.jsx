@@ -25,8 +25,10 @@ export default function Navbar({
   setActiveTab, 
   onOpenApiKeyModal, 
   onOpenCastModal,
+  onOpenAdBlockModal,
   isApiKeySet,
-  myListCount
+  myListCount,
+  blockedAdsCount = 38
 }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -105,6 +107,7 @@ export default function Navbar({
     { id: 'home', label: 'Inicio' },
     { id: 'movies', label: 'Películas 4K', badge: 'Digital UHD' },
     { id: 'series', label: 'Series', badge: 'Temporadas' },
+    { id: 'brands', label: 'Franquicias', badge: 'Disney+ • HBO' },
     { id: 'trending', label: 'Tendencias' },
     { id: 'mylist', label: 'Mi Lista', count: myListCount },
   ];
@@ -148,9 +151,22 @@ export default function Navbar({
                   MAX 4K • LATINO
                 </span>
               </div>
-              <span className="hidden xl:inline-flex items-center space-x-1 bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[9px] font-black px-2.5 py-0.5 rounded-full ml-1 shadow-sm">
-                <ShieldCheck className="w-3 h-3 mr-0.5 text-emerald-400" /> 0% ADS • ANTI-CAM
-              </span>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenAdBlockModal?.();
+                }}
+                className="hidden xl:inline-flex items-center space-x-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/35 text-[9px] font-black px-2.5 py-0.5 rounded-full ml-1 shadow-sm transition-all cursor-pointer"
+                title="Abrir panel de CineShield™ AdBlocker 4K"
+              >
+                <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0" />
+                <span>CineShield™ 0% ADS</span>
+                <span className="bg-emerald-500/25 text-emerald-200 px-1 py-0.1 rounded font-mono text-[8px]">
+                  {blockedAdsCount}
+                </span>
+              </motion.button>
             </motion.div>
 
             {/* Desktop Navigation Links */}
@@ -338,6 +354,21 @@ export default function Navbar({
                         <Zap className="w-3.5 h-3.5" />
                         <span>Anti-CAM: Master 4K Digital</span>
                       </div>
+                      <button
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          onOpenAdBlockModal?.();
+                        }}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-bold text-xs flex items-center justify-between transition-colors"
+                      >
+                        <span className="flex items-center space-x-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>CineShield™ AdBlock</span>
+                        </span>
+                        <span className="bg-emerald-500/20 px-1.5 py-0.5 rounded font-mono text-[9px]">
+                          {blockedAdsCount}
+                        </span>
+                      </button>
                       <button
                         onClick={() => {
                           setShowProfileMenu(false);

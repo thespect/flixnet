@@ -142,3 +142,33 @@ input[type="range"].touch-scrubber:active::-webkit-slider-thumb {
   font-family: 'Bebas Neue', 'Impact', sans-serif;
   letter-spacing: 2px;
 }
+
+/* Efectos Estilo Disney+, HBO Max y Netflix */
+.disney-glow {
+  box-shadow: 0 0 25px rgba(0, 114, 210, 0.35);
+}
+
+.hbo-glow {
+  box-shadow: 0 0 25px rgba(157, 43, 230, 0.35);
+}
+
+.netflix-glow {
+  box-shadow: 0 0 25px rgba(229, 9, 20, 0.35);
+}
+
+.brand-sheen {
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 45%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.05) 55%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+}
+
+.brand-sheen:hover {
+  background-position: -100% 0;
+  transition: background-position 0.75s ease-in-out;
+}
