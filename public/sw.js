@@ -36,7 +36,14 @@ const AD_PATTERNS = [
   'betano',
   'caliente.mx',
   'adservice',
-  'popunder'
+  'popunder',
+  'onclickmega',
+  'highcpmgate',
+  'clksite',
+  'ad2up',
+  'waptap',
+  'tsyndicate',
+  'exdynsrv'
 ];
 
 self.addEventListener('install', (event) => {

@@ -138,10 +138,22 @@ export const STREAM_PROVIDERS = [
     language: 'Español Latino Oficial (Doblaje Real)',
     description: 'Servidor #1 preferido y verificado: audio oficial en Español Latino, carga instantánea, calidad Full HD/4K y blindaje estricto contra anuncios y ventanas emergentes.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
-      const targetId = imdbId || KNOWN_IMDB_IDS[id] || id;
+      const validImdb = (imdbId && String(imdbId).startsWith('tt'))
+        ? imdbId
+        : (KNOWN_IMDB_IDS[id] && String(KNOWN_IMDB_IDS[id]).startsWith('tt'))
+          ? KNOWN_IMDB_IDS[id]
+          : null;
+
+      // Si no hay IMDb ID válido, redirigir a MbPly Latino para garantizar que NUNCA cargue una película equivocada
+      if (!validImdb) {
+        return isTv
+          ? `https://web.nxsha.app/embed/tv/${id}/${season}/${episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
+          : `https://web.nxsha.app/embed/movie/${id}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
+      }
+
       return isTv
-        ? `https://playlatinsrc.co/custom/serial/${targetId}/${season}/${episode}?lang=${lang}&autoplay=1`
-        : `https://playlatinsrc.co/custom/movie/${targetId}?lang=${lang}&autoplay=1`;
+        ? `https://playlatinsrc.co/custom/serial/${validImdb}/${season}/${episode}?lang=${lang}&autoplay=1`
+        : `https://playlatinsrc.co/custom/movie/${validImdb}?lang=${lang}&autoplay=1`;
     }
   },
   {
@@ -192,7 +204,7 @@ export const STREAM_PROVIDERS = [
     description: 'Servidor de alto bitrate con blindaje Sandbox estricto: bloquea el 100% de ventanas emergentes, redirecciones y clics fantasmas.',
     getUrl: (id, isTv = false, season = 1, episode = 1) =>
       isTv
-        ? `https://cinesrc.st/embed/tv/${id}/${season}/${episode}?color=E50914&autoplay=true`
+        ? `https://cinesrc.st/embed/tv/${id}?s=${season}&e=${episode}&color=E50914&autoplay=true`
         : `https://cinesrc.st/embed/movie/${id}?color=E50914&autoplay=true`
   },
   {

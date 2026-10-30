@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Info, Plus, Check, Volume2, VolumeX, Sparkles, Zap, Cast, ShieldCheck, Radio, Globe, Youtube, Star, ChevronRight } from 'lucide-react';
+import { Play, Info, Plus, Check, Volume2, VolumeX, Sparkles, Zap, Cast, ShieldCheck, Globe, Youtube, Star, ChevronRight } from 'lucide-react';
 import { MovieAPI } from '../services/movieService';
 
 export default function HeroBanner({ 
@@ -37,7 +37,7 @@ export default function HeroBanner({
   const topCarouselItems = featuredPool.slice(0, 6);
 
   return (
-    <div className="relative h-[83dvh] sm:h-[88dvh] min-h-[540px] sm:min-h-[650px] max-h-[920px] w-full select-none overflow-hidden bg-[#040407]">
+    <div className="relative h-[85dvh] sm:h-[90dvh] min-h-[560px] sm:min-h-[660px] max-h-[940px] w-full select-none overflow-hidden bg-[#040407]">
       
       {/* Background: High-Res 4K Backdrop or On-Demand Video Trailer */}
       <div className="absolute inset-0 w-full h-full overflow-hidden">
@@ -54,20 +54,20 @@ export default function HeroBanner({
         ) : (
           <motion.img 
             key={movie.id}
-            initial={{ scale: 1.08, opacity: 0 }}
+            initial={{ scale: 1.05, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             src={movie.backdrop_path || movie.poster_path} 
             alt={movie.title}
             fetchPriority="high"
-            className="w-full h-full object-cover object-center filter brightness-[0.76] contrast-[1.09] saturate-[1.15]"
+            className="w-full h-full object-cover object-center filter brightness-[0.82] contrast-[1.08] saturate-[1.12]"
           />
         )}
 
-        {/* Cinematic Multi-Layer Gradient Mesh */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#040407] via-[#040407]/85 to-transparent w-full md:w-3/4 z-10" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#040407] via-[#040407]/40 to-transparent z-10" />
-        <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-[#040407]/95 via-[#040407]/50 to-transparent z-10" />
+        {/* Cinematic Multi-Layer Vignette Gradientes (Estilo Netflix / HBO Max) */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#040407] via-[#040407]/75 to-transparent w-full md:w-3/4 z-10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#040407] via-[#040407]/30 to-transparent z-10" />
+        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#040407]/90 via-[#040407]/40 to-transparent z-10" />
       </div>
 
       {/* Main Content Container */}
@@ -75,25 +75,20 @@ export default function HeroBanner({
         
         <motion.div 
           key={movie.id}
-          initial={{ opacity: 0, y: 22 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           className="max-w-2xl space-y-3 sm:space-y-4"
         >
-          {/* Top Franchise Badges Stack */}
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs font-black">
-            <span className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-gradient-to-r from-netflix-red to-rose-600 text-white tracking-wider text-[9px] sm:text-[10px] uppercase shadow-lg shadow-red-900/50">
-              <Sparkles className="w-3 h-3 mr-1 inline" /> {movie.isTv ? 'SERIE 4K ESTRELLA' : 'MASTER 4K DIGITAL'}
+          {/* Studio Wordmark / Category Pill (Limpio y Elegante) */}
+          <div className="flex items-center space-x-2 text-xs font-bold">
+            <span className="text-[10px] font-black uppercase tracking-widest text-netflix-red bg-netflix-red/10 border border-netflix-red/30 px-2.5 py-0.5 rounded-md">
+              {movie.isTv ? 'SERIE DE TELEVISIÓN' : 'ESTRENO EN CINE 4K'}
             </span>
-            <span className="bg-amber-400/20 text-amber-300 border border-amber-400/40 text-[9px] sm:text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center shadow">
-              <Zap className="w-3 h-3 mr-1 fill-current" /> 2160p HDR10+ • ANTI-CAM
-            </span>
-            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/35 text-[9px] sm:text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center shadow">
-              <Globe className="w-3 h-3 mr-1.5 text-emerald-400 shrink-0" />
-              <span>ESPAÑOL LATINO</span>
-            </span>
-            <span className="hidden sm:inline-flex bg-white/10 backdrop-blur-md text-white border border-white/20 text-[10px] font-black px-2.5 py-1 rounded-lg items-center">
-              <ShieldCheck className="w-3 h-3 mr-1 text-emerald-400" /> 0% ANUNCIOS
+            <span className="text-gray-400 font-bold">•</span>
+            <span className="text-emerald-400 font-extrabold flex items-center space-x-1">
+              <Globe className="w-3 h-3 text-emerald-400 inline" />
+              <span>Español Latino Oficial</span>
             </span>
           </div>
 
@@ -102,27 +97,28 @@ export default function HeroBanner({
             {movie.title}
           </h1>
 
-          {/* Metadata, Genres & Auto-Verified Indicator */}
-          <div className="flex flex-wrap items-center gap-2 text-[11px] sm:text-xs text-gray-200 font-bold">
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 font-black">
-              <Star className="w-3 h-3 mr-1 fill-amber-400 text-amber-400" />
-              {movie.vote_average || '8.8'}
+          {/* Metadata Bar (Estilo Auténtico Netflix: Coincidencia, Año, Edad, 4K UHD, Audio) */}
+          <div className="flex flex-wrap items-center gap-2 text-[11px] sm:text-xs text-gray-200 font-semibold">
+            <span className="text-emerald-400 font-black">98% para ti</span>
+            <span>•</span>
+            <span className="text-gray-300 font-bold">{movie.release_date?.slice(0, 4) || '2024'}</span>
+            <span>•</span>
+            <span className="border border-white/30 text-gray-300 text-[10px] font-bold px-1.5 py-0.2 rounded">
+              {movie.age_rating || '16+'}
             </span>
-            {movie.release_date && (
-              <span className="text-gray-300 font-black">{String(movie.release_date).slice(0, 4)}</span>
-            )}
-            <span className="text-emerald-400 font-black flex items-center">
-              <Radio className="w-3.5 h-3.5 mr-1 animate-pulse" />
-              Calidad Blu-Ray Verificada
+            <span>•</span>
+            <span className="border border-white/30 text-gray-300 text-[10px] font-bold px-1.5 py-0.2 rounded">
+              4K ULTRA HD
             </span>
-            {movie.genres?.slice(0, 3).map((genre, idx) => (
-              <span key={idx} className="bg-white/10 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-white/10">
-                {genre}
+            <span>•</span>
+            <span className="border border-white/30 text-gray-300 text-[10px] font-bold px-1.5 py-0.2 rounded">
+              DOLBY ATMOS
+            </span>
+            {movie.genres?.slice(0, 2).map((genre, idx) => (
+              <span key={idx} className="hidden sm:inline text-gray-400">
+                • {genre}
               </span>
             ))}
-            <span className="hidden sm:inline-block border border-white/30 text-gray-200 text-[10px] px-2 py-0.5 rounded font-black tracking-wider">
-              DOLBY ATMOS 5.1
-            </span>
           </div>
 
           {/* Overview */}
@@ -130,52 +126,57 @@ export default function HeroBanner({
             {movie.overview}
           </p>
 
-          {/* Adaptive Buttons CTA */}
-          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 pt-1 sm:pt-2">
+          {/* Botones de Acción Estilo Streaming Oficial (Play Blanco + Más Info Translúcido) */}
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 pt-2">
+            
+            {/* Botón Principal Reproducir: Blanco Sólido con Texto Negro (Auténtico Netflix / HBO Max) */}
             <motion.button 
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.96 }}
               onClick={() => movie.isTv ? onOpenDetails(movie) : onPlay(movie, 1, 1)}
-              className="flex items-center justify-center space-x-2 px-5 sm:px-7 py-3 sm:py-3.5 rounded-2xl bg-gradient-to-r from-netflix-red to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-black text-xs sm:text-base shadow-[0_12px_35px_rgba(229,9,20,0.5)] transition-all cursor-pointer border border-white/15"
+              className="flex items-center justify-center space-x-2 px-6 sm:px-8 py-3 rounded-xl bg-white hover:bg-neutral-200 text-black font-black text-xs sm:text-base shadow-[0_10px_30px_rgba(255,255,255,0.25)] transition-all cursor-pointer"
             >
-              <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current shrink-0" />
-              <span>{movie.isTv ? 'Elegir Temporada / Capítulo' : 'Reproducir en 4K'}</span>
+              <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-black text-black shrink-0" />
+              <span>{movie.isTv ? 'Ver Temporadas' : 'Reproducir'}</span>
             </motion.button>
 
+            {/* Botón Secundario: Más Información Translúcido */}
             <motion.button 
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.96 }}
               onClick={() => onOpenDetails(movie)}
-              className="flex items-center justify-center space-x-2 px-4 sm:px-6 py-3 sm:py-3.5 rounded-2xl bg-white/15 hover:bg-white/25 backdrop-blur-xl text-white font-bold text-xs sm:text-base transition-colors border border-white/20 cursor-pointer shadow-lg"
+              className="flex items-center justify-center space-x-2 px-5 sm:px-7 py-3 rounded-xl bg-neutral-600/60 hover:bg-neutral-600/80 backdrop-blur-md text-white font-bold text-xs sm:text-base transition-colors border border-white/10 cursor-pointer shadow-lg"
             >
               <Info className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-              <span>{movie.isTv ? 'Temporadas y Capítulos' : 'Saga / Servidores 4K'}</span>
+              <span>Más información</span>
             </motion.button>
 
+            {/* Mi Lista */}
             <motion.button 
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.92 }}
               onClick={() => onToggleMyList(movie)}
-              className="p-3 sm:p-3.5 rounded-2xl bg-black/65 hover:bg-black/85 backdrop-blur-md text-white border border-white/20 transition-all shadow-xl cursor-pointer"
+              className="w-11 h-11 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white border border-white/20 flex items-center justify-center transition-all shadow-xl cursor-pointer"
               title={isInMyList ? "Quitar de Mi Lista" : "Añadir a Mi Lista"}
             >
-              {isInMyList ? <Check className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" /> : <Plus className="w-4 h-4 sm:w-5 sm:h-5" />}
+              {isInMyList ? <Check className="w-5 h-5 text-emerald-400" /> : <Plus className="w-5 h-5" />}
             </motion.button>
 
+            {/* Transmitir a Smart TV */}
             {onOpenCast && (
               <motion.button 
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.92 }}
                 onClick={() => onOpenCast(movie)}
-                className="p-3 sm:p-3.5 rounded-2xl bg-black/65 hover:bg-black/85 backdrop-blur-md text-white border border-white/20 transition-all shadow-xl cursor-pointer"
-                title="Transmitir a Smart TV (Chromecast / AirPlay)"
+                className="w-11 h-11 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white border border-white/20 flex items-center justify-center transition-all shadow-xl cursor-pointer"
+                title="Transmitir a Smart TV (AirPlay / Chromecast)"
               >
-                <Cast className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
+                <Cast className="w-5 h-5 text-emerald-400" />
               </motion.button>
             )}
           </div>
 
-          {/* Interactive Hero Carousel Indicators */}
+          {/* Carrusel de Puntos de Navegación del Hero */}
           {topCarouselItems.length > 1 && onSelectFeaturedIndex && (
             <div className="pt-2 flex items-center space-x-2">
               {topCarouselItems.map((item, idx) => {
@@ -186,8 +187,8 @@ export default function HeroBanner({
                     onClick={() => onSelectFeaturedIndex(idx)}
                     className={`h-1.5 rounded-full transition-all duration-300 ${
                       isCurr
-                        ? 'w-8 sm:w-10 bg-netflix-red shadow-[0_0_10px_rgba(229,9,20,0.9)]'
-                        : 'w-2.5 bg-white/25 hover:bg-white/50'
+                        ? 'w-8 bg-netflix-red shadow-[0_0_8px_rgba(229,9,20,0.9)]'
+                        : 'w-2 bg-white/25 hover:bg-white/50'
                     }`}
                     title={item.title}
                   />
@@ -196,9 +197,9 @@ export default function HeroBanner({
               {onRandomizeFeatured && (
                 <button
                   onClick={onRandomizeFeatured}
-                  className="ml-2 text-[11px] font-bold text-gray-300 hover:text-white flex items-center space-x-0.5 transition-colors"
+                  className="ml-2 text-[11px] font-bold text-gray-400 hover:text-white flex items-center space-x-0.5 transition-colors"
                 >
-                  <span>Siguiente estreno</span>
+                  <span>Siguiente</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               )}
@@ -209,22 +210,22 @@ export default function HeroBanner({
 
       </div>
 
-      {/* Bottom Right Controls: Preview Trailer Toggle & Age Rating Badge */}
+      {/* Controles Inferiores Derecha: Audio del Tráiler y Calificación de Edad */}
       <div className="absolute right-0 bottom-24 sm:bottom-32 md:bottom-36 z-20 flex items-center space-x-2.5 pr-4 sm:pr-8">
         {trailerKey && (
           <motion.button 
             whileHover={{ scale: 1.06 }}
             whileTap={{ scale: 0.94 }}
             onClick={() => setShowVideoTrailer(!showVideoTrailer)}
-            className={`px-3 sm:px-3.5 py-2 rounded-full backdrop-blur-md text-[11px] sm:text-xs font-bold border flex items-center space-x-1.5 shadow-xl transition-all cursor-pointer ${
+            className={`px-3 sm:px-3.5 py-1.5 rounded-full backdrop-blur-md text-[11px] font-bold border flex items-center space-x-1.5 shadow-xl transition-all cursor-pointer ${
               showVideoTrailer
                 ? 'bg-netflix-red text-white border-netflix-red'
-                : 'bg-black/65 hover:bg-black/85 text-gray-200 border-white/20'
+                : 'bg-black/60 hover:bg-black/80 text-gray-200 border-white/20'
             }`}
-            title="Activar/Desactivar vista previa de tráiler en fondo"
+            title="Activar o desactivar tráiler de fondo"
           >
-            <Youtube className="w-4 h-4" />
-            <span className="hidden sm:inline">{showVideoTrailer ? 'Ocultar Tráiler' : 'Vista Previa 4K'}</span>
+            <Youtube className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{showVideoTrailer ? 'Ocultar Tráiler' : 'Ver Tráiler'}</span>
           </motion.button>
         )}
 
@@ -233,14 +234,14 @@ export default function HeroBanner({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setIsMuted(!isMuted)}
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/65 hover:bg-black/85 backdrop-blur-md text-white border border-white/20 flex items-center justify-center shadow-xl transition-all cursor-pointer"
-            title={isMuted ? "Activar audio del tráiler" : "Silenciar"}
+            className="w-9 h-9 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white border border-white/20 flex items-center justify-center shadow-xl transition-all cursor-pointer"
+            title={isMuted ? "Activar audio" : "Silenciar"}
           >
-            {isMuted ? <VolumeX className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300" /> : <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
+            {isMuted ? <VolumeX className="w-4 h-4 text-gray-300" /> : <Volume2 className="w-4 h-4 text-white" />}
           </motion.button>
         )}
 
-        <div className="border-l-4 border-netflix-red bg-black/80 backdrop-blur-md px-3 py-1 text-[11px] sm:text-xs font-black text-gray-200 rounded-r">
+        <div className="border-l-4 border-netflix-red bg-black/80 backdrop-blur-md px-3 py-1 text-[11px] font-black text-gray-200 rounded-r">
           {movie.age_rating || '16+'}
         </div>
       </div>

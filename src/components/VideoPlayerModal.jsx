@@ -175,7 +175,11 @@ export default function VideoPlayerModal({
   }, []);
 
   useEffect(() => {
-    return () => stopSpeechSynthesis();
+    AdBlockerService.setWatchingVideo(true);
+    return () => {
+      AdBlockerService.setWatchingVideo(false);
+      stopSpeechSynthesis();
+    };
   }, [stopSpeechSynthesis]);
 
   // Cargar Temporadas y Capítulos para el Selector Integrado del Reproductor
@@ -400,6 +404,31 @@ export default function VideoPlayerModal({
 
   const active4kDemoSource = movie?.real4kSource || REAL_4K_SOURCES[0];
   const activeDirectStream = directHlsStreams[activeHlsIndex] || null;
+
+  // Watchdog de Auto-Failover Inteligente: si un servidor tarda más de 4.8s en conectar o responder,
+  // conmuta de forma proactiva al siguiente servidor verificado en Español Latino
+  useEffect(() => {
+    if (!isLoading || showTrailer || isNativeServer) return;
+
+    const timer = setTimeout(() => {
+      if (isLoading) {
+        const fallbackChain = ['playlatin_es', 'nxsha_multilang', 'cinesrc_4k', 'embedwave_ultra'];
+        const currentIdx = fallbackChain.indexOf(selectedServer);
+        if (currentIdx >= 0 && currentIdx < fallbackChain.length - 1) {
+          const next = fallbackChain[currentIdx + 1];
+          setSelectedServer(next);
+          setIframeKey((k) => k + 1);
+          setIsLoading(true);
+          const prov = STREAM_PROVIDERS.find((p) => p.id === next);
+          showToast(`⚡ Auto-Failover: Conmutando a ${prov?.name || 'servidor alternativo'} (Español Latino)...`);
+        } else {
+          setIsLoading(false);
+        }
+      }
+    }, 4800);
+
+    return () => clearTimeout(timer);
+  }, [isLoading, selectedServer, showTrailer, isNativeServer, showToast]);
 
   // Doblaje Voz IA en Español sincronizado con subtítulos cuando el usuario elige 'es_ai_voiceover'
   useEffect(() => {
@@ -1741,10 +1770,9 @@ export default function VideoPlayerModal({
                   src={showTrailer ? trailerUrl : streamUrl}
                   title={`Reproductor ${movie.title}`}
                   className="w-full h-full sm:rounded-2xl shadow-2xl border-0 sm:border sm:border-white/10 bg-[#050508]"
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-presentation"
                   allowFullScreen
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-                  referrerPolicy="origin"
+                  referrerPolicy="no-referrer-when-downgrade"
                   onLoad={() => setIsLoading(false)}
                 />
               )}

@@ -48,11 +48,11 @@ export default function MovieCard({
         {/* Top Badges */}
         <div className="absolute top-2.5 left-2.5 flex items-center space-x-1.5 z-10">
           <span className="bg-netflix-red text-white text-[9px] font-black px-1.5 py-0.5 rounded-md shadow-md tracking-wider">
-            {movie.isTv ? 'SERIE' : '4K'}
+            {movie.isTv ? 'SERIE' : '4K UHD'}
           </span>
-          <span className="bg-black/85 backdrop-blur-md text-[9px] font-black px-1.5 py-0.5 rounded-md text-emerald-300 border border-emerald-400/30 flex items-center shadow">
+          <span className="bg-black/85 backdrop-blur-md text-[9px] font-black px-1.5 py-0.5 rounded-md text-emerald-300 border border-emerald-400/25 flex items-center shadow">
             <Globe className="w-2.5 h-2.5 mr-1 text-emerald-400 shrink-0" />
-            <span>LAT</span>
+            <span>LATINO</span>
           </span>
         </div>
 
@@ -121,15 +121,15 @@ export default function MovieCard({
             {movie.title}
           </h4>
 
-          {/* Metadata badges row */}
+          {/* Metadata badges row estilo Netflix / Disney+ */}
           <div className="flex items-center space-x-1.5 text-[10px] text-gray-300 mt-1">
-            <span className="text-emerald-400 font-extrabold">0% Ads</span>
+            <span className="text-emerald-400 font-extrabold">98% para ti</span>
             <span>•</span>
-            <span className="text-amber-300 font-bold flex items-center">
-              <Zap className="w-2.5 h-2.5 mr-0.5 fill-current" /> 4K HDR
-            </span>
+            <span className="text-white font-bold">{movie.release_date ? movie.release_date.slice(0, 4) : '2024'}</span>
             <span>•</span>
-            <span className="text-gray-200 font-bold">Latino</span>
+            <span className="text-gray-300 font-bold">4K UHD</span>
+            <span>•</span>
+            <span className="text-gray-300 font-bold">Latino</span>
           </div>
 
           {/* Genres */}

@@ -56,7 +56,17 @@ const AD_DOMAINS_BLACKLIST = [
   'adtrue.com',
   'adcash.com',
   'popmyads.com',
-  'adxad.com'
+  'adxad.com',
+  'onclickmega.com',
+  'highcpmgate.com',
+  'clksite.com',
+  'go.ad2upapp.com',
+  'waptap.biz',
+  'onclickperformance.com',
+  'creative.xlviirdr.com',
+  'tsyndicate.com',
+  'exdynsrv.com',
+  'pemsrv.com'
 ];
 
 const AD_KEYWORDS = [
@@ -91,6 +101,7 @@ class AdBlockerEngine {
     this.shieldMode = 'strict'; // 'strict' | 'balanced'
     this.blockedEvents = [];
     this.isInitialized = false;
+    this.isWatchingVideo = false;
   }
 
   _loadInitialCount() {
@@ -181,12 +192,21 @@ class AdBlockerEngine {
     );
   }
 
+  setWatchingVideo(status) {
+    this.isWatchingVideo = Boolean(status);
+  }
+
   // Evita redirecciones forzadas que intenten secuestrar la pestaña principal
   _installNavigationGuard() {
     const self = this;
 
     window.addEventListener('beforeunload', (e) => {
-      // Si la ventana intenta redirigir a un sitio no deseado de golpe, el navegador alertará
+      if (self.isShieldActive && self.isWatchingVideo) {
+        e.preventDefault();
+        e.returnValue = '';
+        self.registerBlockedAd('Redirección emergente neutralizada (Pestaña protegida)');
+        return '';
+      }
     });
   }
 
