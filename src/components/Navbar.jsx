@@ -105,9 +105,9 @@ export default function Navbar({
 
   const navItems = [
     { id: 'home', label: 'Inicio' },
-    { id: 'movies', label: 'Películas 4K', badge: 'Digital UHD' },
-    { id: 'series', label: 'Series', badge: 'Temporadas' },
-    { id: 'brands', label: 'Franquicias', badge: 'Disney+ • HBO' },
+    { id: 'movies', label: 'Películas' },
+    { id: 'series', label: 'Series' },
+    { id: 'brands', label: 'Estudios' },
     { id: 'trending', label: 'Tendencias' },
     { id: 'mylist', label: 'Mi Lista', count: myListCount },
   ];
@@ -169,35 +169,32 @@ export default function Navbar({
               </motion.button>
             </motion.div>
 
-            {/* Desktop Navigation Links */}
-            <div className="hidden lg:flex items-center space-x-5 text-sm font-semibold">
+            {/* Desktop Navigation Links — Apple TV+ Liquid Glass Pill Dock */}
+            <div className="hidden lg:flex items-center space-x-1 bg-white/[0.04] backdrop-blur-2xl border border-white/[0.08] rounded-full p-1 text-xs font-semibold">
               {navItems.map((item) => {
                 const isActive = activeTab === item.id && !searchQuery;
                 return (
                   <button
                     key={item.id}
                     onClick={() => { setActiveTab(item.id); clearSearch(); }}
-                    className={`relative py-1.5 transition-colors flex items-center space-x-1.5 ${
-                      isActive ? 'text-white font-black' : 'text-gray-300 hover:text-white'
+                    className={`relative px-4 py-1.5 rounded-full transition-colors flex items-center space-x-1.5 cursor-pointer ${
+                      isActive ? 'text-black font-bold' : 'text-white/75 hover:text-white'
                     }`}
                   >
-                    <span>{item.label}</span>
-                    {item.badge && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-gradient-to-r from-netflix-red to-rose-600 text-white font-black shadow-sm">
-                        {item.badge}
-                      </span>
-                    )}
-                    {item.count > 0 && (
-                      <span className="bg-netflix-red text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
-                        {item.count}
-                      </span>
-                    )}
                     {isActive && (
                       <motion.div 
                         layoutId="activeNavIndicator"
-                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-netflix-red via-amber-400 to-netflix-red rounded-full"
-                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                        className="absolute inset-0 bg-white rounded-full shadow-[0_2px_12px_rgba(255,255,255,0.25)]"
+                        transition={{ type: "spring", stiffness: 420, damping: 32 }}
                       />
+                    )}
+                    <span className="relative z-10">{item.label}</span>
+                    {item.count > 0 && (
+                      <span className={`relative z-10 text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                        isActive ? 'bg-black text-white' : 'bg-netflix-red text-white'
+                      }`}>
+                        {item.count}
+                      </span>
                     )}
                   </button>
                 );

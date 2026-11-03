@@ -2,7 +2,7 @@
 // Almacena en caché la interfaz adaptativa y bloquea redes publicitarias a nivel de red,
 // sin interceptar flujos de video .m3u8/.ts ni llamadas dinámicas de streaming.
 
-const CACHE_NAME = 'cineflex-max-4k-v4';
+const CACHE_NAME = 'cineflex-max-4k-v5';
 const APP_SHELL = [
   './',
   './index.html',
@@ -43,7 +43,12 @@ const AD_PATTERNS = [
   'ad2up',
   'waptap',
   'tsyndicate',
-  'exdynsrv'
+  'exdynsrv',
+  'llvpn.com',
+  'ancillammmm',
+  'hubeamily',
+  'parergygrates',
+  '/js/pop.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -89,13 +94,15 @@ self.addEventListener('fetch', (event) => {
 
   if (req.method !== 'GET') return;
 
-  // Nunca interceptar streams de video (.m3u8, .ts, .mp4), API de escaneo ni SDK de Cast
+  // Nunca interceptar streams de video (.m3u8, .ts, .mp4), proxy HLS, API de escaneo ni SDK de Cast
   if (
     url.pathname.includes('/api/scan-streams') ||
+    url.pathname.includes('/api/hls-proxy') ||
     url.pathname.endsWith('api.php') ||
     url.pathname.endsWith('.m3u8') ||
     url.pathname.endsWith('.ts') ||
     url.pathname.endsWith('.mp4') ||
+    url.hostname.includes('dropcdn.io') ||
     url.hostname.includes('acek-cdn') ||
     url.hostname.includes('dramiyos-cdn') ||
     url.hostname.includes('edgeone.dev') ||

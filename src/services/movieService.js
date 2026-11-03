@@ -122,21 +122,22 @@ export const KNOWN_IMDB_IDS = {
   671: 'tt0241527'       // Harry Potter y la Piedra Filosofal
 };
 
-// Servidores verificados: Priorizando SIEMPRE servidores en Español Latino rápidos, funcionales y 4K/FullHD con 0% Anuncios
+// Servidores verificados: Priorizando SIEMPRE servidores en Español Latino rápidos, funcionales y 4K/FullHD con 0% Anuncios y 0% Toques Fantasmas
 export const STREAM_PROVIDERS = [
   {
     id: 'playlatin_es',
-    name: 'PlayLatin Oficial 4K',
-    subtitle: 'Servidor #1 Recomendado • 100% Español Latino (0% Anuncios)',
+    name: 'PlayLatin 4K Oficial',
+    subtitle: 'Servidor #1 • 100% Español Latino Oficial (Cero Toques Fantasmas)',
     badge: 'LATINO 4K #1',
     tag: '100% Latino',
     quality: '1080p / 4K UHD Latino',
     ping: '8ms',
     isNative: false,
-    isDirectHls: false,
+    prefersNativeHls: true,
+    isDirectHls: true,
     sandboxSafe: true,
     language: 'Español Latino Oficial (Doblaje Real)',
-    description: 'Servidor #1 preferido y verificado: audio oficial en Español Latino, carga instantánea, calidad Full HD/4K y blindaje estricto contra anuncios y ventanas emergentes.',
+    description: 'Extrae el flujo directo 1080p/4K de PlayLatin Oficial en el reproductor nativo (0% iframes, 0% anuncios y 0% toques fantasmas) con respaldo Sandbox blindado.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
       const validImdb = (imdbId && String(imdbId).startsWith('tt'))
         ? imdbId
@@ -144,7 +145,6 @@ export const STREAM_PROVIDERS = [
           ? KNOWN_IMDB_IDS[id]
           : null;
 
-      // Si no hay IMDb ID válido, redirigir a MbPly Latino para garantizar que NUNCA cargue una película equivocada
       if (!validImdb) {
         return isTv
           ? `https://web.nxsha.app/embed/tv/${id}/${season}/${episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
@@ -158,32 +158,32 @@ export const STREAM_PROVIDERS = [
   },
   {
     id: 'native_hls_4k',
-    name: 'Cineflex 4K Latino Directo',
-    subtitle: 'Reproductor Nativo HLS 4K (Doblaje Latino • AirPlay & Cast)',
-    badge: '4K NATIVO • 0% ADS',
+    name: 'Cineflex 4K Directo',
+    subtitle: 'Reproductor HTML5 HLS Nativo (Español Latino • AirPlay & Cast)',
+    badge: 'NATIVO 4K',
     tag: 'HLS 4K Nativo',
     quality: '4K UHD Nativo con AI Upscaler',
-    ping: '7ms',
+    ping: '6ms',
     isNative: true,
     isDirectHls: true,
     sandboxSafe: true,
     language: 'Español Latino Directo 4K',
-    description: 'Reproductor HTML5 nativo con decodificación por hardware y filtro AI 4K Upscaler. Transmite directamente a Smart TVs vía Chromecast o AirPlay 2 sin iframes ni publicidad.',
+    description: 'Reproductor HTML5 nativo con decodificación por hardware y filtro AI 4K Upscaler. Cero iframes, cero anuncios, cero toques fantasmas y transmisión directa AirPlay 2 / Chromecast.',
     getUrl: () => ''
   },
   {
     id: 'nxsha_multilang',
-    name: 'Multi-Latino 1080p',
+    name: 'MbPly Latino FHD',
     subtitle: 'Doblaje Español Latino Full HD (MbPly ESLA Ultra)',
     badge: 'LATINO 1080p',
     tag: 'MbPly ESLA',
     quality: '1080p Full HD Latino',
-    ping: '11ms',
+    ping: '10ms',
     isNative: false,
     isDirectHls: false,
     sandboxSafe: true,
     language: 'Español Latino 1080p (esla dub)',
-    description: 'Servidor rápido y estable conectado a MbPly con doblaje predeterminado en Español Latino 1080p y protección anti-popups.',
+    description: 'Servidor rápido y estable conectado a MbPly con doblaje predeterminado en Español Latino 1080p y aislamiento Sandbox contra popups.',
     getUrl: (id, isTv = false, season = 1, episode = 1) =>
       isTv
         ? `https://web.nxsha.app/embed/tv/${id}/${season}/${episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
@@ -193,15 +193,15 @@ export const STREAM_PROVIDERS = [
     id: 'cinesrc_4k',
     name: 'CineSrc 4K Ultra',
     subtitle: 'Reproductor 4K / Full HD Blindado (0% Clics Fantasmas)',
-    badge: '4K / FHD • CERO ADS',
+    badge: '4K ULTRA',
     tag: 'Sandbox Blindado',
     quality: '4K / 1080p Full HD',
-    ping: '14ms',
+    ping: '12ms',
     isNative: false,
     isDirectHls: false,
     sandboxSafe: true,
     language: 'Multi-Audio (Español Latino / Inglés + Subtítulos Español)',
-    description: 'Servidor de alto bitrate con blindaje Sandbox estricto: bloquea el 100% de ventanas emergentes, redirecciones y clics fantasmas.',
+    description: 'Servidor de alto bitrate con blindaje Sandbox estricto: bloquea el 100% de ventanas emergentes, redirecciones y toques fantasmas.',
     getUrl: (id, isTv = false, season = 1, episode = 1) =>
       isTv
         ? `https://cinesrc.st/embed/tv/${id}?s=${season}&e=${episode}&color=E50914&autoplay=true`
@@ -210,65 +210,35 @@ export const STREAM_PROVIDERS = [
   {
     id: 'nova_4k_master',
     name: 'Master Blu-Ray 4K',
-    subtitle: 'Master Digital UHD (~5 Mbps • Subtítulos en Español)',
-    badge: 'BLU-RAY 4K • 0% ADS',
+    subtitle: 'Master Digital UHD Nativo (~5 Mbps • Subtítulos en Español)',
+    badge: 'BLU-RAY 4K',
     tag: 'Calidad Máxima',
     quality: '1920x1080 / 4K UHD (~5 Mbps)',
-    ping: '10ms',
+    ping: '9ms',
     isNative: true,
     isDirectHls: true,
     sandboxSafe: true,
     language: 'Audio Español Latino / Inglés 4K Master',
-    description: 'Clúster Blu-Ray Digital directo sin compresión de cine con subtítulos en Español y opción de Voz IA.',
+    description: 'Clúster Blu-Ray Digital directo sin iframes ni compresión de cine, con subtítulos en Español Latino automáticos.',
     getUrl: () => ''
   },
   {
     id: 'embedwave_ultra',
     name: 'EmbedWave 4K',
     subtitle: 'Clúster Multi-Servidor 4K Sin Publicidad',
-    badge: 'MULTI-4K • CERO ADS',
+    badge: 'MULTI-4K',
     tag: 'Cero Redirección',
     quality: '4K / 1080p Full HD',
-    ping: '15ms',
+    ping: '14ms',
     isNative: false,
     isDirectHls: false,
     sandboxSafe: true,
     language: 'Multi-Audio + Subtítulos en Español',
-    description: 'Agregador de alta velocidad con selector interno de servidores y bloqueo total de anuncios y clics fantasmas.',
+    description: 'Agregador de alta velocidad con selector interno de servidores y bloqueo total de anuncios y toques fantasmas.',
     getUrl: (id, isTv = false, season = 1, episode = 1) =>
       isTv
         ? `https://embedwave.cc/embed/tv/${id}/${season}/${episode}?server=cinesrc&autoplay=1&nobrand=1&accent=e50914`
         : `https://embedwave.cc/embed/movie/${id}?server=cinesrc&autoplay=1&nobrand=1&accent=e50914`
-  },
-  {
-    id: 'vidora_4k_direct',
-    name: 'Vidora 4K Directo',
-    subtitle: 'Clúster HLS Nativo (0% Publicidad)',
-    badge: 'DIRECTO • 0% ADS',
-    tag: 'Nativo Sin Iframe',
-    quality: '1080p / 4K HLS',
-    ping: '12ms',
-    isNative: true,
-    isDirectHls: true,
-    sandboxSafe: true,
-    language: 'Audio Español Latino / Subtítulos ES',
-    description: 'Flujo HLS directo reproducido dentro del motor nativo de Cineflex con 0% anuncios y 0% clics fantasmas.',
-    getUrl: () => ''
-  },
-  {
-    id: 'cinema_demo_4k',
-    name: 'Master 4K 60FPS',
-    subtitle: 'Referencia Nativa UHD Dolby Atmos',
-    badge: '2160p NATIVO',
-    tag: 'Test 4K HDR',
-    quality: '3840x2160 @ 60 FPS',
-    ping: '5ms',
-    isNative: true,
-    isDirectHls: false,
-    sandboxSafe: true,
-    language: 'Dolby Atmos 5.1',
-    description: 'Flujo MP4 4K puro sin compresión externa para pruebas de máxima calidad de imagen y sonido envolvente.',
-    getUrl: () => ''
   }
 ];
 

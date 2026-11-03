@@ -46,35 +46,25 @@ export default function MovieRow({
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       className="relative py-3 sm:py-4 space-y-2.5 select-none group/row"
     >
-      {/* Row Header with Lucide Icon, Title and Explore Link */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+      {/* Row Header — Editorial Typography (Estilo Apple TV+ / HBO Max / Netflix) */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-baseline justify-between">
         <div 
           onClick={onExplore}
-          className={`flex items-center space-x-2.5 sm:space-x-3 ${onExplore ? 'cursor-pointer group/title' : ''}`}
+          className={`flex items-baseline space-x-3 ${onExplore ? 'cursor-pointer group/title' : ''}`}
         >
-          {IconComponent ? (
-            <div className="w-8 h-8 rounded-xl bg-netflix-red/15 border border-netflix-red/35 text-netflix-red flex items-center justify-center shadow-lg shadow-red-950/40 shrink-0">
-              <IconComponent className="w-4 h-4 text-netflix-red" />
-            </div>
-          ) : (
-            <div className="w-1.5 h-6 bg-netflix-red rounded-full shadow-[0_0_10px_rgba(229,9,20,0.8)]" />
+          <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white tracking-tight group-hover/row:text-white transition-colors">
+            {title}
+          </h3>
+          {badgeText && (
+            <span className="hidden sm:inline-flex text-[11px] font-medium text-white/45 tracking-wide">
+              {badgeText}
+            </span>
           )}
 
-          <div className="flex items-center space-x-2">
-            <h3 className="text-base sm:text-lg md:text-xl font-black text-white tracking-tight group-hover/row:text-white transition-colors">
-              {title}
-            </h3>
-            {badgeText && (
-              <span className="hidden sm:inline-flex text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-gray-400">
-                {badgeText}
-              </span>
-            )}
-          </div>
-
           {onExplore && (
-            <span className="text-xs text-netflix-red font-bold flex items-center space-x-1 opacity-0 group-hover/row:opacity-100 transition-opacity ml-1.5">
-              <span>Explorar</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+            <span className="text-xs text-white/60 group-hover/row:text-white font-semibold flex items-center space-x-0.5 opacity-0 group-hover/row:opacity-100 transition-all duration-200 translate-x-0 group-hover/row:translate-x-1">
+              <span>Ver todo</span>
+              <ChevronRight className="w-3.5 h-3.5" />
             </span>
           )}
         </div>

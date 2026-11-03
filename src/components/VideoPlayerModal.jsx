@@ -259,25 +259,27 @@ export default function VideoPlayerModal({
       setSubtitlesList(report.subtitles || []);
       setIsScanningLinks(false);
 
-      // REGLA #1: La primera opción SIEMPRE debe reproducirse en ESPAÑOL LATINO con audio nítido y en 4K/Full HD (0% Anuncios).
-      const anyLatinoIdx = streams.findIndex((s) => s.isLatinoDub);
+      // REGLA #1: La primera opción SIEMPRE debe reproducirse en ESPAÑOL LATINO con audio nítido y en 4K/Full HD (0% Anuncios y 0% Toques Fantasmas).
       const cleanLatinoIdx = streams.findIndex((s) => s.isLatinoDub && !s.isCamQuality);
+      const anyLatinoIdx = cleanLatinoIdx >= 0 ? cleanLatinoIdx : streams.findIndex((s) => s.isLatinoDub);
       const bluRayIdx = streams.findIndex((s) => s.isBluRayMaster || s.providerId === 'nova');
 
       if (selectedServer === 'playlatin_es') {
-        setSelectedAudioMode('es_latino_dub');
-        showToast('PlayLatin Oficial 4K activo (100% Español Latino • 0% Anuncios)');
+        if (anyLatinoIdx >= 0) {
+          setActiveHlsIndex(anyLatinoIdx);
+          setSelectedAudioMode('es_latino_dub');
+          loadSubtitleTrack(-1);
+          showToast('PlayLatin 4K Oficial activo (Stream Directo Español Latino • 0% Anuncios)');
+        } else {
+          setSelectedAudioMode('es_latino_dub');
+          showToast('PlayLatin Oficial 4K activo (100% Español Latino • 0% Anuncios)');
+        }
       } else if (selectedServer === 'native_hls_4k') {
         if (anyLatinoIdx >= 0) {
           setActiveHlsIndex(anyLatinoIdx);
           setSelectedAudioMode('es_latino_dub');
           loadSubtitleTrack(-1);
           showToast('Español Latino 4K Directo activo (Audio Oficial • 0% Anuncios)');
-        } else if (cleanLatinoIdx >= 0) {
-          setActiveHlsIndex(cleanLatinoIdx);
-          setSelectedAudioMode('es_latino_dub');
-          loadSubtitleTrack(-1);
-          showToast('Español Latino 4K / Full HD Digital activo (0% Anuncios)');
         } else if (bluRayIdx >= 0) {
           setActiveHlsIndex(bluRayIdx);
           setSelectedAudioMode('en_original_sub_es');
@@ -287,6 +289,26 @@ export default function VideoPlayerModal({
             setTimeout(() => loadSubtitleTrack(esIdx >= 0 ? esIdx : 0), 150);
           }
           showToast('Master 4K Digital con Subtítulos en Español activo');
+        } else if (streams.length > 0) {
+          setActiveHlsIndex(0);
+        } else {
+          // Si no hay streams HLS directos para este título, conmutar automáticamente a Multi-Latino 1080p sin quedarse cargando
+          setSelectedServer('nxsha_multilang');
+          setSelectedAudioMode('es_latino_dub');
+        }
+      } else if (selectedServer === 'nova_4k_master') {
+        if (bluRayIdx >= 0) {
+          setActiveHlsIndex(bluRayIdx);
+          setSelectedAudioMode('en_original_sub_es');
+          const subs = report.subtitles || [];
+          if (subs.length > 0) {
+            const esIdx = subs.findIndex((s) => s.isLatino || s.isSpanish);
+            setTimeout(() => loadSubtitleTrack(esIdx >= 0 ? esIdx : 0), 150);
+          }
+        } else if (anyLatinoIdx >= 0) {
+          setActiveHlsIndex(anyLatinoIdx);
+        } else {
+          setSelectedServer('nxsha_multilang');
         }
       } else if (anyLatinoIdx >= 0) {
         setActiveHlsIndex(anyLatinoIdx);
@@ -294,7 +316,7 @@ export default function VideoPlayerModal({
         loadSubtitleTrack(-1);
       } else if (streams.length > 0) {
         setActiveHlsIndex(0);
-        setSelectedAudioMode('es_ai_voiceover');
+        setSelectedAudioMode('en_original_sub_es');
         const subs = report.subtitles || [];
         if (subs.length > 0) {
           const esIdx = subs.findIndex((s) => s.isLatino || s.isSpanish);
@@ -343,25 +365,37 @@ export default function VideoPlayerModal({
 
     if (trackId === 'es_latino_dub') {
       setPlayLatinLang('latino');
+      const anyLatinoIdx = directHlsStreams.findIndex((s) => s.isLatinoDub);
+      if (anyLatinoIdx >= 0) {
+        setActiveHlsIndex(anyLatinoIdx);
+      }
       setSelectedServer('playlatin_es');
       setShowTrailer(false);
       setIsLoading(true);
       setIframeKey((prev) => prev + 1);
+      loadSubtitleTrack(-1);
       showToast('Pista activa: Español Latino 4K (PlayLatin Oficial)');
     } else if (trackId === 'es_latino_direct') {
       setPlayLatinLang('latino');
       const anyLatinoIdx = directHlsStreams.findIndex((s) => s.isLatinoDub);
       setSelectedServer('native_hls_4k');
       setShowTrailer(false);
+      setIsLoading(true);
+      setIframeKey((prev) => prev + 1);
       setActiveHlsIndex(anyLatinoIdx >= 0 ? anyLatinoIdx : 0);
       loadSubtitleTrack(-1);
       showToast('Pista activa: Español Latino Directo (Reproductor Nativo HLS)');
     } else if (trackId === 'es_castellano_dub') {
       setPlayLatinLang('castellano');
+      const castIdx = directHlsStreams.findIndex((s) => s.isCastellanoDub);
+      if (castIdx >= 0) {
+        setActiveHlsIndex(castIdx);
+      }
       setSelectedServer('playlatin_es');
       setShowTrailer(false);
       setIsLoading(true);
       setIframeKey((prev) => prev + 1);
+      loadSubtitleTrack(-1);
       showToast('Pista activa: Español Castellano (PlayLatin Oficial)');
     } else if (trackId === 'es_ai_voiceover') {
       if (selectedServer !== 'native_hls_4k') {
@@ -398,24 +432,51 @@ export default function VideoPlayerModal({
 
   // 4. MOTOR DE REPRODUCCIÓN NATIVA HLS.JS (0% ANUNCIOS, 0% CLICS FANTASMAS)
   const currentProvider = STREAM_PROVIDERS.find(p => p.id === selectedServer) || STREAM_PROVIDERS[0];
+  const hasMatchingDirectDub =
+    playLatinLang === 'castellano'
+      ? directHlsStreams.some((s) => s.isCastellanoDub)
+      : directHlsStreams.some((s) => s.isLatinoDub);
+
   const isNativeServer =
     Boolean(movie?.customUrl) ||
-    Boolean(currentProvider?.isNative);
+    Boolean(currentProvider?.isNative) ||
+    (Boolean(currentProvider?.prefersNativeHls) && hasMatchingDirectDub);
 
-  const active4kDemoSource = movie?.real4kSource || REAL_4K_SOURCES[0];
   const activeDirectStream = directHlsStreams[activeHlsIndex] || null;
 
-  // Watchdog de Auto-Failover Inteligente: si un servidor tarda más de 4.8s en conectar o responder,
-  // conmuta de forma proactiva al siguiente servidor verificado en Español Latino
+  // Si un servidor nativo termina de escanear y no tiene stream directo disponible, conmutar de inmediato al mejor servidor verificado
   useEffect(() => {
-    if (!isLoading || showTrailer || isNativeServer) return;
+    if (isScanningLinks || showTrailer || movie?.customUrl) return;
+    if (isNativeServer && !activeDirectStream?.url) {
+      setSelectedServer('nxsha_multilang');
+      setIframeKey((k) => k + 1);
+      setIsLoading(true);
+      showToast('Conmutando automáticamente a Multi-Latino 1080p (Español Latino)...');
+    }
+  }, [isScanningLinks, isNativeServer, activeDirectStream, showTrailer, movie, showToast]);
 
+  // Watchdog Universal de Auto-Failover Inteligente: monitorea tanto servidores nativos como iframes
+  // para garantizar que ningún servidor se quede congelado cargando
+  useEffect(() => {
+    if (!isLoading || showTrailer || isScanningLinks) return;
+
+    const timeoutMs = isNativeServer ? 6000 : 4800;
     const timer = setTimeout(() => {
       if (isLoading) {
-        const fallbackChain = ['playlatin_es', 'nxsha_multilang', 'cinesrc_4k', 'embedwave_ultra'];
+        if (isNativeServer && activeHlsIndex + 1 < directHlsStreams.length) {
+          const nextIdx = activeHlsIndex + 1;
+          setActiveHlsIndex(nextIdx);
+          showToast(`⚡ Auto-Failover: Probando nodo directo #${nextIdx + 1} (${directHlsStreams[nextIdx]?.name || '4K'})...`);
+          return;
+        }
+
+        const fallbackChain = ['playlatin_es', 'native_hls_4k', 'nxsha_multilang', 'cinesrc_4k', 'embedwave_ultra'];
         const currentIdx = fallbackChain.indexOf(selectedServer);
         if (currentIdx >= 0 && currentIdx < fallbackChain.length - 1) {
-          const next = fallbackChain[currentIdx + 1];
+          let next = fallbackChain[currentIdx + 1];
+          if (next === 'native_hls_4k' && directHlsStreams.length === 0) {
+            next = 'nxsha_multilang';
+          }
           setSelectedServer(next);
           setIframeKey((k) => k + 1);
           setIsLoading(true);
@@ -425,10 +486,10 @@ export default function VideoPlayerModal({
           setIsLoading(false);
         }
       }
-    }, 4800);
+    }, timeoutMs);
 
     return () => clearTimeout(timer);
-  }, [isLoading, selectedServer, showTrailer, isNativeServer, showToast]);
+  }, [isLoading, selectedServer, showTrailer, isScanningLinks, isNativeServer, activeHlsIndex, directHlsStreams, showToast]);
 
   // Doblaje Voz IA en Español sincronizado con subtítulos cuando el usuario elige 'es_ai_voiceover'
   useEffect(() => {
@@ -476,19 +537,16 @@ export default function VideoPlayerModal({
     }
   }, [activeCueText, selectedAudioMode, isPlaying, isMuted, volume]);
 
+  // NUNCA usar videos de demostración como fallback: reproduce únicamente el stream real de la película o serie seleccionada
   const resolvedNativeUrl = movie?.customUrl
     ? movie.customUrl
-    : selectedServer === 'cinema_demo_4k'
-    ? active4kDemoSource.resolutions[selectedResolution] || active4kDemoSource.resolutions['2160p']
-    : activeDirectStream?.url
-    ? activeDirectStream.url
-    : isScanningLinks
-    ? ''
-    : active4kDemoSource.resolutions['2160p'];
+    : activeDirectStream?.url || '';
 
   const isHlsStream = Boolean(
     resolvedNativeUrl &&
     (resolvedNativeUrl.includes('.m3u8') ||
+      resolvedNativeUrl.includes('/api/hls-proxy') ||
+      resolvedNativeUrl.includes('api.php?action=proxy') ||
       resolvedNativeUrl.includes('vidrack.created.app/proxy') ||
       resolvedNativeUrl.includes('px.php?play=') ||
       activeDirectStream?.type === 'hls')
@@ -513,10 +571,10 @@ export default function VideoPlayerModal({
         enableWorker: true,
         maxBufferLength: 30,
         maxMaxBufferLength: 60,
-        manifestLoadingTimeOut: 9000,
-        manifestLoadingMaxRetry: 2,
-        levelLoadingTimeOut: 9000,
-        fragLoadingTimeOut: 15000
+        manifestLoadingTimeOut: 7500,
+        manifestLoadingMaxRetry: 1,
+        levelLoadingTimeOut: 7500,
+        fragLoadingTimeOut: 12000
       });
 
       hlsRef.current = hls;
@@ -587,7 +645,7 @@ export default function VideoPlayerModal({
         hlsRef.current = null;
       }
     };
-  }, [isNativeServer, showTrailer, resolvedNativeUrl, isHlsStream, activeHlsIndex, directHlsStreams, showToast]);
+  }, [isNativeServer, selectedServer, iframeKey, showTrailer, resolvedNativeUrl, isHlsStream, activeHlsIndex, directHlsStreams, showToast]);
 
   // 5. CARGAR SUBTÍTULOS EN ESPAÑOL LATINO AUTOMÁTICAMENTE CUANDO EL AUDIO ES INGLÉS O VOZ IA
   useEffect(() => {
@@ -770,25 +828,24 @@ export default function VideoPlayerModal({
     setIsLoading(true);
     setIframeKey(prev => prev + 1);
 
+    const cleanLatinoIdx = directHlsStreams.findIndex(s => s.isLatinoDub && !s.isCamQuality);
+    const anyLatinoIdx = cleanLatinoIdx >= 0 ? cleanLatinoIdx : directHlsStreams.findIndex(s => s.isLatinoDub);
+    const bluRayIdx = directHlsStreams.findIndex(s => s.isBluRayMaster || s.providerId === 'nova');
+
     if (serverId === 'playlatin_es') {
       setSelectedAudioMode('es_latino_dub');
       setPlayLatinLang('latino');
+      if (anyLatinoIdx >= 0) {
+        setActiveHlsIndex(anyLatinoIdx);
+        loadSubtitleTrack(-1);
+      }
       showToast('PlayLatin Oficial 4K activado (100% Español Latino • 0% Anuncios)');
     } else if (serverId === 'native_hls_4k') {
-      const anyLatinoIdx = directHlsStreams.findIndex(s => s.isLatinoDub);
-      const cleanLatinoIdx = directHlsStreams.findIndex(s => s.isLatinoDub && !s.isCamQuality);
-      const bluRayIdx = directHlsStreams.findIndex(s => s.isBluRayMaster || s.providerId === 'nova');
-
       if (anyLatinoIdx >= 0) {
         setActiveHlsIndex(anyLatinoIdx);
         setSelectedAudioMode('es_latino_dub');
         loadSubtitleTrack(-1);
         showToast('Cineflex 4K Latino Directo activo (Audio Oficial • 0% Anuncios)');
-      } else if (cleanLatinoIdx >= 0) {
-        setActiveHlsIndex(cleanLatinoIdx);
-        setSelectedAudioMode('es_latino_dub');
-        loadSubtitleTrack(-1);
-        showToast('Cineflex 4K Latino Digital activo (0% Anuncios)');
       } else if (bluRayIdx >= 0) {
         setActiveHlsIndex(bluRayIdx);
         setSelectedAudioMode('en_original_sub_es');
@@ -797,42 +854,40 @@ export default function VideoPlayerModal({
           loadSubtitleTrack(esIdx >= 0 ? esIdx : 0);
         }
         showToast('Master 4K Digital con Subtítulos en Español activo');
-      } else {
+      } else if (directHlsStreams.length > 0) {
         setActiveHlsIndex(0);
         setSelectedAudioMode('es_latino_dub');
+      } else {
+        setSelectedServer('nxsha_multilang');
+        setSelectedAudioMode('es_latino_dub');
+        showToast('Conmutando a Multi-Latino 1080p (Español Latino)...');
       }
     } else if (serverId === 'nxsha_multilang') {
       setSelectedAudioMode('es_latino_dub');
-      showToast('Multi-Latino 1080p activado (MbPly ESLA Ultra)');
+      showToast('Multi-Latino 1080p activado (MbPly ESLA Ultra • 0% Anuncios)');
     } else if (serverId === 'cinesrc_4k') {
       setSelectedAudioMode('es_latino_dub');
       showToast('CineSrc 4K Ultra activado (0% Clics Fantasmas)');
     } else if (serverId === 'nova_4k_master') {
-      const novaIdx = directHlsStreams.findIndex(s => s.providerId === 'nova' || s.isBluRayMaster);
-      if (novaIdx >= 0) {
-        setActiveHlsIndex(novaIdx);
+      if (bluRayIdx >= 0) {
+        setActiveHlsIndex(bluRayIdx);
         setSelectedAudioMode('en_original_sub_es');
         if (subtitlesList.length > 0) {
           const esIdx = subtitlesList.findIndex(s => s.isLatino || s.isSpanish);
           loadSubtitleTrack(esIdx >= 0 ? esIdx : 0);
         }
         showToast('Master Blu-Ray 4K Digital (~5 Mbps • Subtítulos en Español)');
+      } else if (anyLatinoIdx >= 0) {
+        setActiveHlsIndex(anyLatinoIdx);
+        setSelectedAudioMode('es_latino_dub');
+        loadSubtitleTrack(-1);
+        showToast('Stream 4K Español Latino Directo activo');
+      } else {
+        setSelectedServer('nxsha_multilang');
+        showToast('Conmutando a Multi-Latino 1080p...');
       }
     } else if (serverId === 'embedwave_ultra') {
       showToast('EmbedWave 4K activado (Cero Redirección)');
-    } else if (serverId === 'vidora_4k_direct') {
-      const vidoraIdx = directHlsStreams.findIndex(s => s.providerId === 'vidora');
-      if (vidoraIdx >= 0) {
-        setActiveHlsIndex(vidoraIdx);
-        setSelectedAudioMode('en_original_sub_es');
-        if (subtitlesList.length > 0) {
-          const esIdx = subtitlesList.findIndex(s => s.isLatino || s.isSpanish);
-          loadSubtitleTrack(esIdx >= 0 ? esIdx : 0);
-        }
-        showToast('Clúster Vidora 4K Directo activado (0% Anuncios)');
-      }
-    } else if (serverId === 'cinema_demo_4k') {
-      showToast('Master 4K 60FPS Dolby Atmos activado');
     }
     StorageService.addToHistory(movie, serverId, currentSeason, currentEpisode);
   };
@@ -1040,138 +1095,153 @@ export default function VideoPlayerModal({
         )}
       </AnimatePresence>
 
-      {/* BARRA SUPERIOR 100% RESPONSIVA (Celular, Tablet y Desktop) */}
+      {/* BARRA SUPERIOR LIQUID GLASS (Estilo Apple TV+ / Max — Monocromática, Elegante y 100% Responsiva) */}
       <motion.header 
         animate={{ y: controlsVisible ? 0 : -110, opacity: controlsVisible ? 1 : 0 }}
         transition={{ duration: 0.25 }}
-        className="bg-black/92 backdrop-blur-2xl border-b border-white/[0.08] px-3 sm:px-6 py-2.5 sm:py-3 pt-safe flex items-center justify-between gap-2 z-30 shrink-0 shadow-2xl"
+        className="bg-black/78 backdrop-blur-2xl border-b border-white/[0.08] px-3 sm:px-6 py-2.5 sm:py-3 pt-safe flex items-center justify-between gap-2 z-30 shrink-0 shadow-[0_10px_40px_rgba(0,0,0,0.85)]"
       >
         {/* Izquierda: Volver y Título */}
-        <div className="flex items-center space-x-2 sm:space-x-3.5 min-w-0 flex-1">
+        <div className="flex items-center space-x-2.5 sm:space-x-3.5 min-w-0 flex-1">
           <motion.button 
             whileTap={{ scale: 0.92 }}
             onClick={onClose}
-            className="flex items-center space-x-1 px-2.5 sm:px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-all border border-white/15 shrink-0"
+            className="flex items-center space-x-1.5 px-3 sm:px-3.5 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.15] text-white/95 font-semibold text-xs transition-all border border-white/[0.12] shrink-0"
             title="Volver al catálogo"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Salir</span>
+            <span className="hidden sm:inline">Catálogo</span>
           </motion.button>
 
           <div className="min-w-0 flex-1">
-            <div className="flex items-center space-x-1.5 sm:space-x-2">
-              <h2 className="text-white text-xs sm:text-base md:text-lg font-black truncate">
+            <div className="flex items-center space-x-2">
+              <h2 className="text-white text-xs sm:text-base md:text-lg font-bold tracking-tight truncate">
                 {movie.title}
               </h2>
               {movie.isTv && (
-                <span className="bg-netflix-red text-white text-[9px] sm:text-[10px] font-black px-1.5 sm:px-2 py-0.5 rounded shrink-0">
-                  T{currentSeason}:E{currentEpisode}
+                <span className="bg-white/[0.12] border border-white/[0.14] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
+                  T{currentSeason} · E{currentEpisode}
                 </span>
               )}
               <button
                 onClick={() => setIsAdBlockModalOpen(true)}
-                className="hidden sm:inline-flex items-center space-x-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/35 text-[9px] font-black px-2.5 py-0.5 rounded-full shadow-sm transition-all cursor-pointer shrink-0"
-                title="CineShield™ 4K AdBlocker Activo (Clic para ver amenazas neutralizadas)"
+                className="hidden sm:inline-flex items-center space-x-1.5 bg-white/[0.06] hover:bg-white/[0.12] text-white/80 border border-white/[0.1] text-[10px] font-semibold px-2.5 py-0.5 rounded-full transition-all cursor-pointer shrink-0"
+                title="CineShield™ 4K AdBlocker Activo (0% Anuncios ni Toques Fantasmas)"
               >
                 <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0" />
-                <span>CineShield™ 0% ADS</span>
-                <span className="bg-emerald-500/25 text-emerald-200 px-1 py-0.1 rounded font-mono text-[8px]">
+                <span>Shield Activo</span>
+                <span className="text-emerald-400 font-mono text-[9px]">
                   {blockedAdsCount}
                 </span>
               </button>
             </div>
 
-            <div className="flex items-center space-x-1.5 text-[10px] sm:text-[11px] text-gray-400 font-medium truncate">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-              <span className="text-emerald-400 font-bold truncate">
-                {showTrailer ? 'Tráiler 4K Español' : currentProvider.name}
+            <div className="flex items-center space-x-1.5 text-[10px] sm:text-[11px] text-white/55 font-medium truncate">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+              <span className="text-white/80 font-semibold truncate">
+                {showTrailer ? 'Tráiler Oficial 4K' : currentProvider.name}
               </span>
-              <span>•</span>
-              <span className="text-amber-300 font-bold truncate">
+              <span>·</span>
+              <span className="text-white/70 truncate">
                 {currentAudioObj.shortLabel}
               </span>
+              {isNativeServer && !showTrailer && (
+                <>
+                  <span>·</span>
+                  <span className="text-emerald-400/90 font-semibold hidden md:inline">
+                    Stream Directo 0% Iframes
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Derecha: Botón de Temporadas/Capítulos + Audio/Idioma + Subtítulos + Calidad 4K + Cerrar */}
+        {/* Derecha: Toolbar Liquid Glass Monocromático (Apple TV+ HIG) */}
         <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
           
-          {/* BOTÓN DE TEMPORADAS Y CAPÍTULOS (Permite cambiar de Temporada o Capítulo sin salir del reproductor) */}
-          <button
-            onClick={() => {
-              setPickerSeason(currentSeason);
-              setActiveMenu(activeMenu === 'episodes' ? null : 'episodes');
-            }}
-            className={`flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-black border transition-all shadow-lg ${
-              activeMenu === 'episodes'
-                ? 'bg-netflix-red text-white border-netflix-red shadow-red-900/50'
-                : 'bg-netflix-red/20 hover:bg-netflix-red/35 text-white border-netflix-red/50'
-            }`}
-            title="Seleccionar Temporada y Capítulo"
-          >
-            <Tv className="w-3.5 h-3.5 text-netflix-red shrink-0" />
-            <span>
-              {movie.isTv ? `T${currentSeason}:E${currentEpisode} • Capítulos` : 'Temp / Cap'}
-            </span>
-          </button>
+          {/* Selector de Temporadas y Capítulos */}
+          {movie.isTv && (
+            <button
+              onClick={() => {
+                setPickerSeason(currentSeason);
+                setActiveMenu(activeMenu === 'episodes' ? null : 'episodes');
+              }}
+              className={`flex items-center space-x-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition-all ${
+                activeMenu === 'episodes'
+                  ? 'bg-white text-black border-white shadow-lg'
+                  : 'bg-white/[0.08] hover:bg-white/[0.14] text-white border-white/[0.12]'
+              }`}
+              title="Seleccionar Temporada y Capítulo"
+            >
+              <Tv className="w-3.5 h-3.5 shrink-0" />
+              <span>T{currentSeason}:E{currentEpisode}</span>
+              <span className="hidden md:inline">· Episodios</span>
+            </button>
+          )}
 
-          {/* BOTÓN DESTACADO DE PISTA DE AUDIO / IDIOMA (Siempre visible en Celular, Tablet y PC) */}
+          {/* Selector de Pista de Audio / Idioma */}
           <button
             onClick={() => setActiveMenu(activeMenu === 'audio' ? null : 'audio')}
-            className={`flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-black border transition-all shadow-lg ${
-              activeMenu === 'audio' || selectedAudioMode.startsWith('es_')
-                ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400/50 shadow-emerald-900/40'
-                : 'bg-white/15 hover:bg-white/25 text-white border-white/20'
+            className={`flex items-center space-x-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition-all ${
+              activeMenu === 'audio'
+                ? 'bg-white text-black border-white shadow-lg'
+                : 'bg-white/[0.08] hover:bg-white/[0.14] text-white border-white/[0.12]'
             }`}
             title="Cambiar Pista de Audio / Idioma (Español Latino, Castellano, Inglés)"
           >
-            <Headphones className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate max-w-[95px] sm:max-w-none">
+            <Headphones className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <span className="truncate max-w-[100px] sm:max-w-none">
               {currentAudioObj.shortLabel}
             </span>
           </button>
 
-          {/* Botón de Subtítulos */}
+          {/* Subtítulos */}
           {isNativeServer && !showTrailer && (
             <button
               onClick={() => setActiveMenu(activeMenu === 'subs' ? null : 'subs')}
-              className={`flex items-center space-x-1 px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold border transition-all ${
-                activeSubIndex >= 0
-                  ? 'bg-white/15 text-emerald-300 border-emerald-500/40'
-                  : 'bg-white/10 text-gray-300 border-white/15'
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition-all ${
+                activeMenu === 'subs'
+                  ? 'bg-white text-black border-white'
+                  : activeSubIndex >= 0
+                  ? 'bg-white/[0.14] text-white border-white/[0.22]'
+                  : 'bg-white/[0.08] hover:bg-white/[0.14] text-white/80 border-white/[0.12]'
               }`}
               title="Subtítulos en Español"
             >
               <Subtitles className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Subtítulos</span>
+              <span className="hidden md:inline">CC</span>
             </button>
           )}
 
-          {/* Botón de Calidad 4K */}
+          {/* Calidad 4K */}
           <button 
             onClick={() => setActiveMenu(activeMenu === 'quality' ? null : 'quality')}
-            className="hidden sm:flex items-center space-x-1 px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-[11px] sm:text-xs font-black text-amber-300 border border-amber-400/30"
+            className={`hidden sm:flex items-center space-x-1 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition-all ${
+              activeMenu === 'quality'
+                ? 'bg-white text-black border-white'
+                : 'bg-white/[0.08] hover:bg-white/[0.14] text-white/90 border-white/[0.12]'
+            }`}
             title="Resolución 4K y Nitidez HDR"
           >
-            <Zap className="w-3.5 h-3.5 text-amber-400 fill-current shrink-0" />
+            <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
             <span>{selectedResolution}</span>
           </button>
 
-          {/* Botón Chromecast & AirPlay (Siempre visible en Celular, Tablet y PC) */}
+          {/* Chromecast & AirPlay */}
           <button 
             onClick={() => setIsCastModalOpen(true)}
-            className="flex items-center space-x-1 px-2.5 sm:px-3 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-400/40 text-[11px] sm:text-xs font-black shadow-lg"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.14] text-white/90 border border-white/[0.12] text-[11px] sm:text-xs font-semibold transition-all"
             title="Transmitir por Chromecast o AirPlay a Smart TV"
           >
             <Cast className="w-3.5 h-3.5 shrink-0" />
-            <span className="hidden md:inline">TV Cast</span>
+            <span className="hidden md:inline">AirPlay</span>
           </button>
 
           {/* Recargar */}
           <button 
             onClick={handleReload}
-            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white border border-white/10"
+            className="p-2 rounded-full bg-white/[0.08] hover:bg-white/[0.14] text-white/80 hover:text-white border border-white/[0.12] transition-all"
             title="Recargar reproductor"
           >
             <RotateCw className="w-4 h-4" />
@@ -1180,8 +1250,8 @@ export default function VideoPlayerModal({
           {/* Cerrar */}
           <button 
             onClick={onClose}
-            className="p-2 rounded-full bg-netflix-red hover:bg-red-700 text-white shadow-lg shadow-red-900/50"
-            title="Cerrar"
+            className="p-2 rounded-full bg-white/[0.12] hover:bg-netflix-red text-white border border-white/[0.15] transition-all"
+            title="Cerrar reproductor"
           >
             <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
@@ -1770,8 +1840,9 @@ export default function VideoPlayerModal({
                   src={showTrailer ? trailerUrl : streamUrl}
                   title={`Reproductor ${movie.title}`}
                   className="w-full h-full sm:rounded-2xl shadow-2xl border-0 sm:border sm:border-white/10 bg-[#050508]"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                   allowFullScreen
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                   referrerPolicy="no-referrer-when-downgrade"
                   onLoad={() => setIsLoading(false)}
                 />
@@ -1782,18 +1853,18 @@ export default function VideoPlayerModal({
 
       </main>
 
-      {/* BARRA INFERIOR DE SERVIDORES Y EPISODIOS (Carrusel horizontal táctil en celular/tablet, sin apilarse) */}
+      {/* BARRA INFERIOR DE SERVIDORES Y EPISODIOS (Liquid Glass Dock — Apple TV+ / Max Style) */}
       <motion.footer 
         animate={{ y: controlsVisible ? 0 : 100, opacity: controlsVisible ? 1 : 0 }}
         transition={{ duration: 0.25 }}
-        className="bg-black/95 border-t border-white/[0.08] px-3 sm:px-6 py-2.5 pb-safe shrink-0 z-30 shadow-2xl"
+        className="bg-black/82 backdrop-blur-2xl border-t border-white/[0.08] px-3 sm:px-6 py-2.5 pb-safe shrink-0 z-30 shadow-2xl"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
           
-          {/* Carrusel Horizontal Deslizable de Servidores (No ocupa media pantalla en celular) */}
+          {/* Carrusel Horizontal Deslizable de Servidores */}
           <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar py-0.5 flex-1 min-w-0">
-            <span className="text-[10px] sm:text-[11px] font-black text-emerald-400 uppercase tracking-wider flex items-center shrink-0">
-              <Radio className="w-3 h-3 mr-1 animate-pulse" /> Servidores:
+            <span className="text-[10px] sm:text-[11px] font-semibold text-white/50 uppercase tracking-widest flex items-center shrink-0 mr-1">
+              <Radio className="w-3 h-3 mr-1.5 text-emerald-400" /> Fuente:
             </span>
 
             {STREAM_PROVIDERS.map((provider) => {
@@ -1806,31 +1877,33 @@ export default function VideoPlayerModal({
                 <button
                   key={provider.id}
                   onClick={() => handleServerChange(provider.id)}
-                  className={`relative px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap ${
+                  className={`relative px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap ${
                     isActive
-                      ? 'text-white shadow-lg shadow-red-900/50'
-                      : 'text-gray-300 hover:text-white bg-white/[0.06] hover:bg-white/10 border border-white/10'
+                      ? 'text-black shadow-lg'
+                      : 'text-white/75 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1]'
                   }`}
                 >
                   {isActive && (
                     <motion.div 
                       layoutId="activeServerPill"
-                      className="absolute inset-0 bg-netflix-red rounded-xl"
-                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                      className="absolute inset-0 bg-white rounded-full"
+                      transition={{ type: "spring", stiffness: 420, damping: 32 }}
                     />
                   )}
                   <span
-                    className={`w-2 h-2 rounded-full relative z-10 shrink-0 ${
-                      isVerifiedOnline ? 'bg-emerald-400' : 'bg-amber-400'
+                    className={`w-1.5 h-1.5 rounded-full relative z-10 shrink-0 ${
+                      isVerifiedOnline ? 'bg-emerald-500' : 'bg-amber-400'
                     }`}
                   />
                   <span className="relative z-10">{provider.name}</span>
-                  <span className={`relative z-10 text-[9px] px-1.5 py-0.2 rounded font-black ${
-                    isActive ? 'bg-black/40 text-amber-300' : 'bg-white/10 text-gray-300'
+                  <span className={`relative z-10 text-[9px] px-1.5 py-0.2 rounded-full font-bold ${
+                    isActive ? 'bg-black/10 text-black/80' : 'bg-white/10 text-white/60'
                   }`}>
                     {provider.badge}
                   </span>
-                  <span className="relative z-10 text-[9px] font-mono text-emerald-300/90 hidden md:inline">
+                  <span className={`relative z-10 text-[9px] font-mono hidden md:inline ${
+                    isActive ? 'text-black/60' : 'text-emerald-400/80'
+                  }`}>
                     {livePing}
                   </span>
                 </button>
@@ -1840,20 +1913,20 @@ export default function VideoPlayerModal({
             {activeTrailerKey && (
               <button
                 onClick={handleOpenTrailer}
-                className={`relative px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap ${
+                className={`relative px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap ${
                   showTrailer
-                    ? 'text-white shadow-lg shadow-red-900/50'
-                    : 'text-gray-300 hover:text-white bg-white/[0.06] hover:bg-white/10 border border-white/10'
+                    ? 'text-black shadow-lg'
+                    : 'text-white/75 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1]'
                 }`}
               >
                 {showTrailer && (
                   <motion.div 
                     layoutId="activeServerPill"
-                    className="absolute inset-0 bg-red-600 rounded-xl"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    className="absolute inset-0 bg-white rounded-full"
+                    transition={{ type: "spring", stiffness: 420, damping: 32 }}
                   />
                 )}
-                <Youtube className="w-3.5 h-3.5 text-red-400 relative z-10" />
+                <Youtube className={`w-3.5 h-3.5 relative z-10 ${showTrailer ? 'text-netflix-red' : 'text-red-400'}`} />
                 <span className="relative z-10">Tráiler 4K</span>
               </button>
             )}

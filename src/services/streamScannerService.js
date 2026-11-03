@@ -30,6 +30,8 @@ function b64Encode(str) {
 export function wrapWithStreamProxy(rawUrl, headers) {
   if (!rawUrl) return '';
   if (
+    rawUrl.indexOf('/api/hls-proxy') !== -1 ||
+    rawUrl.indexOf('api.php?action=proxy') !== -1 ||
     rawUrl.indexOf(VIDRACK_PROXY) === 0 ||
     rawUrl.indexOf('vidrack.created.app/proxy') !== -1 ||
     rawUrl.indexOf('acek-cdn.com') !== -1 ||
@@ -92,7 +94,7 @@ export const StreamScannerService = {
     const tasks = HLS_PROVIDERS.map(async (provider) => {
       const t0 = performance.now();
       try {
-        const res = await fetchWithTimeout(`${VIDRACK_API}/${provider.endpoint}?${query}`, {}, 5000);
+        const res = await fetchWithTimeout(`${VIDRACK_API}/${provider.endpoint}?${query}`, {}, 3500);
         if (!res.ok) return [];
         const data = await res.json();
         const ping = Math.max(8, Math.round(performance.now() - t0));

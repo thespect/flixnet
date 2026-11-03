@@ -1,77 +1,70 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, Film, Compass, Shield, Zap, Flame } from 'lucide-react';
 
 export const BRAND_HUBS = [
   {
     id: 'disney',
     title: 'DISNEY+',
-    subtitle: 'Clásicos, Pixar & Magia',
-    badge: 'ANIMACIÓN 4K',
-    gradient: 'from-[#031b4e] via-[#082b75] to-[#020d26]',
-    glowColor: 'rgba(0, 114, 210, 0.45)',
-    borderColor: 'border-sky-500/40 hover:border-sky-400',
-    icon: Sparkles,
+    subtitle: 'Pixar · Clásicos · Animación',
+    gradient: 'from-[#041d56]/90 via-[#072a78]/75 to-[#020b21]/95',
+    glowColor: 'rgba(56, 189, 248, 0.35)',
+    borderColor: 'border-white/[0.12] hover:border-sky-400/70',
+    backdrop: 'https://image.tmdb.org/t/p/w780/stKGOm8UyhuLPR9sZLjs5AkmncA.jpg',
     filterKey: 'animation',
     searchTerm: 'Disney'
   },
   {
     id: 'marvel',
     title: 'MARVEL',
-    subtitle: 'Universo Cinemático UCM',
-    badge: 'SUPERHÉROES',
-    gradient: 'from-[#540d12] via-[#350609] to-[#140102]',
-    glowColor: 'rgba(237, 29, 36, 0.45)',
-    borderColor: 'border-red-600/40 hover:border-red-500',
-    icon: Zap,
+    subtitle: 'Universo Cinematográfico',
+    gradient: 'from-[#5c0b10]/90 via-[#380609]/75 to-[#120102]/95',
+    glowColor: 'rgba(239, 68, 68, 0.4)',
+    borderColor: 'border-white/[0.12] hover:border-red-500/70',
+    backdrop: 'https://image.tmdb.org/t/p/w780/yDHYTfA3R0jFYba16jBB1ef8oIt.jpg',
     filterKey: 'action',
     searchTerm: 'Spider-Man'
   },
   {
     id: 'starwars',
     title: 'STAR WARS',
-    subtitle: 'Lucasfilm & Galaxia',
-    badge: 'CIENCIA FICCIÓN',
-    gradient: 'from-[#1a1c2e] via-[#0d1021] to-[#04050a]',
-    glowColor: 'rgba(255, 215, 0, 0.35)',
-    borderColor: 'border-amber-400/30 hover:border-amber-300',
-    icon: Compass,
+    subtitle: 'Lucasfilm · Saga Galáctica',
+    gradient: 'from-[#1c2038]/90 via-[#0d1021]/75 to-[#04050a]/95',
+    glowColor: 'rgba(251, 191, 36, 0.3)',
+    borderColor: 'border-white/[0.12] hover:border-amber-400/70',
+    backdrop: 'https://image.tmdb.org/t/p/w780/6oom5QYQ2yQTMJIbnvbkBL9cHo6.jpg',
     filterKey: 'scifi',
     searchTerm: 'Star Wars'
   },
   {
     id: 'hbomax',
     title: 'MAX',
-    subtitle: 'Warner Bros & HBO Original',
-    badge: 'PRESTIGE TV',
-    gradient: 'from-[#3c0863] via-[#23033d] to-[#0c0117]',
-    glowColor: 'rgba(157, 43, 230, 0.45)',
-    borderColor: 'border-purple-500/40 hover:border-purple-400',
-    icon: Flame,
+    subtitle: 'HBO Originals · Warner Bros',
+    gradient: 'from-[#390861]/90 via-[#21033a]/75 to-[#090112]/95',
+    glowColor: 'rgba(168, 85, 247, 0.4)',
+    borderColor: 'border-white/[0.12] hover:border-purple-400/70',
+    backdrop: 'https://image.tmdb.org/t/p/w780/xOMo8BRK7PfcJv9JCnx7s5hj0PX.jpg',
     filterKey: 'topRated',
-    searchTerm: 'House of the Dragon'
+    searchTerm: 'Dune'
   },
   {
     id: 'netflix',
     title: 'NETFLIX',
-    subtitle: 'Originals & Blockbusters',
-    badge: 'ESTRENOS MUNDIALES',
-    gradient: 'from-[#380b0e] via-[#1f0406] to-[#0a0102]',
-    glowColor: 'rgba(229, 9, 20, 0.45)',
-    borderColor: 'border-netflix-red/40 hover:border-netflix-red',
-    icon: Film,
+    subtitle: 'Series & Estrenos Globales',
+    gradient: 'from-[#42090d]/90 via-[#210406]/75 to-[#080102]/95',
+    glowColor: 'rgba(229, 9, 20, 0.4)',
+    borderColor: 'border-white/[0.12] hover:border-netflix-red/80',
+    backdrop: 'https://image.tmdb.org/t/p/w780/56v2KjBlU4XaOv9rVYEQypROD7P.jpg',
     filterKey: 'top10',
     searchTerm: 'Stranger Things'
   },
   {
     id: 'dc',
-    title: 'DC',
-    subtitle: 'Batman, Joker & Multiverso',
-    badge: 'CÓMICS 4K',
-    gradient: 'from-[#062433] via-[#04151e] to-[#01080c]',
-    glowColor: 'rgba(0, 180, 216, 0.45)',
-    borderColor: 'border-cyan-500/40 hover:border-cyan-400',
-    icon: Shield,
+    title: 'DC STUDIOS',
+    subtitle: 'Gotham · Multiverso',
+    gradient: 'from-[#062638]/90 via-[#041520]/75 to-[#01070b]/95',
+    glowColor: 'rgba(34, 211, 238, 0.35)',
+    borderColor: 'border-white/[0.12] hover:border-cyan-400/70',
+    backdrop: 'https://image.tmdb.org/t/p/w780/b0PlSFdDwbyK0cf5RxwDpaOJQvQ.jpg',
     filterKey: 'action',
     searchTerm: 'Batman'
   }
@@ -79,101 +72,71 @@ export const BRAND_HUBS = [
 
 export default function BrandHubs({ activeHub, onSelectHub }) {
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 select-none relative z-20">
-      
-      {/* Header Estilo Disney+ / HBO Max */}
-      <div className="flex items-center justify-between mb-3.5">
-        <div className="flex items-center space-x-2">
-          <div className="w-1.5 h-5 bg-gradient-to-b from-netflix-red via-purple-500 to-sky-400 rounded-full shadow-[0_0_10px_rgba(229,9,20,0.8)]" />
-          <h3 className="text-sm sm:text-base md:text-lg font-black text-white tracking-wide uppercase flex items-center space-x-2">
-            <span>Franquicias y Estudios Oficiales</span>
-          </h3>
-        </div>
-        <span className="text-[10px] sm:text-xs font-bold text-gray-400 tracking-wider hidden sm:inline">
-          Formatos Master 4K Ultra HD • Sin Publicidad
-        </span>
-      </div>
-
-      {/* Grid de Brand Hubs (Responsive: 2 columnas en móvil, 3 en tablet, 6 en desktop) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-5 select-none relative z-20">
+      {/* Grid de Brand Hubs con Fotografía Cinematográfica y Liquid Glass (Estilo Disney+ / Max) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3.5">
         {BRAND_HUBS.map((hub) => {
           const isActive = activeHub === hub.id;
-          const IconComp = hub.icon;
 
           return (
-            <motion.div
+            <motion.button
               key={hub.id}
-              whileHover={{ scale: 1.05, y: -4 }}
-              whileTap={{ scale: 0.96 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              type="button"
+              whileHover={{ scale: 1.045, y: -4 }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 26 }}
               onClick={() => onSelectHub(hub)}
-              className={`relative aspect-[16/10] sm:aspect-[16/9] rounded-2xl overflow-hidden cursor-pointer border transition-all duration-300 p-3 sm:p-4 flex flex-col justify-between group shadow-xl ${
+              className={`relative aspect-[16/9] rounded-2xl overflow-hidden cursor-pointer border transition-all duration-300 p-3 sm:p-4 flex flex-col items-center justify-center group shadow-[0_12px_32px_rgba(0,0,0,0.65)] ${
                 hub.borderColor
               } ${
                 isActive
-                  ? 'ring-2 ring-white/80 shadow-[0_10px_30px_rgba(255,255,255,0.25)]'
+                  ? 'ring-2 ring-white shadow-[0_12px_36px_rgba(255,255,255,0.22)]'
                   : 'bg-white/[0.03]'
               }`}
-              style={{
-                background: `linear-gradient(145deg, var(--tw-gradient-stops))`,
-              }}
             >
-              {/* Fondo Degradado Específico de la Marca */}
+              {/* Fotografía Key-Art de Fondo con Zoom Cinematográfico en Hover */}
+              {hub.backdrop && (
+                <img
+                  src={hub.backdrop}
+                  alt={hub.title}
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:opacity-60 group-hover:scale-110 transition-all duration-700 ease-out filter saturate-[1.15]"
+                />
+              )}
+
+              {/* Degradado Atmosférico del Estudio */}
               <div
-                className={`absolute inset-0 bg-gradient-to-br ${hub.gradient} opacity-90 group-hover:opacity-100 transition-opacity duration-300`}
+                className={`absolute inset-0 bg-gradient-to-t ${hub.gradient} transition-opacity duration-300`}
               />
 
-              {/* Reflejo / Brillo Especular de Vidrio Líquido */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-white/[0.08] pointer-events-none" />
+              {/* Brillo Especular Superior (Apple Liquid Glass) */}
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/35 to-transparent pointer-events-none" />
 
               {/* Resplandor Ambiental al Pasar el Cursor */}
               <div
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl"
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none blur-2xl"
                 style={{ backgroundColor: hub.glowColor }}
               />
 
-              {/* Insignia Superior */}
-              <div className="relative z-10 flex items-center justify-between">
-                <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-gray-300/90 bg-black/40 px-1.5 py-0.5 rounded-md border border-white/10 backdrop-blur-md">
-                  {hub.badge}
-                </span>
-                <IconComp className="w-3.5 h-3.5 text-white/70 group-hover:text-white transition-colors" />
-              </div>
-
-              {/* Logo / Nombre Central en Tipografía Emblemática */}
-              <div className="relative z-10 text-center py-1">
+              {/* Wordmark Central en Tipografía Emblemática */}
+              <div className="relative z-10 text-center">
                 <h4 
-                  className="font-black text-xl sm:text-2xl md:text-3xl text-white tracking-wider leading-none drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)] transition-transform duration-300 group-hover:scale-105"
+                  className="font-black text-lg sm:text-xl md:text-2xl text-white tracking-wider leading-none drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)] transition-transform duration-300 group-hover:scale-105"
                   style={{
-                    fontFamily: hub.id === 'disney' ? "'Plus Jakarta Sans', sans-serif" : hub.id === 'marvel' ? "'Bebas Neue', 'Impact', sans-serif" : hub.id === 'starwars' ? "'Inter', sans-serif" : "'Plus Jakarta Sans', sans-serif",
+                    fontFamily: hub.id === 'marvel' ? "'Bebas Neue', 'Impact', sans-serif" : "'Plus Jakarta Sans', sans-serif",
                     letterSpacing: hub.id === 'marvel' ? '3px' : '1.5px'
                   }}
                 >
                   {hub.title}
                 </h4>
-                <p className="text-[9px] sm:text-[10px] text-gray-300 font-medium truncate mt-0.5 opacity-80 group-hover:opacity-100">
+                <p className="text-[9px] sm:text-[10px] text-white/65 font-medium truncate mt-1 group-hover:text-white/95 transition-colors">
                   {hub.subtitle}
                 </p>
               </div>
-
-              {/* Línea de Acento Inferior */}
-              <div className="relative z-10 h-0.5 w-full bg-white/10 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full w-0 group-hover:w-full transition-all duration-300 ${
-                    hub.id === 'marvel' ? 'bg-red-500' :
-                    hub.id === 'disney' ? 'bg-sky-400' :
-                    hub.id === 'starwars' ? 'bg-amber-400' :
-                    hub.id === 'hbomax' ? 'bg-purple-400' :
-                    hub.id === 'dc' ? 'bg-cyan-400' : 'bg-netflix-red'
-                  }`}
-                />
-              </div>
-
-            </motion.div>
+            </motion.button>
           );
         })}
       </div>
-
     </div>
   );
 }

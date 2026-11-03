@@ -514,43 +514,6 @@ export default function App() {
               }}
             />
 
-            {/* Barra de Estado de Calidad Digital 4K, Anti-CAM y CineShield 0% Anuncios */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 relative z-20">
-              <div className="glass-card rounded-2xl px-3.5 py-2.5 sm:px-5 sm:py-3 flex flex-wrap items-center justify-between gap-2 text-[11px] sm:text-xs border border-white/10 shadow-xl">
-                <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-                  <span className="inline-flex items-center space-x-1.5 text-amber-300 font-black">
-                    <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
-                    <span>Filtro Anti-CAM Activo: Prioriza Master 4K Digital</span>
-                  </span>
-                  <span className="hidden md:inline text-white/20">|</span>
-                  <button 
-                    onClick={() => setIsAdBlockModalOpen(true)}
-                    className="inline-flex items-center space-x-1.5 text-emerald-300 font-bold hover:text-emerald-200 transition-colors cursor-pointer"
-                    title="Ver registro de anuncios bloqueados"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>CineShield™ Activo: {blockedAdsCount} Popups y Anuncios Bloqueados</span>
-                  </button>
-                </div>
-                <div className="flex items-center space-x-2 ml-auto">
-                  <button
-                    onClick={() => setIsAdBlockModalOpen(true)}
-                    className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 font-black border border-emerald-500/35 transition-colors"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Bloqueador 4K</span>
-                  </button>
-                  <button
-                    onClick={() => setCastItemForModal(featuredItem || catalog.trendingMovies[0])}
-                    className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold border border-white/10 transition-colors"
-                  >
-                    <Cast className="w-3.5 h-3.5 text-sky-400" />
-                    <span>Chromecast & AirPlay 2</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
             {/* Filas de Contenido Dinámico */}
             <div className="relative z-20 space-y-6">
               

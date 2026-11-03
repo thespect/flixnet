@@ -45,21 +45,17 @@ export default function MovieCard({
           }}
         />
 
-        {/* Top Badges */}
-        <div className="absolute top-2.5 left-2.5 flex items-center space-x-1.5 z-10">
-          <span className="bg-netflix-red text-white text-[9px] font-black px-1.5 py-0.5 rounded-md shadow-md tracking-wider">
-            {movie.isTv ? 'SERIE' : '4K UHD'}
-          </span>
-          <span className="bg-black/85 backdrop-blur-md text-[9px] font-black px-1.5 py-0.5 rounded-md text-emerald-300 border border-emerald-400/25 flex items-center shadow">
-            <Globe className="w-2.5 h-2.5 mr-1 text-emerald-400 shrink-0" />
-            <span>LATINO</span>
+        {/* Top Badges — Minimalist Apple Liquid Glass */}
+        <div className="absolute top-2.5 left-2.5 z-10">
+          <span className="bg-black/65 backdrop-blur-xl text-white/95 text-[9px] font-bold px-2 py-0.5 rounded-full border border-white/[0.15] tracking-wider uppercase shadow">
+            {movie.isTv ? 'SERIE · LAT' : '4K · LAT'}
           </span>
         </div>
 
         <div className="absolute top-2.5 right-2.5 z-10">
-          <span className="bg-black/85 backdrop-blur-md text-white text-[10px] font-black px-1.5 py-0.5 rounded-md flex items-center border border-white/10 shadow">
+          <span className="bg-black/65 backdrop-blur-xl text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center border border-white/[0.12] shadow">
             <Star className="w-2.5 h-2.5 text-amber-400 fill-current inline mr-1" />
-            {movie.vote_average || '8.4'}
+            {Number(movie.vote_average || 8.4).toFixed(1)}
           </span>
         </div>
 
@@ -71,46 +67,46 @@ export default function MovieCard({
           initial={false}
           animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 8 }}
           transition={{ duration: 0.18 }}
-          className="absolute inset-0 bg-gradient-to-t from-[#09090f] via-[#09090f]/90 to-transparent flex flex-col justify-end p-3.5 z-20 pointer-events-auto"
+          className="absolute inset-0 bg-gradient-to-t from-[#060609] via-[#060609]/85 to-transparent flex flex-col justify-end p-3.5 z-20 pointer-events-auto"
         >
-          {/* Action Buttons Row */}
+          {/* Action Buttons Row: 1-Click Direct Play + My List + Episodes/Details */}
           <div className="flex items-center space-x-2 mb-2.5">
             <motion.button 
-              whileHover={{ scale: 1.06 }}
-              whileTap={{ scale: 0.94 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={(e) => {
                 e.stopPropagation();
-                onOpenDetails(movie);
+                onPlay(movie, 1, 1);
               }}
-              className="flex-1 h-8 px-2.5 rounded-xl bg-netflix-red text-white flex items-center justify-center space-x-1.5 hover:bg-red-700 shadow-xl shadow-red-900/50 text-[10px] font-black"
-              title={movie.isTv ? "Seleccionar Temporada y Capítulo" : "Seleccionar Versión / Reproducir"}
+              className="flex-1 h-8 px-3 rounded-full bg-white text-black flex items-center justify-center space-x-1.5 hover:bg-neutral-200 shadow-lg text-[11px] font-bold cursor-pointer"
+              title="Reproducir ahora en Español Latino 4K"
             >
-              <Play className="w-3.5 h-3.5 fill-current shrink-0" />
-              <span className="truncate">{movie.isTv ? 'Temp / Cap' : 'Ver / Elegir'}</span>
+              <Play className="w-3.5 h-3.5 fill-black text-black shrink-0" />
+              <span className="truncate">Reproducir</span>
             </motion.button>
 
             <motion.button 
-              whileHover={{ scale: 1.12 }}
+              whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleMyList(movie);
               }}
-              className="w-7 h-7 rounded-full bg-[#1e1e2a] hover:bg-[#2e2e3e] text-white flex items-center justify-center border border-white/20 transition-all shrink-0"
+              className="w-8 h-8 rounded-full bg-white/[0.12] hover:bg-white/[0.22] backdrop-blur-xl text-white flex items-center justify-center border border-white/20 transition-all shrink-0 cursor-pointer"
               title={isInMyList ? "Quitar de Mi Lista" : "Añadir a Mi Lista"}
             >
               {isInMyList ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Plus className="w-3.5 h-3.5" />}
             </motion.button>
 
             <motion.button 
-              whileHover={{ scale: 1.12 }}
+              whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={(e) => {
                 e.stopPropagation();
                 onOpenDetails(movie);
               }}
-              className="w-7 h-7 rounded-full bg-[#1e1e2a] hover:bg-[#2e2e3e] text-white flex items-center justify-center border border-white/20 transition-all shrink-0"
-              title="Seleccionar temporada, capítulo y servidor"
+              className="w-8 h-8 rounded-full bg-white/[0.12] hover:bg-white/[0.22] backdrop-blur-xl text-white flex items-center justify-center border border-white/20 transition-all shrink-0 cursor-pointer"
+              title={movie.isTv ? "Temporadas y Episodios" : "Detalles y Servidores"}
             >
               <ChevronDown className="w-4 h-4" />
             </motion.button>
