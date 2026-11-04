@@ -698,11 +698,6 @@ export default function App() {
                     </>
                   )}
 
-                  {/* Lanzador Rápido por TMDB o Enlace */}
-                  <QuickLauncher 
-                    onPlayCustomMovie={(m, s, e, epTitle) => handleStartPlay(m, s, e, epTitle)}
-                  />
-
                   {/* SECCIÓN DE PELÍCULAS 4K */}
                   {(!showSeriesOnly) && (
                     <>
@@ -791,9 +786,9 @@ export default function App() {
 
       </main>
 
-      {/* Barra de Navegación Inferior Flotante Móvil y Tablet (Apple Liquid Glass PWA) */}
-      <nav className="lg:hidden fixed bottom-3 inset-x-3 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md z-40 pointer-events-none">
-        <div className="pointer-events-auto bg-[#0a0a14]/85 backdrop-blur-2xl border border-white/15 rounded-2xl p-1.5 shadow-[0_14px_45px_rgba(0,0,0,0.92)] flex items-center justify-around text-[10px] font-bold">
+      {/* Barra de Navegación Inferior Flotante Móvil y Tablet (Apple Liquid Glass Dock) */}
+      <nav className="lg:hidden fixed bottom-3 inset-x-4 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md z-40 pointer-events-none pb-safe">
+        <div className="pointer-events-auto bg-[#0b0b12]/82 backdrop-blur-2xl border border-white/[0.12] rounded-full p-1.5 shadow-[0_16px_48px_rgba(0,0,0,0.92)] flex items-center justify-around text-[10px] font-semibold">
           {[
             { id: 'home', label: 'Inicio', icon: Home },
             { id: 'movies', label: 'Películas', icon: Film },
@@ -807,21 +802,21 @@ export default function App() {
               <button
                 key={nav.id}
                 onClick={() => handleTabChange(nav.id)}
-                className={`relative flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition-all ${
-                  isActive ? 'text-white font-black' : 'text-gray-400 hover:text-gray-200'
+                className={`relative flex flex-col items-center justify-center py-1.5 px-3.5 rounded-full transition-all cursor-pointer ${
+                  isActive ? 'text-black font-bold' : 'text-white/65 hover:text-white'
                 }`}
               >
                 {isActive && (
                   <motion.div
                     layoutId="mobileBottomNavPill"
-                    className="absolute inset-0 bg-netflix-red rounded-xl shadow-lg shadow-red-950/50"
+                    className="absolute inset-0 bg-white rounded-full shadow-md"
                     transition={{ type: 'spring', stiffness: 450, damping: 32 }}
                   />
                 )}
                 <div className="relative z-10">
-                  <IconComp className={`w-4 h-4 ${isActive ? 'text-white' : ''}`} />
+                  <IconComp className={`w-4 h-4 ${isActive ? 'text-black' : ''}`} />
                   {nav.badgeCount > 0 && (
-                    <span className="absolute -top-1.5 -right-2.5 bg-netflix-red text-white text-[9px] font-black px-1.5 rounded-full border border-black">
+                    <span className="absolute -top-1.5 -right-2.5 bg-netflix-red text-white text-[9px] font-bold px-1.5 rounded-full">
                       {nav.badgeCount}
                     </span>
                   )}

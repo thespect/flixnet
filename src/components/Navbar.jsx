@@ -135,38 +135,17 @@ export default function Navbar({
           {/* Left: Brand Identity & Desktop Navigation */}
           <div className="flex items-center space-x-5 lg:space-x-8 min-w-0">
             <motion.div 
-              whileHover={{ scale: 1.03 }}
+              whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.96 }}
               onClick={() => { setActiveTab('home'); clearSearch(); }}
               className="flex items-center space-x-2.5 cursor-pointer select-none group shrink-0"
             >
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-netflix-red via-red-600 to-amber-500 flex items-center justify-center shadow-lg shadow-red-900/60 group-hover:shadow-red-600/80 transition-all border border-white/20">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-netflix-red flex items-center justify-center shadow-[0_4px_20px_rgba(229,9,20,0.5)] transition-all">
                 <Film className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
-              <div className="flex flex-col">
-                <span className="logo-font text-2xl sm:text-3xl font-black text-white tracking-wider leading-none drop-shadow-md group-hover:text-netflix-red transition-colors">
-                  CINE<span className="text-netflix-red">FLEX</span>
-                </span>
-                <span className="text-[7px] sm:text-[8px] font-black tracking-widest text-amber-400/90 uppercase -mt-0.5">
-                  MAX 4K • LATINO
-                </span>
-              </div>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenAdBlockModal?.();
-                }}
-                className="hidden xl:inline-flex items-center space-x-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/35 text-[9px] font-black px-2.5 py-0.5 rounded-full ml-1 shadow-sm transition-all cursor-pointer"
-                title="Abrir panel de CineShield™ AdBlocker 4K"
-              >
-                <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0" />
-                <span>CineShield™ 0% ADS</span>
-                <span className="bg-emerald-500/25 text-emerald-200 px-1 py-0.1 rounded font-mono text-[8px]">
-                  {blockedAdsCount}
-                </span>
-              </motion.button>
+              <span className="logo-font text-2xl sm:text-3xl font-black text-white tracking-wider leading-none drop-shadow-md">
+                CINE<span className="text-netflix-red">FLEX</span>
+              </span>
             </motion.div>
 
             {/* Desktop Navigation Links — Apple TV+ Liquid Glass Pill Dock */}
@@ -202,21 +181,23 @@ export default function Navbar({
             </div>
           </div>
 
-          {/* Right: Search, Install PWA, Smart TV Cast, API Key, Profile */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
+          {/* Right: Search, Install PWA, Smart TV Cast, Profile */}
+          <div className="flex items-center space-x-2 sm:space-x-2.5">
             
             {/* Animated Search Bar */}
             <motion.div 
               layout
               className={`relative flex items-center transition-all ${
                 searchOpen || searchQuery 
-                  ? 'w-40 sm:w-64 md:w-72 bg-black/90 border border-white/25 rounded-full px-3 py-1.5 shadow-2xl' 
-                  : 'w-8 sm:w-9 justify-center'
+                  ? 'w-44 sm:w-64 md:w-72 bg-white/[0.08] backdrop-blur-2xl border border-white/20 rounded-full px-3.5 py-1.5 shadow-2xl' 
+                  : 'w-9 h-9 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] justify-center cursor-pointer'
               }`}
+              onClick={() => {
+                if (!searchOpen) setSearchOpen(true);
+              }}
             >
               <Search 
-                className="w-4 h-4 text-gray-200 cursor-pointer hover:text-white shrink-0" 
-                onClick={() => setSearchOpen(true)}
+                className="w-4 h-4 text-white/85 shrink-0" 
               />
               
               <AnimatePresence>
@@ -231,79 +212,61 @@ export default function Navbar({
                       type="text" 
                       value={searchQuery}
                       onChange={handleSearchChange}
-                      placeholder="Películas, series, sagas..." 
-                      className="bg-transparent text-xs sm:text-sm text-white px-2 focus:outline-none w-full placeholder-gray-400 font-medium"
+                      placeholder="Buscar películas o series..." 
+                      className="bg-transparent text-xs sm:text-sm text-white px-2 focus:outline-none w-full placeholder-white/45 font-medium"
                       autoFocus
                     />
                     <X 
-                      className="w-3.5 h-3.5 text-gray-400 hover:text-white cursor-pointer shrink-0"
-                      onClick={clearSearch}
+                      className="w-3.5 h-3.5 text-white/50 hover:text-white cursor-pointer shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        clearSearch();
+                      }}
                     />
                   </motion.div>
                 )}
               </AnimatePresence>
             </motion.div>
 
-            {/* Botón Instalar App PWA (Celular, Tablet y PC) */}
-            {!isStandalonePwa ? (
+            {/* Botón Instalar App PWA */}
+            {!isStandalonePwa && (
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
                 onClick={handleInstallPwaClick}
-                className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-gradient-to-r from-netflix-red/90 to-rose-600/90 hover:from-netflix-red hover:to-rose-600 text-white text-[11px] sm:text-xs font-black border border-white/20 shadow-lg shadow-red-950/50 transition-all shrink-0"
-                title="Instalar aplicación Cineflex 4K en tu Celular, Tablet o PC"
+                className="hidden sm:flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.15] text-white text-xs font-semibold border border-white/[0.12] transition-all shrink-0 cursor-pointer"
+                title="Instalar aplicación Cineflex 4K"
               >
                 <Download className="w-3.5 h-3.5 shrink-0" />
-                <span className="hidden sm:inline">Instalar App</span>
-                <span className="sm:hidden">App</span>
+                <span>App</span>
               </motion.button>
-            ) : (
-              <span className="hidden md:inline-flex items-center space-x-1 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-black">
-                <CheckCircle2 className="w-3 h-3" />
-                <span>PWA 4K</span>
-              </span>
             )}
 
             {/* Cast Smart TV Button */}
             {onOpenCastModal && (
               <motion.button 
-                whileHover={{ scale: 1.06 }}
+                whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={onOpenCastModal}
-                className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white border border-white/15 transition-all flex items-center justify-center shadow-lg shrink-0"
+                className="w-9 h-9 rounded-full bg-white/[0.06] hover:bg-white/[0.14] text-white/85 hover:text-white border border-white/[0.1] transition-all flex items-center justify-center shrink-0 cursor-pointer"
                 title="Transmitir a Smart TV (AirPlay / Chromecast)"
               >
                 <Cast className="w-4 h-4" />
               </motion.button>
             )}
 
-            {/* TMDB Key Pill */}
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onOpenApiKeyModal}
-              className={`hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all shrink-0 ${
-                isApiKeySet 
-                  ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25' 
-                  : 'bg-white/10 border-white/15 text-gray-300 hover:bg-white/20'
-              }`}
-            >
-              <Key className="w-3.5 h-3.5" />
-              <span>{isApiKeySet ? 'TMDB Activo' : 'API TMDB'}</span>
-            </motion.button>
-
             {/* Profile Switcher Menu */}
             <div className="relative shrink-0">
               <motion.div 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="flex items-center space-x-1.5 cursor-pointer bg-white/5 hover:bg-white/10 p-1 pr-2 rounded-xl border border-white/10 transition-colors"
+                className="flex items-center space-x-1.5 cursor-pointer bg-white/[0.06] hover:bg-white/[0.12] p-1 pr-2.5 rounded-full border border-white/[0.1] transition-colors"
               >
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-netflix-red to-rose-600 flex items-center justify-center font-black text-xs shadow-md border border-white/20 text-white">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-netflix-red to-rose-600 flex items-center justify-center font-bold text-xs text-white">
                   {currentProfile[0]}
                 </div>
-                <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+                <ChevronDown className="w-3.5 h-3.5 text-white/60" />
               </motion.div>
 
               <AnimatePresence>

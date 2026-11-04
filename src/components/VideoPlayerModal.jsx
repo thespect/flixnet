@@ -240,11 +240,30 @@ export default function VideoPlayerModal({
         if (!cancelled && imdb) setResolvedImdbId(imdb);
       }
 
+      // Fast-Path: inicia la reproducción en cuanto llega el primer flujo en Español Latino 4K/Full HD,
+      // sin esperar a que terminen los subtítulos o los servidores secundarios
+      const handleFastStream = (fastReport) => {
+        if (cancelled || !fastReport) return;
+        if (fastReport.imdbId) setResolvedImdbId(fastReport.imdbId);
+        const fastStreams = fastReport.directHlsStreams || [];
+        if (fastStreams.length > 0) {
+          setDirectHlsStreams(fastStreams);
+          const cleanLat = fastStreams.findIndex((s) => s.isLatinoDub && !s.isCamQuality);
+          const anyLat = cleanLat >= 0 ? cleanLat : fastStreams.findIndex((s) => s.isLatinoDub);
+          if (anyLat >= 0) {
+            setActiveHlsIndex(anyLat);
+            setSelectedAudioMode('es_latino_dub');
+            setIsScanningLinks(false);
+          }
+        }
+      };
+
       const report = await StreamScannerService.scanAllWorkingLinks(
         movie,
         currentSeason,
         currentEpisode,
-        imdb
+        imdb,
+        handleFastStream
       );
 
       if (cancelled || !report) {
@@ -259,20 +278,28 @@ export default function VideoPlayerModal({
       setSubtitlesList(report.subtitles || []);
       setIsScanningLinks(false);
 
-      // REGLA #1: La primera opción SIEMPRE debe reproducirse en ESPAÑOL LATINO con audio nítido y en 4K/Full HD (0% Anuncios y 0% Toques Fantasmas).
+      // REGLA #1: La primera opción (Smart Auto 4K / PlayLatin) SIEMPRE prioriza ESPAÑOL LATINO en Full HD / 4K con 0% Anuncios
       const cleanLatinoIdx = streams.findIndex((s) => s.isLatinoDub && !s.isCamQuality);
       const anyLatinoIdx = cleanLatinoIdx >= 0 ? cleanLatinoIdx : streams.findIndex((s) => s.isLatinoDub);
       const bluRayIdx = streams.findIndex((s) => s.isBluRayMaster || s.providerId === 'nova');
 
-      if (selectedServer === 'playlatin_es') {
+      if (selectedServer === 'auto_smart_latino' || selectedServer === 'playlatin_es') {
         if (anyLatinoIdx >= 0) {
           setActiveHlsIndex(anyLatinoIdx);
           setSelectedAudioMode('es_latino_dub');
           loadSubtitleTrack(-1);
-          showToast('PlayLatin 4K Oficial activo (Stream Directo Español Latino • 0% Anuncios)');
+          showToast(
+            selectedServer === 'auto_smart_latino'
+              ? `Smart Auto 4K: Conectado a ${streams[anyLatinoIdx]?.name || 'Español Latino 4K'} (${report.scanDurationMs || 120}ms)`
+              : 'PlayLatin 4K activo (Stream Directo Español Latino • 0% Anuncios)'
+          );
         } else {
           setSelectedAudioMode('es_latino_dub');
-          showToast('PlayLatin Oficial 4K activo (100% Español Latino • 0% Anuncios)');
+          showToast(
+            selectedServer === 'auto_smart_latino'
+              ? 'Smart Auto 4K: Conectado al nodo Español Latino verificado'
+              : 'PlayLatin Oficial 4K activo (100% Español Latino • 0% Anuncios)'
+          );
         }
       } else if (selectedServer === 'native_hls_4k') {
         if (anyLatinoIdx >= 0) {
@@ -460,20 +487,23 @@ export default function VideoPlayerModal({
   useEffect(() => {
     if (!isLoading || showTrailer || isScanningLinks) return;
 
-    const timeoutMs = isNativeServer ? 6000 : 4800;
+    const timeoutMs = isNativeServer ? 4800 : 3800;
     const timer = setTimeout(() => {
       if (isLoading) {
         if (isNativeServer && activeHlsIndex + 1 < directHlsStreams.length) {
           const nextIdx = activeHlsIndex + 1;
           setActiveHlsIndex(nextIdx);
-          showToast(`⚡ Auto-Failover: Probando nodo directo #${nextIdx + 1} (${directHlsStreams[nextIdx]?.name || '4K'})...`);
+          showToast(`⚡ Smart Auto: Conmutando a nodo directo #${nextIdx + 1} (${directHlsStreams[nextIdx]?.name || '4K'})...`);
           return;
         }
 
-        const fallbackChain = ['playlatin_es', 'native_hls_4k', 'nxsha_multilang', 'cinesrc_4k', 'embedwave_ultra'];
+        const fallbackChain = ['auto_smart_latino', 'playlatin_es', 'native_hls_4k', 'nxsha_multilang', 'cinesrc_4k', 'embedwave_ultra'];
         const currentIdx = fallbackChain.indexOf(selectedServer);
         if (currentIdx >= 0 && currentIdx < fallbackChain.length - 1) {
           let next = fallbackChain[currentIdx + 1];
+          if (selectedServer === 'auto_smart_latino' && next === 'playlatin_es') {
+            next = 'nxsha_multilang';
+          }
           if (next === 'native_hls_4k' && directHlsStreams.length === 0) {
             next = 'nxsha_multilang';
           }
@@ -481,7 +511,7 @@ export default function VideoPlayerModal({
           setIframeKey((k) => k + 1);
           setIsLoading(true);
           const prov = STREAM_PROVIDERS.find((p) => p.id === next);
-          showToast(`⚡ Auto-Failover: Conmutando a ${prov?.name || 'servidor alternativo'} (Español Latino)...`);
+          showToast(`⚡ Smart Auto-Failover: Conmutando a ${prov?.name || 'servidor alternativo'} (Español Latino)...`);
         } else {
           setIsLoading(false);
         }
@@ -832,7 +862,17 @@ export default function VideoPlayerModal({
     const anyLatinoIdx = cleanLatinoIdx >= 0 ? cleanLatinoIdx : directHlsStreams.findIndex(s => s.isLatinoDub);
     const bluRayIdx = directHlsStreams.findIndex(s => s.isBluRayMaster || s.providerId === 'nova');
 
-    if (serverId === 'playlatin_es') {
+    if (serverId === 'auto_smart_latino') {
+      setSelectedAudioMode('es_latino_dub');
+      setPlayLatinLang('latino');
+      if (anyLatinoIdx >= 0) {
+        setActiveHlsIndex(anyLatinoIdx);
+        loadSubtitleTrack(-1);
+        showToast(`Smart Auto 4K: Conectado a ${directHlsStreams[anyLatinoIdx]?.name || 'Español Latino 4K Directo'}`);
+      } else {
+        showToast('Smart Auto 4K activado (Auto-Detector Español Latino Full HD / 4K)');
+      }
+    } else if (serverId === 'playlatin_es') {
       setSelectedAudioMode('es_latino_dub');
       setPlayLatinLang('latino');
       if (anyLatinoIdx >= 0) {
@@ -1139,20 +1179,16 @@ export default function VideoPlayerModal({
             <div className="flex items-center space-x-1.5 text-[10px] sm:text-[11px] text-white/55 font-medium truncate">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
               <span className="text-white/80 font-semibold truncate">
-                {showTrailer ? 'Tráiler Oficial 4K' : currentProvider.name}
+                {showTrailer
+                  ? 'Tráiler Oficial 4K'
+                  : selectedServer === 'auto_smart_latino' && activeDirectStream?.name
+                  ? `Smart Auto → ${activeDirectStream.name}`
+                  : currentProvider.name}
               </span>
               <span>·</span>
               <span className="text-white/70 truncate">
                 {currentAudioObj.shortLabel}
               </span>
-              {isNativeServer && !showTrailer && (
-                <>
-                  <span>·</span>
-                  <span className="text-emerald-400/90 font-semibold hidden md:inline">
-                    Stream Directo 0% Iframes
-                  </span>
-                </>
-              )}
             </div>
           </div>
         </div>
@@ -1828,11 +1864,10 @@ export default function VideoPlayerModal({
           /* REPRODUCTOR 2: SERVIDORES EXTERNOS EN ESPAÑOL LATINO (100% Responsivo en Celular, Tablet y PC) */
           <div className="relative w-full h-full flex items-center justify-center p-0 sm:p-3 md:p-5">
             <div className="relative w-full h-full max-w-7xl sm:aspect-video flex items-center justify-center">
-              {selectedServer === 'playlatin_es' && !resolvedImdbId && isScanningLinks ? (
+              {(selectedServer === 'auto_smart_latino' || selectedServer === 'playlatin_es') && isScanningLinks ? (
                 <div className="flex flex-col items-center justify-center space-y-3 p-4 text-center">
-                  <div className="w-12 h-12 border-4 border-netflix-red/30 border-t-netflix-red rounded-full animate-spin" />
-                  <p className="text-sm font-black text-white">Conectando a PlayLatin Oficial 4K...</p>
-                  <p className="text-xs text-emerald-400 font-bold">Verificando audio oficial en Español Latino (0% Anuncios)</p>
+                  <div className="w-11 h-11 border-2 border-white/15 border-t-white rounded-full animate-spin" />
+                  <p className="text-sm font-semibold text-white tracking-tight">Seleccionando mejor nodo en Español Latino 4K...</p>
                 </div>
               ) : (
                 <iframe 

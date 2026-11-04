@@ -18,6 +18,7 @@ const HLS_PROVIDERS = [
 ];
 
 const scanCache = new Map();
+const inFlightScans = new Map();
 
 function b64Encode(str) {
   try {
@@ -250,82 +251,127 @@ export const StreamScannerService = {
   },
 
   /**
-   * Escaneo integral automático:
-   * 1. Extrae streams HLS (.m3u8) directos en Español Latino (LAT) y Castellano (ESP) desde el backend
-   * 2. Los coloca en la posición #1 para que el reproductor nativo 4K y Chromecast / AirPlay transmitan en Español Latino real
-   * 3. Agrega los nodos HLS 4K originales + subtítulos en Español Latino como respaldo
+   * Escaneo progresivo ultra-rápido:
+   * - Notifica inmediatamente mediante `onFastStream` en cuanto llega el primer flujo en Español Latino 4K/Full HD,
+   *   sin esperar a que terminen los subtítulos ni los servidores secundarios.
+   * - Reutiliza promesas en vuelo (`inFlightScans`) y caché en memoria (`scanCache`) para carga en 0ms.
    */
-  async scanAllWorkingLinks(movie, season = 1, episode = 1, imdbId = null) {
+  async scanAllWorkingLinks(movie, season = 1, episode = 1, imdbId = null, onFastStream = null) {
     if (!movie?.id) return null;
     const isTv = Boolean(movie.isTv);
     const cacheKey = `${movie.id}_${isTv ? `tv_${season}_${episode}` : 'movie'}`;
 
     if (scanCache.has(cacheKey)) {
-      return scanCache.get(cacheKey);
+      const cached = scanCache.get(cacheKey);
+      if (typeof onFastStream === 'function') {
+        onFastStream(cached);
+      }
+      return cached;
+    }
+
+    if (inFlightScans.has(cacheKey)) {
+      const existingPromise = inFlightScans.get(cacheKey);
+      if (typeof onFastStream === 'function') {
+        existingPromise.then((res) => {
+          if (res) onFastStream(res);
+        }).catch(() => {});
+      }
+      return existingPromise;
     }
 
     const startTime = performance.now();
 
-    const [hlsResult, subtitles, backendScan] = await Promise.all([
-      this.fetchDirectHlsStreams(movie.id, isTv, season, episode),
-      this.fetchSubtitles(movie.id, isTv, season, episode),
-      this.fetchBackendVerification(movie.id, isTv, season, episode, imdbId || movie.imdb_id)
-    ]);
+    const scanPromise = (async () => {
+      try {
+        let fastNotified = false;
 
-    if (backendScan?.lanIp && typeof window !== 'undefined') {
-      window.__CINEFLEX_LAN_IP__ = backendScan.lanIp;
-    }
+        const backendPromise = this.fetchBackendVerification(
+          movie.id,
+          isTv,
+          season,
+          episode,
+          imdbId || movie.imdb_id
+        ).then((backendScan) => {
+          if (backendScan?.lanIp && typeof window !== 'undefined') {
+            window.__CINEFLEX_LAN_IP__ = backendScan.lanIp;
+          }
+          const latinoDirect = Array.isArray(backendScan?.latinoDirectStreams)
+            ? backendScan.latinoDirectStreams
+            : [];
+          if (!fastNotified && typeof onFastStream === 'function' && (latinoDirect.length > 0 || backendScan?.imdbId)) {
+            fastNotified = true;
+            onFastStream({
+              tmdbId: movie.id,
+              imdbId: backendScan?.imdbId || imdbId || movie.imdb_id || null,
+              directHlsStreams: latinoDirect,
+              latinoDirectStreams: latinoDirect,
+              subtitles: [],
+              serverStatuses: backendScan?.serverStatuses || {},
+              scanDurationMs: Math.round(performance.now() - startTime),
+              isPartialFast: true
+            });
+          }
+          return backendScan;
+        });
 
-    // Clasificación Anti-CAM inteligente:
-    // 1. Doblaje Español Latino Digital Limpio (!isCamQuality)
-    // 2. Master Blu-Ray Digital 4K/1080p (Nova ~5 Mbps, descarta copias antiguas grabadas en cine)
-    // 3. Español Castellano Digital Limpio (!isCamQuality)
-    // 4. Vidora / Otros nodos HD
-    // 5. Versiones de estreno inicial (isCamQuality) solo como último respaldo si el usuario lo pide explícitamente
-    const latinoDirect = Array.isArray(backendScan?.latinoDirectStreams)
-      ? backendScan.latinoDirectStreams
-      : [];
-    const rawCombined = [
-      ...latinoDirect,
-      ...(hlsResult.streams || [])
-    ];
+        const hlsPromise = this.fetchDirectHlsStreams(movie.id, isTv, season, episode);
+        const subsPromise = this.fetchSubtitles(movie.id, isTv, season, episode);
 
-    const rankStream = (s) => {
-      if (s.isLatinoDub && !s.isCamQuality) return 1;
-      if (s.isBluRayMaster || s.providerId === 'nova') return 2;
-      if (s.isCastellanoDub && !s.isCamQuality) return 3;
-      if (!s.isCamQuality) return 4;
-      return 5;
-    };
+        const [backendScan, hlsResult, subtitles] = await Promise.all([
+          backendPromise,
+          hlsPromise,
+          subsPromise
+        ]);
 
-    const combinedDirectStreams = [...rawCombined].sort((a, b) => rankStream(a) - rankStream(b));
-    const skippedCamLatino =
-      latinoDirect.some((s) => s.isLatinoDub && s.isCamQuality) &&
-      combinedDirectStreams.some((s) => s.isBluRayMaster || s.providerId === 'nova');
+        const latinoDirect = Array.isArray(backendScan?.latinoDirectStreams)
+          ? backendScan.latinoDirectStreams
+          : [];
+        const rawCombined = [
+          ...latinoDirect,
+          ...(hlsResult.streams || [])
+        ];
 
-    const result = {
-      tmdbId: movie.id,
-      imdbId: backendScan?.imdbId || imdbId || movie.imdb_id || null,
-      lanIp: backendScan?.lanIp || null,
-      isTv,
-      season,
-      episode,
-      directHlsStreams: combinedDirectStreams,
-      latinoDirectStreams: latinoDirect,
-      subtitles: subtitles || [],
-      latinoSources: backendScan?.latinoSources || [],
-      hasConfirmedLatinoDub:
-        latinoDirect.some((s) => s.isLatinoDub) || (backendScan?.latinoSources?.length || 0) > 0,
-      skippedCamLatino,
-      serverStatuses: backendScan?.serverStatuses || {},
-      scanDurationMs: Math.round(performance.now() - startTime),
-      timestamp: Date.now()
-    };
+        const rankStream = (s) => {
+          if (s.isLatinoDub && !s.isCamQuality) return 1;
+          if (s.isBluRayMaster || s.providerId === 'nova') return 2;
+          if (s.isCastellanoDub && !s.isCamQuality) return 3;
+          if (!s.isCamQuality) return 4;
+          return 5;
+        };
 
-    if (combinedDirectStreams.length > 0) {
-      scanCache.set(cacheKey, result);
-    }
-    return result;
+        const combinedDirectStreams = [...rawCombined].sort((a, b) => rankStream(a) - rankStream(b));
+        const skippedCamLatino =
+          latinoDirect.some((s) => s.isLatinoDub && s.isCamQuality) &&
+          combinedDirectStreams.some((s) => s.isBluRayMaster || s.providerId === 'nova');
+
+        const result = {
+          tmdbId: movie.id,
+          imdbId: backendScan?.imdbId || imdbId || movie.imdb_id || null,
+          lanIp: backendScan?.lanIp || null,
+          isTv,
+          season,
+          episode,
+          directHlsStreams: combinedDirectStreams,
+          latinoDirectStreams: latinoDirect,
+          subtitles: subtitles || [],
+          latinoSources: backendScan?.latinoSources || [],
+          hasConfirmedLatinoDub:
+            latinoDirect.some((s) => s.isLatinoDub) || (backendScan?.latinoSources?.length || 0) > 0,
+          skippedCamLatino,
+          serverStatuses: backendScan?.serverStatuses || {},
+          scanDurationMs: Math.round(performance.now() - startTime),
+          timestamp: Date.now()
+        };
+
+        scanCache.set(cacheKey, result);
+        return result;
+      } finally {
+        inFlightScans.delete(cacheKey);
+      }
+    })();
+
+    inFlightScans.set(cacheKey, scanPromise);
+    return scanPromise;
   },
 
   async fetchBackendVerification(tmdbId, isTv, season, episode, imdbId) {
@@ -342,16 +388,21 @@ export const StreamScannerService = {
       `./api.php?action=scan&${params.toString()}`
     ];
 
-    for (const ep of endpoints) {
-      try {
-        const res = await fetchWithTimeout(ep, { headers: { Accept: 'application/json' } }, 9000);
-        if (!res.ok) continue;
-        const ct = res.headers.get('content-type') || '';
-        if (!ct.includes('json')) continue;
-        const data = await res.json();
-        if (data && data.ok) return data;
-      } catch {}
+    try {
+      const winner = await Promise.any(
+        endpoints.map(async (ep) => {
+          const res = await fetchWithTimeout(ep, { headers: { Accept: 'application/json' } }, 5500);
+          if (!res.ok) throw new Error('HTTP error');
+          const ct = res.headers.get('content-type') || '';
+          if (!ct.includes('json')) throw new Error('Not JSON');
+          const data = await res.json();
+          if (!data || !data.ok) throw new Error('Invalid payload');
+          return data;
+        })
+      );
+      return winner;
+    } catch {
+      return null;
     }
-    return null;
   }
 };

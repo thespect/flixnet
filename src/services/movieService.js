@@ -122,13 +122,46 @@ export const KNOWN_IMDB_IDS = {
   671: 'tt0241527'       // Harry Potter y la Piedra Filosofal
 };
 
-// Servidores verificados: Priorizando SIEMPRE servidores en Español Latino rápidos, funcionales y 4K/FullHD con 0% Anuncios y 0% Toques Fantasmas
+// Servidores verificados: El Nodo #1 "Smart Auto 4K" detecta y conecta automáticamente al servidor más rápido en Español Latino Full HD / 4K
 export const STREAM_PROVIDERS = [
   {
+    id: 'auto_smart_latino',
+    name: 'Smart Auto 4K',
+    subtitle: 'Auto-Detector Inteligente • Conecta al Mejor Servidor Funcional en Español Latino 4K/FHD',
+    badge: 'AUTO LATINO',
+    tag: 'Auto-Detect',
+    quality: '4K / 1080p Full HD Latino',
+    ping: '4ms',
+    isNative: false,
+    isAutoNode: true,
+    prefersNativeHls: true,
+    isDirectHls: true,
+    sandboxSafe: true,
+    language: 'Español Latino Oficial (Selección Inteligente)',
+    description: 'Analiza en milisegundos todos los nodos y reproduce automáticamente el flujo más rápido y estable en Español Latino Full HD / 4K sin anuncios.',
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
+      const validImdb = (imdbId && String(imdbId).startsWith('tt'))
+        ? imdbId
+        : (KNOWN_IMDB_IDS[id] && String(KNOWN_IMDB_IDS[id]).startsWith('tt'))
+          ? KNOWN_IMDB_IDS[id]
+          : null;
+
+      if (!validImdb) {
+        return isTv
+          ? `https://web.nxsha.app/embed/tv/${id}/${season}/${episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
+          : `https://web.nxsha.app/embed/movie/${id}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
+      }
+
+      return isTv
+        ? `https://playlatinsrc.co/custom/serial/${validImdb}/${season}/${episode}?lang=${lang}&autoplay=1`
+        : `https://playlatinsrc.co/custom/movie/${validImdb}?lang=${lang}&autoplay=1`;
+    }
+  },
+  {
     id: 'playlatin_es',
-    name: 'PlayLatin 4K Oficial',
-    subtitle: 'Servidor #1 • 100% Español Latino Oficial (Cero Toques Fantasmas)',
-    badge: 'LATINO 4K #1',
+    name: 'PlayLatin 4K',
+    subtitle: 'Servidor Oficial • 100% Español Latino (Cero Toques Fantasmas)',
+    badge: 'LATINO 4K',
     tag: '100% Latino',
     quality: '1080p / 4K UHD Latino',
     ping: '8ms',

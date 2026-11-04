@@ -87,7 +87,17 @@ if (empty($tmdbId)) {
     exit;
 }
 
-function quickGet($url, $timeout = 4, $referer = '', $postJson = null) {
+$cacheKey = 'cineflex_v5_' . md5("{$tmdbId}_" . ($isTv ? "tv_{$season}_{$episode}" : "movie"));
+$cacheFile = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . $cacheKey . '.json';
+if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < 600) {
+    $cachedJson = @file_get_contents($cacheFile);
+    if ($cachedJson && strpos($cachedJson, '"ok":true') !== false) {
+        echo $cachedJson;
+        exit;
+    }
+}
+
+function quickGet($url, $timeout = 3, $referer = '', $postJson = null) {
     global $dropUa;
     $headers = "User-Agent: {$dropUa}\r\n";
     if (!empty($referer)) {
@@ -186,17 +196,22 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
             $resData = @json_decode($resJson, true);
             if (!empty($resData['sources']) && is_array($resData['sources'])) {
                 $hasPlayLatin = true;
+                $seenLangs = [];
                 foreach ($resData['sources'] as $idx => $src) {
                     if (!empty($src['url']) && strpos($src['url'], 'dr0pstream.com') !== false) {
                         $ver = strtolower(isset($src['version']) ? $src['version'] : 'latino');
                         $isLat = ($ver === 'latino' || ($ver !== 'castellano' && $ver !== 'subtitulado'));
                         $isCast = ($ver === 'castellano');
                         $langKey = $isLat ? 'latino' : ($isCast ? 'castellano' : 'subtitulado');
+                        if (isset($seenLangs[$langKey]) || $langKey === 'subtitulado') {
+                            continue;
+                        }
+                        $seenLangs[$langKey] = true;
                         $langBadge = $isLat
                             ? 'PlayLatin Oficial • Español Latino'
                             : ($isCast ? 'PlayLatin Oficial • Castellano' : 'PlayLatin Oficial • Subtitulado');
 
-                        $dHtml = quickGet($src['url'], 4, 'https://playlatinsrc.co/');
+                        $dHtml = quickGet($src['url'], 3, 'https://playlatinsrc.co/');
                         if ($dHtml) {
                             $unpacked = unpackPackerPhp($dHtml);
                             if (preg_match('/file:"(https:\/\/[^"]+\.m3u8[^"]*)"/', $unpacked, $mm)) {
@@ -321,7 +336,7 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
     }
 }
 
-echo json_encode([
+$responsePayload = json_encode([
     'ok' => true,
     'tmdbId' => $tmdbId,
     'imdbId' => $imdbId ?: null,
@@ -329,6 +344,12 @@ echo json_encode([
     'latinoDirectStreams' => $latinoDirectStreams,
     'latinoSources' => [],
     'serverStatuses' => [
+        'auto_smart_latino' => [
+            'online' => true,
+            'hasLatinoDirect' => count($latinoDirectStreams) > 0,
+            'ping' => '4ms',
+            'verified' => true
+        ],
         'native_hls_4k' => [
             'online' => true,
             'hasLatinoDirect' => count($latinoDirectStreams) > 0,
@@ -352,3 +373,9 @@ echo json_encode([
         'embedwave_ultra' => ['online' => true, 'ping' => '14ms', 'verified' => true]
     ]
 ]);
+
+if (count($latinoDirectStreams) > 0) {
+    @file_put_contents($cacheFile, $responsePayload);
+}
+
+echo $responsePayload;
