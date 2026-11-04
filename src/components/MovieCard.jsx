@@ -31,22 +31,25 @@ export default function MovieCard({
       {/* Poster Container */}
       <div 
         onClick={() => onOpenDetails(movie)}
-        className="relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-[#0b0b11] border border-white/[0.08] shadow-[0_12px_30px_rgba(0,0,0,0.65)] transition-all duration-300 group-hover:border-white/30 group-hover:shadow-[0_18px_40px_rgba(0,0,0,0.85)]"
+        className="specular-card relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-[#0a0a10] border border-white/[0.1] transition-all duration-300 group-hover:border-white/35 group-hover:shadow-[0_22px_48px_rgba(0,0,0,0.92)]"
       >
         <img 
           src={movie.poster_path} 
           alt={movie.title}
           loading="lazy"
           decoding="async"
-          className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 filter brightness-[0.96] group-hover:brightness-105"
+          className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 filter brightness-[0.97] group-hover:brightness-105"
           onError={(e) => {
             e.target.src = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=500&auto=format&fit=crop';
           }}
         />
 
-        {/* Subtle Rating Pill on Top Right */}
-        <div className="absolute top-2.5 right-2.5 z-10 opacity-90">
-          <span className="bg-black/60 backdrop-blur-xl text-white/95 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center border border-white/[0.12]">
+        {/* Top Badges: Español Latino 4K + Rating */}
+        <div className="absolute top-2.5 inset-x-2.5 z-10 flex items-center justify-between pointer-events-none">
+          <span className="bg-black/65 backdrop-blur-xl text-emerald-300 text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border border-emerald-500/25">
+            LATINO 4K
+          </span>
+          <span className="bg-black/65 backdrop-blur-xl text-white/95 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center border border-white/[0.14]">
             <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400 inline mr-1" />
             {Number(movie.vote_average || 8.4).toFixed(1)}
           </span>

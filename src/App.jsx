@@ -14,6 +14,7 @@ import QuickLauncher from './components/QuickLauncher';
 import BrandHubs from './components/BrandHubs';
 import AdBlockModal from './components/AdBlockModal';
 import { AdBlockerService } from './services/adBlockerService';
+import { StreamScannerService } from './services/streamScannerService';
 import { 
   MovieAPI, 
   StorageService,
@@ -160,12 +161,13 @@ export default function App() {
   };
 
   // Abrir reproductor y actualizar enlace compartible en la barra del navegador
-  const handleStartPlay = (mediaItem, season = 1, episode = 1, episodeTitle = '') => {
+  const handleStartPlay = (mediaItem, season = 1, episode = 1, episodeTitle = '', serverId = null) => {
     setPlayingMedia({
       movie: mediaItem,
       season: season,
       episode: episode,
-      episodeTitle: episodeTitle
+      episodeTitle: episodeTitle,
+      initialServer: serverId
     });
 
     try {
@@ -247,6 +249,22 @@ export default function App() {
 
   const featuredItem = allFeaturedPool[featuredIndex % (allFeaturedPool.length || 1)] || null;
 
+  // Pre-calentar en segundo plano el título destacado y los primeros del Top 10 para reproducción en 0ms
+  useEffect(() => {
+    if (!featuredItem) return;
+    const warmQueue = [
+      featuredItem,
+      ...(catalog.trendingMovies || []).slice(0, 3)
+    ];
+    warmQueue.forEach((item, idx) => {
+      if (item?.id) {
+        setTimeout(() => {
+          StreamScannerService.scanAllWorkingLinks(item, 1, 1).catch(() => {});
+        }, idx * 450);
+      }
+    });
+  }, [featuredItem?.id]);
+
   const handleNextFeatured = () => {
     setFeaturedIndex((prev) => (prev + 1) % (allFeaturedPool.length || 1));
   };
@@ -256,9 +274,19 @@ export default function App() {
   const showMoviesOnly = activeTab === 'movies' || activeCategoryFilter === 'movies';
 
   return (
-    <div className="min-h-screen bg-[#050508] text-white flex flex-col font-sans selection:bg-netflix-red selection:text-white relative overflow-x-hidden">
-      {/* Luz ambiental cinemática */}
+    <div className="min-h-screen bg-[#040407] text-white flex flex-col font-sans selection:bg-netflix-red selection:text-white relative overflow-x-hidden">
+      {/* Luz ambiental cinemática + Ambilight dinámico sincronizado con la obra destacada */}
       <div className="ambient-mesh fixed inset-0 pointer-events-none z-0" />
+      {featuredItem?.backdrop_path && (
+        <div
+          className="fixed inset-x-0 top-0 h-[75vh] pointer-events-none z-0 opacity-25 blur-[130px] saturate-200 transition-all duration-1000"
+          style={{
+            backgroundImage: `url(${featuredItem.backdrop_path})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center top',
+          }}
+        />
+      )}
       
       {/* Navigation Header */}
       <Navbar 
@@ -871,7 +899,7 @@ export default function App() {
           <MovieDetailsModal 
             movie={selectedMovieForDetails}
             onClose={() => setSelectedMovieForDetails(null)}
-            onPlay={(m, s, e, epTitle) => handleStartPlay(m, s, e, epTitle)}
+            onPlay={(m, s, e, epTitle, srvId) => handleStartPlay(m, s, e, epTitle, srvId)}
             onToggleMyList={handleToggleMyList}
             isInMyList={isInMyList(selectedMovieForDetails.id)}
           />
@@ -886,6 +914,7 @@ export default function App() {
             initialSeason={playingMedia.season}
             initialEpisode={playingMedia.episode}
             initialEpisodeTitle={playingMedia.episodeTitle}
+            initialServer={playingMedia.initialServer}
             onClose={handleClosePlayer}
           />
         )}

@@ -91,9 +91,9 @@ export default function MovieDetailsModal({
   const selectedEpObj = episodes.find(e => e.episode_number === selectedEpisode) || episodes[0];
   const selectedEpisodeTitle = selectedEpObj?.name || `Episodio ${selectedEpisode}`;
 
-  const handleLaunchPlay = (seasonNum = selectedSeason, epNum = selectedEpisode, epTitle = selectedEpisodeTitle) => {
+  const handleLaunchPlay = (seasonNum = selectedSeason, epNum = selectedEpisode, epTitle = selectedEpisodeTitle, serverId = null) => {
     onClose();
-    onPlay(activeMovie, seasonNum, epNum, epTitle);
+    onPlay(activeMovie, seasonNum, epNum, epTitle, serverId);
   };
 
   return (
@@ -229,28 +229,29 @@ export default function MovieDetailsModal({
             </div>
 
             {/* Selector Rápido de Nodo en 1 Clic (Compacto y Minimalista) */}
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-white/45">
-                  Reproducción Instantánea (Nodos Disponibles)
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-white/55 flex items-center space-x-1.5">
+                  <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Servidores Español Latino 4K (Carga en 0ms)</span>
                 </span>
               </div>
               <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar pb-1">
                 {STREAM_PROVIDERS.map((provider, idx) => (
                   <button
                     key={provider.id}
-                    onClick={() => handleLaunchPlay(selectedSeason, selectedEpisode, selectedEpisodeTitle)}
+                    onClick={() => handleLaunchPlay(selectedSeason, selectedEpisode, selectedEpisodeTitle, provider.id)}
                     className={`px-3.5 py-2 rounded-full text-xs font-semibold flex items-center space-x-2 shrink-0 transition-all cursor-pointer border ${
                       idx === 0
-                        ? 'bg-white/[0.12] hover:bg-white/[0.2] text-white border-white/25'
-                        : 'bg-white/[0.04] hover:bg-white/[0.1] text-white/75 hover:text-white border-white/[0.08]'
+                        ? 'bg-white text-black border-white shadow-[0_8px_24px_rgba(255,255,255,0.2)]'
+                        : 'bg-white/[0.06] hover:bg-white/[0.14] text-white/85 hover:text-white border-white/[0.12]'
                     }`}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span className={`w-1.5 h-1.5 rounded-full ${idx === 0 ? 'bg-emerald-600' : 'bg-emerald-400'}`} />
                     <span>{provider.name}</span>
                     {idx === 0 && (
-                      <span className="text-[9px] font-bold bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full">
-                        Recomendado
+                      <span className="text-[9px] font-bold bg-black/15 text-black px-1.5 py-0.5 rounded-full">
+                        Auto Latino
                       </span>
                     )}
                   </button>

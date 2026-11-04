@@ -86,9 +86,9 @@ export default function Top10Row({
                 {/* Sculptural Rank Number */}
                 <div className="relative -mr-4 sm:-mr-6 z-0 pointer-events-none select-none">
                   <span 
-                    className="text-7xl sm:text-8xl md:text-[130px] font-black tracking-tighter leading-none text-[#06060a] transition-all duration-300 drop-shadow-2xl"
+                    className="text-7xl sm:text-8xl md:text-[134px] font-black tracking-tighter leading-none text-[#050509] transition-all duration-300 drop-shadow-[0_12px_28px_rgba(0,0,0,0.9)] group-hover/card:scale-105 inline-block"
                     style={{
-                      WebkitTextStroke: '3px rgba(255, 255, 255, 0.28)',
+                      WebkitTextStroke: '2.5px rgba(255, 255, 255, 0.34)',
                       paintOrder: 'stroke fill',
                     }}
                   >
@@ -97,13 +97,18 @@ export default function Top10Row({
                 </div>
 
                 {/* Clean Poster Card */}
-                <div className="relative w-32 sm:w-40 md:w-48 aspect-[2/3] rounded-2xl overflow-hidden bg-[#0c0c12] border border-white/[0.1] shadow-[0_14px_34px_rgba(0,0,0,0.75)] z-10 transition-all duration-300 group-hover/card:border-white/35">
+                <div className="specular-card relative w-32 sm:w-40 md:w-48 aspect-[2/3] rounded-2xl overflow-hidden bg-[#0b0b12] border border-white/[0.12] z-10 transition-all duration-300 group-hover/card:border-white/40">
                   <img 
                     src={movie.poster_path} 
                     alt={movie.title}
                     loading="lazy"
-                    className="w-full h-full object-cover filter brightness-[0.95] group-hover/card:brightness-105 transition-transform duration-500 group-hover/card:scale-105"
+                    className="w-full h-full object-cover filter brightness-[0.96] group-hover/card:brightness-105 transition-transform duration-500 group-hover/card:scale-105"
                   />
+                  <div className="absolute top-2 left-2 z-10 pointer-events-none">
+                    <span className="bg-black/65 backdrop-blur-xl text-emerald-300 text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border border-emerald-500/25">
+                      LATINO 4K
+                    </span>
+                  </div>
 
                   {/* Hover Quick Action Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/45 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-3">

@@ -32,6 +32,15 @@ export default function HeroBanner({
     }
   }, [movie]);
 
+  // Rotación automática suave estilo Apple TV+ cuando no se está reproduciendo el tráiler
+  useEffect(() => {
+    if (showVideoTrailer || !onRandomizeFeatured || featuredPool.length <= 1) return;
+    const timer = setInterval(() => {
+      onRandomizeFeatured();
+    }, 9500);
+    return () => clearInterval(timer);
+  }, [showVideoTrailer, onRandomizeFeatured, featuredPool.length, movie?.id]);
+
   if (!movie) return null;
 
   const topCarouselItems = featuredPool.slice(0, 5);
@@ -86,19 +95,19 @@ export default function HeroBanner({
             className="max-w-2xl space-y-3.5 sm:space-y-4"
           >
             {/* Editorial Kicker (Estilo Apple TV+ / Max Originals) */}
-            <div className="flex items-center space-x-2.5 text-[11px] sm:text-xs font-semibold tracking-wider uppercase text-white/80">
-              <span className="inline-flex items-center space-x-1.5 bg-white/[0.1] backdrop-blur-xl border border-white/[0.15] px-2.5 py-0.5 rounded-full text-white font-bold">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] sm:text-xs font-semibold tracking-wider uppercase text-white/85">
+              <span className="inline-flex items-center space-x-1.5 bg-white/[0.11] backdrop-blur-2xl border border-white/[0.18] px-3 py-1 rounded-full text-white font-bold shadow-lg">
                 <span className="w-1.5 h-1.5 rounded-full bg-netflix-red animate-pulse" />
                 <span>{movie.isTv ? 'SERIE DESTACADA' : 'ESTRENO EXCLUSIVO'}</span>
               </span>
-              <span className="text-white/40">·</span>
-              <span className="text-white/90 font-semibold tracking-wide">
-                Audio Español Latino 4K
+              <span className="inline-flex items-center space-x-1.5 bg-emerald-500/[0.14] backdrop-blur-2xl border border-emerald-500/30 px-3 py-1 rounded-full text-emerald-300 font-bold shadow-lg">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span>Español Latino 4K · Carga Instantánea</span>
               </span>
             </div>
 
             {/* Title with High-Impact Editorial Typography */}
-            <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-[4.25rem] font-black text-white tracking-tight drop-shadow-[0_12px_36px_rgba(0,0,0,0.95)] leading-[0.96] line-clamp-2">
+            <h1 className="hero-metallic-text text-3xl sm:text-5xl md:text-6xl lg:text-[4.25rem] font-black tracking-tight drop-shadow-[0_14px_38px_rgba(0,0,0,0.95)] leading-[0.96] line-clamp-2 pb-1">
               {movie.title}
             </h1>
 

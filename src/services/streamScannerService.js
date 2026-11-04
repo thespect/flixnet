@@ -1,5 +1,5 @@
-// Servicio Inteligente de Detección Automática de Links, Streams HLS Nativos (.m3u8 en Español Latino 4K)
-// Extrae streams .m3u8 directos en Español Latino (LAT), Castellano (ESP) e Inglés 4K sin anuncios ni iframes,
+// Servicio Inteligente de Detección Automática de Links y Streams HLS Nativos (.m3u8 100% en Español Latino 4K)
+// Extrae streams .m3u8 directos en Español Latino (LAT) y Castellano (ESP) sin anuncios ni iframes,
 // 100% compatibles con Chromecast, AirPlay 2 y Reproductor HTML5 Nativo en Celular, Tablet y PC.
 
 const VIDRACK_API = 'https://vidrack.created.app/api/sources';
@@ -10,11 +10,10 @@ const SUB_HOSTS = {
 };
 const SUB_CORS_PROXY = 'https://little-field-fe85.instafashion662-3d4.workers.dev/?url=';
 
-// Nova se prioriza #1 porque entrega el Master Digital Blu-Ray 1080p/4K (~5 Mbps, nunca copias de cine CAM)
+// Respaldo internacional Master Blu-Ray 4K (Audio Original Inglés + Subtítulos Español) — NUNCA se mezcla con Español Latino
 const HLS_PROVIDERS = [
-  { id: 'nova', label: 'Nodo Nova 4K Blu-Ray Master (Digital UHD)', endpoint: 'nova', alreadyProxied: false, isBluRayMaster: true },
-  { id: 'vidora', label: 'Nodo Vidora 4K Directo (Audio Original)', endpoint: 'vidora', alreadyProxied: true, isBluRayMaster: false },
-  { id: 'movy', label: 'Nodo Movy Pro (Audio Original)', endpoint: 'movy', alreadyProxied: false, isBluRayMaster: false }
+  { id: 'nova', label: 'Nodo Nova 4K Blu-Ray Master (Audio Original + Sub ES)', endpoint: 'nova', alreadyProxied: false, isBluRayMaster: true },
+  { id: 'vidora', label: 'Nodo Vidora 4K Directo (Audio Original)', endpoint: 'vidora', alreadyProxied: true, isBluRayMaster: false }
 ];
 
 const scanCache = new Map();
@@ -58,7 +57,7 @@ function isDeadStream(url, quality) {
   return false;
 }
 
-async function fetchWithTimeout(url, options = {}, timeoutMs = 4800) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = 4200) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -67,6 +66,23 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 4800) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+// Desempaquetador P.A.C.K.E.R. en cliente para extracción directa en el navegador
+function unpackPackerClient(packedHtml) {
+  if (!packedHtml) return '';
+  const m = packedHtml.match(/\}\('([\s\S]*?)',(\d+),(\d+),'([\s\S]*?)'\.split\('\|'\)/);
+  if (!m) return '';
+  let [, p, aStr, cStr, kStr] = m;
+  const a = parseInt(aStr, 10);
+  let c = parseInt(cStr, 10);
+  const k = kStr.split('|');
+  while (c--) {
+    if (k[c]) {
+      p = p.replace(new RegExp('\\b' + c.toString(a) + '\\b', 'g'), k[c]);
+    }
+  }
+  return p;
 }
 
 // Convierte SRT a WebVTT para soporte nativo en <video> y AirPlay / Chromecast
@@ -81,9 +97,148 @@ export function srtToVtt(srtText) {
   );
 }
 
+// Extractor 100% en Cliente (WebCrypto + Edge Worker) por si el backend local no está activo
+async function extractClientSideEmbed69Latino(imdbId, isTv = false, season = 1, episode = 1) {
+  if (!imdbId || !String(imdbId).startsWith('tt') || typeof window === 'undefined' || !window.crypto?.subtle) {
+    return null;
+  }
+  const epPadded = String(episode).padStart(2, '0');
+  const path = isTv ? `${imdbId}-${season}x${epPadded}` : `${imdbId}`;
+  const targetUrl = `https://embed69.org/f/${path}`;
+
+  try {
+    const res = await fetchWithTimeout(`${SUB_CORS_PROXY}${encodeURIComponent(targetUrl)}`, {}, 3600);
+    if (!res.ok) return null;
+    const html = await res.text();
+
+    const challenge = (html.match(/POW_CHALLENGE\s*=\s*'([^']+)'/) || [])[1];
+    const difficulty = parseInt((html.match(/POW_DIFFICULTY\s*=\s*(\d+)/) || [])[1] || '3', 10);
+    const salt = (html.match(/POW_SALT\s*=\s*'([^']+)'/) || [])[1];
+    const dataLinkMatch = html.match(/let\s+dataLink\s*=\s*(\[[\s\S]*?\]);/);
+
+    if (!challenge || !salt || !dataLinkMatch) return null;
+    const dataLink = JSON.parse(dataLinkMatch[1]);
+    if (!Array.isArray(dataLink) || dataLink.length === 0) return null;
+
+    const enc = new TextEncoder();
+    const prefix = '0'.repeat(Math.min(difficulty, 4));
+    let nonce = 0;
+    while (nonce < 150000) {
+      const digest = await window.crypto.subtle.digest('SHA-256', enc.encode(challenge + nonce));
+      const hex = Array.from(new Uint8Array(digest))
+        .slice(0, 3)
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+      if (hex.startsWith(prefix)) break;
+      nonce++;
+    }
+
+    const rawKeyBuf = await window.crypto.subtle.digest('SHA-256', enc.encode(challenge + nonce + salt));
+    const cryptoKey = await window.crypto.subtle.importKey(
+      'raw',
+      rawKeyBuf,
+      { name: 'AES-CBC' },
+      false,
+      ['decrypt']
+    );
+
+    const decryptLink = async (b64) => {
+      try {
+        const binStr = atob(b64);
+        const bytes = new Uint8Array(binStr.length);
+        for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+        const iv = bytes.slice(0, 16);
+        const ct = bytes.slice(16);
+        const decBuf = await window.crypto.subtle.decrypt({ name: 'AES-CBC', iv }, cryptoKey, ct);
+        return new TextDecoder().decode(decBuf);
+      } catch {
+        return null;
+      }
+    };
+
+    const spanishGroups = dataLink.filter((g) => {
+      const l = String(g.video_language || '').toUpperCase();
+      return l.includes('LAT') || l.includes('ESP') || l.includes('CAST');
+    });
+
+    const streams = [];
+    for (let groupIdx = 0; groupIdx < spanishGroups.length; groupIdx++) {
+      const langGroup = spanishGroups[groupIdx];
+      const langRaw = String(langGroup.video_language || 'LAT').toUpperCase();
+      const isLatino = langRaw.includes('LAT');
+      const isCastellano = !isLatino && (langRaw.includes('ESP') || langRaw.includes('CAST'));
+      const langKey = isLatino ? 'latino' : 'castellano';
+      const langBadge = isLatino
+        ? 'Cineflex CDN • Español Latino Oficial'
+        : 'Cineflex CDN • Español Castellano';
+
+      const embeds = Array.isArray(langGroup.sortedEmbeds) ? langGroup.sortedEmbeds : [];
+      const vhEmb = embeds.find((e) => String(e.servername || '').toLowerCase() === 'vidhide');
+      if (!vhEmb?.link) continue;
+
+      const vhUrl = await decryptLink(vhEmb.link);
+      if (!vhUrl || !vhUrl.startsWith('http')) continue;
+
+      const t0 = performance.now();
+      const er = await fetchWithTimeout(`${SUB_CORS_PROXY}${encodeURIComponent(vhUrl)}`, {}, 3200);
+      if (!er.ok) continue;
+      const eHtml = await er.text();
+      const unpacked = unpackPackerClient(eHtml);
+      const hls2 = (unpacked.match(/"hls2"\s*:\s*"([^"]+)"/) || [])[1];
+      const hls4 = (unpacked.match(/"hls4"\s*:\s*"([^"]+)"/) || [])[1];
+      const m3u8Url = hls2 || hls4;
+
+      if (m3u8Url && m3u8Url.includes('.m3u8') && m3u8Url.startsWith('http')) {
+        streams.push({
+          id: `latino_hls_client_${langKey}_${groupIdx}`,
+          name: `${langBadge} 4K/FHD`,
+          providerId: `embed69_${langKey}`,
+          url: m3u8Url,
+          rawUrl: m3u8Url,
+          embedUrl: vhUrl,
+          type: 'hls',
+          lang: langKey,
+          langCode: langRaw,
+          isLatinoDub: isLatino,
+          isCastellanoDub: isCastellano,
+          isDirectHls: true,
+          castCompatible: true,
+          isCamQuality: false,
+          maxBandwidth: 3200000,
+          maxHeight: 1080,
+          quality: '4K / 1080p Digital HD Latino',
+          ping: `${Math.max(8, Math.round(performance.now() - t0))}ms`,
+          verified: true
+        });
+      }
+    }
+
+    if (streams.length === 0) return null;
+    return {
+      ok: true,
+      imdbId,
+      latinoDirectStreams: streams,
+      latinoSources: [],
+      serverStatuses: {}
+    };
+  } catch {
+    return null;
+  }
+}
+
 export const StreamScannerService = {
   /**
-   * Extrae streams HLS (.m3u8) directos internacionales de respaldo
+   * Obtiene instantáneamente (0ms) el resultado en caché si la película/serie ya fue pre-escaneada
+   */
+  getCachedScan(movie, season = 1, episode = 1) {
+    if (!movie?.id) return null;
+    const isTv = Boolean(movie.isTv);
+    const cacheKey = `${movie.id}_${isTv ? `tv_${season}_${episode}` : 'movie'}`;
+    return scanCache.get(cacheKey) || null;
+  },
+
+  /**
+   * Extrae streams HLS (.m3u8) internacionales de respaldo (solo para modo Inglés Original + Subtítulos)
    */
   async fetchDirectHlsStreams(tmdbId, isTv = false, season = 1, episode = 1) {
     const query = isTv
@@ -95,7 +250,7 @@ export const StreamScannerService = {
     const tasks = HLS_PROVIDERS.map(async (provider) => {
       const t0 = performance.now();
       try {
-        const res = await fetchWithTimeout(`${VIDRACK_API}/${provider.endpoint}?${query}`, {}, 3500);
+        const res = await fetchWithTimeout(`${VIDRACK_API}/${provider.endpoint}?${query}`, {}, 3200);
         if (!res.ok) return [];
         const data = await res.json();
         const ping = Math.max(8, Math.round(performance.now() - t0));
@@ -107,7 +262,6 @@ export const StreamScannerService = {
             if (!st || !st.url) return false;
             if (isDeadStream(st.url, st.quality)) return false;
             if (provider.id === 'vidora' && st.url.indexOf('netoda.tech') === -1) return false;
-            // En Nova el tercer espejo suele ser redundante/404; conservar los 2 nodos principales de alta velocidad
             if (provider.id === 'nova' && idx >= 2) return false;
             return true;
           })
@@ -178,7 +332,7 @@ export const StreamScannerService = {
       const urlsToTry = [url, `${SUB_CORS_PROXY}${encodeURIComponent(url)}`];
       for (const u of urlsToTry) {
         try {
-          const res = await fetchWithTimeout(u, {}, 4000);
+          const res = await fetchWithTimeout(u, {}, 3500);
           if (!res.ok) continue;
           const json = await res.json();
           if (Array.isArray(json)) return json;
@@ -238,7 +392,7 @@ export const StreamScannerService = {
     ];
     for (const u of candidates) {
       try {
-        const res = await fetchWithTimeout(u, {}, 4000);
+        const res = await fetchWithTimeout(u, {}, 3800);
         if (!res.ok) continue;
         const text = await res.text();
         if (/^\s*(WEBVTT|\d)/i.test(text)) {
@@ -251,10 +405,9 @@ export const StreamScannerService = {
   },
 
   /**
-   * Escaneo progresivo ultra-rápido:
-   * - Notifica inmediatamente mediante `onFastStream` en cuanto llega el primer flujo en Español Latino 4K/Full HD,
-   *   sin esperar a que terminen los subtítulos ni los servidores secundarios.
-   * - Reutiliza promesas en vuelo (`inFlightScans`) y caché en memoria (`scanCache`) para carga en 0ms.
+   * Escaneo progresivo ultra-rápido 100% Español Latino:
+   * - Notifica inmediatamente mediante `onFastStream` en cuanto llega el primer flujo en Español Latino 4K/Full HD.
+   * - Separa estrictamente `latinoDirectStreams` (Español Latino/Castellano) de `englishMasterStreams` para que NUNCA se reproduzca en inglés por error.
    */
   async scanAllWorkingLinks(movie, season = 1, episode = 1, imdbId = null, onFastStream = null) {
     if (!movie?.id) return null;
@@ -284,27 +437,29 @@ export const StreamScannerService = {
     const scanPromise = (async () => {
       try {
         let fastNotified = false;
+        const resolvedImdb = imdbId || movie.imdb_id || null;
 
         const backendPromise = this.fetchBackendVerification(
           movie.id,
           isTv,
           season,
           episode,
-          imdbId || movie.imdb_id
+          resolvedImdb
         ).then((backendScan) => {
           if (backendScan?.lanIp && typeof window !== 'undefined') {
             window.__CINEFLEX_LAN_IP__ = backendScan.lanIp;
           }
           const latinoDirect = Array.isArray(backendScan?.latinoDirectStreams)
-            ? backendScan.latinoDirectStreams
+            ? backendScan.latinoDirectStreams.filter((s) => s.isLatinoDub || s.isCastellanoDub)
             : [];
           if (!fastNotified && typeof onFastStream === 'function' && (latinoDirect.length > 0 || backendScan?.imdbId)) {
             fastNotified = true;
             onFastStream({
               tmdbId: movie.id,
-              imdbId: backendScan?.imdbId || imdbId || movie.imdb_id || null,
+              imdbId: backendScan?.imdbId || resolvedImdb,
               directHlsStreams: latinoDirect,
               latinoDirectStreams: latinoDirect,
+              englishMasterStreams: [],
               subtitles: [],
               serverStatuses: backendScan?.serverStatuses || {},
               scanDurationMs: Math.round(performance.now() - startTime),
@@ -323,41 +478,37 @@ export const StreamScannerService = {
           subsPromise
         ]);
 
-        const latinoDirect = Array.isArray(backendScan?.latinoDirectStreams)
-          ? backendScan.latinoDirectStreams
+        const spanishDirect = Array.isArray(backendScan?.latinoDirectStreams)
+          ? backendScan.latinoDirectStreams.filter((s) => s.isLatinoDub || s.isCastellanoDub)
           : [];
-        const rawCombined = [
-          ...latinoDirect,
-          ...(hlsResult.streams || [])
-        ];
+        const englishMasterStreams = Array.isArray(hlsResult?.streams) ? hlsResult.streams : [];
 
+        // Orden estricto: 1º Español Latino Oficial, 2º Español Castellano, 3º Respaldo Inglés (SOLO si se pide explícitamente)
         const rankStream = (s) => {
-          if (s.isLatinoDub && !s.isCamQuality) return 1;
-          if (s.isBluRayMaster || s.providerId === 'nova') return 2;
-          if (s.isCastellanoDub && !s.isCamQuality) return 3;
-          if (!s.isCamQuality) return 4;
-          return 5;
+          if (s.isLatinoDub) return 1;
+          if (s.isCastellanoDub) return 2;
+          if (s.isBluRayMaster || s.providerId === 'nova') return 3;
+          return 4;
         };
 
-        const combinedDirectStreams = [...rawCombined].sort((a, b) => rankStream(a) - rankStream(b));
-        const skippedCamLatino =
-          latinoDirect.some((s) => s.isLatinoDub && s.isCamQuality) &&
-          combinedDirectStreams.some((s) => s.isBluRayMaster || s.providerId === 'nova');
+        const combinedDirectStreams = [...spanishDirect, ...englishMasterStreams].sort(
+          (a, b) => rankStream(a) - rankStream(b)
+        );
 
         const result = {
           tmdbId: movie.id,
-          imdbId: backendScan?.imdbId || imdbId || movie.imdb_id || null,
+          imdbId: backendScan?.imdbId || resolvedImdb,
           lanIp: backendScan?.lanIp || null,
           isTv,
           season,
           episode,
           directHlsStreams: combinedDirectStreams,
-          latinoDirectStreams: latinoDirect,
+          latinoDirectStreams: spanishDirect.filter((s) => s.isLatinoDub),
+          castellanoDirectStreams: spanishDirect.filter((s) => s.isCastellanoDub),
+          englishMasterStreams,
           subtitles: subtitles || [],
           latinoSources: backendScan?.latinoSources || [],
-          hasConfirmedLatinoDub:
-            latinoDirect.some((s) => s.isLatinoDub) || (backendScan?.latinoSources?.length || 0) > 0,
-          skippedCamLatino,
+          hasConfirmedLatinoDub: spanishDirect.some((s) => s.isLatinoDub),
           serverStatuses: backendScan?.serverStatuses || {},
           scanDurationMs: Math.round(performance.now() - startTime),
           timestamp: Date.now()
@@ -388,19 +539,28 @@ export const StreamScannerService = {
       `./api.php?action=scan&${params.toString()}`
     ];
 
-    try {
-      const winner = await Promise.any(
-        endpoints.map(async (ep) => {
-          const res = await fetchWithTimeout(ep, { headers: { Accept: 'application/json' } }, 5500);
-          if (!res.ok) throw new Error('HTTP error');
-          const ct = res.headers.get('content-type') || '';
-          if (!ct.includes('json')) throw new Error('Not JSON');
-          const data = await res.json();
-          if (!data || !data.ok) throw new Error('Invalid payload');
-          return data;
+    const tasks = endpoints.map(async (ep) => {
+      const res = await fetchWithTimeout(ep, { headers: { Accept: 'application/json' } }, 4200);
+      if (!res.ok) throw new Error('HTTP error');
+      const ct = res.headers.get('content-type') || '';
+      if (!ct.includes('json')) throw new Error('Not JSON');
+      const data = await res.json();
+      if (!data || !data.ok) throw new Error('Invalid payload');
+      return data;
+    });
+
+    // Añadir extracción directa en cliente en paralelo por si el servidor local no está corriendo
+    if (imdbId && String(imdbId).startsWith('tt')) {
+      tasks.push(
+        extractClientSideEmbed69Latino(imdbId, isTv, season, episode).then((res) => {
+          if (!res || !res.latinoDirectStreams?.length) throw new Error('No client streams');
+          return res;
         })
       );
-      return winner;
+    }
+
+    try {
+      return await Promise.any(tasks);
     } catch {
       return null;
     }
