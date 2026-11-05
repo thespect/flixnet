@@ -463,167 +463,167 @@ export const StreamScannerService = {
 
     const cacheKey = `${movie.id}_${targetId}_${targetIsTv ? `tv_${targetSeason}_${targetEpisode}` : 'movie'}`;
 
-      const cached = scanCache.get(cacheKey) || getScanFromStorage(cacheKey);
-      if (cached) {
-        scanCache.set(cacheKey, cached);
-        if (typeof onFastStream === 'function') {
-          onFastStream(cached);
-        }
-        return cached;
+    const cached = scanCache.get(cacheKey) || getScanFromStorage(cacheKey);
+    if (cached) {
+      scanCache.set(cacheKey, cached);
+      if (typeof onFastStream === 'function') {
+        onFastStream(cached);
       }
+      return cached;
+    }
 
-      if (inFlightScans.has(cacheKey)) {
-        const existingPromise = inFlightScans.get(cacheKey);
-        if (typeof onFastStream === 'function') {
-          existingPromise.then((res) => {
-            if (res) onFastStream(res);
-          }).catch(() => { });
-        }
-        return existingPromise;
+    if (inFlightScans.has(cacheKey)) {
+      const existingPromise = inFlightScans.get(cacheKey);
+      if (typeof onFastStream === 'function') {
+        existingPromise.then((res) => {
+          if (res) onFastStream(res);
+        }).catch(() => { });
       }
+      return existingPromise;
+    }
 
-      const startTime = performance.now();
+    const startTime = performance.now();
 
-      const scanPromise = (async () => {
-        try {
-          // Lanzamos backend, subtítulos y HLS en paralelo
-          const backendPromise = this.fetchBackendVerification(
-            targetId,
-            targetIsTv,
-            targetSeason,
-            targetEpisode,
-            targetImdb
+    const scanPromise = (async () => {
+      try {
+        // Lanzamos backend, subtítulos y HLS en paralelo
+        const backendPromise = this.fetchBackendVerification(
+          targetId,
+          targetIsTv,
+          targetSeason,
+          targetEpisode,
+          targetImdb
         );
 
-      const hlsPromise = this.fetchDirectHlsStreams(targetId, targetIsTv, targetSeason, targetEpisode);
-      const subsPromise = this.fetchSubtitles(targetId, targetIsTv, targetSeason, targetEpisode);
+        const hlsPromise = this.fetchDirectHlsStreams(targetId, targetIsTv, targetSeason, targetEpisode);
+        const subsPromise = this.fetchSubtitles(targetId, targetIsTv, targetSeason, targetEpisode);
 
-      const instantFastReport = {
-        tmdbId: movie.id,
-        aliasTmdbId: targetId,
-        imdbId: targetImdb || null,
-        lanIp: null,
-        isTv: targetIsTv,
-        season: targetSeason,
-        episode: targetEpisode,
-        directHlsStreams: [],
-        latinoDirectStreams: [],
-        castellanoDirectStreams: [],
-        englishMasterStreams: [],
-        subtitles: [],
-        latinoSources: [],
-        hasConfirmedLatinoDub: Boolean(targetImdb),
-        serverStatuses: {
-          auto_smart_latino: { online: true, verified: true, ping: '3ms' },
-          playlatin_es: { online: Boolean(targetImdb), verified: Boolean(targetImdb), ping: '4ms' },
-          vidlink_4k_pro: { online: true, verified: true, ping: '5ms' },
-          vidsrc_pm: { online: true, verified: true, ping: '6ms' },
-          multiembed_global: { online: true, verified: true, ping: '7ms' }
-        },
-        recommendedServer: targetImdb ? 'playlatin_es' : 'vidlink_4k_pro',
-        scanDurationMs: 0,
-        timestamp: Date.now()
-      };
-
-      if (typeof onFastStream === 'function') {
-        onFastStream(instantFastReport);
-      }
-
-      // Backend con timeout ajustado para no bloquear reproducción en hosts compartidos
-      const timeoutPromise = new Promise((resolve) => {
-        setTimeout(() => resolve(null), 1400);
-      });
-      const backendScan = await Promise.race([backendPromise, timeoutPromise]);
-
-      if (backendScan?.lanIp && typeof window !== 'undefined') {
-        window.__CINEFLEX_LAN_IP__ = backendScan.lanIp;
-      }
-
-      const spanishDirect = Array.isArray(backendScan?.latinoDirectStreams)
-        ? backendScan.latinoDirectStreams.filter((s) => s.isLatinoDub || s.isCastellanoDub)
-        : [];
-
-      const result = {
-        tmdbId: movie.id,
-        aliasTmdbId: targetId,
-        imdbId: backendScan?.imdbId || targetImdb,
-        lanIp: backendScan?.lanIp || null,
-        isTv: targetIsTv,
-        season: targetSeason,
-        episode: targetEpisode,
-        directHlsStreams: spanishDirect,
-        latinoDirectStreams: spanishDirect.filter((s) => s.isLatinoDub),
-        castellanoDirectStreams: spanishDirect.filter((s) => s.isCastellanoDub),
-        englishMasterStreams: [],
-        subtitles: [],
-        latinoSources: backendScan?.latinoSources || [],
-        hasConfirmedLatinoDub: spanishDirect.some((s) => s.isLatinoDub),
-        serverStatuses: backendScan?.serverStatuses || {},
-        recommendedServer: backendScan?.recommendedServer || (spanishDirect.length > 0 ? 'native_hls_4k' : 'auto_smart_latino'),
-        scanDurationMs: Math.round(performance.now() - startTime),
-        timestamp: Date.now()
-      };
-
-      scanCache.set(cacheKey, result);
-      saveScanToStorage(cacheKey, result);
-
-      if (typeof onFastStream === 'function') {
-        onFastStream(result);
-      }
-
-      // Subtítulos y streams en inglés de respaldo se resuelven en segundo plano sin congelar la interfaz
-      Promise.allSettled([hlsPromise, subsPromise]).then(([hlsRes, subRes]) => {
-        const englishMasterStreams = hlsRes.status === 'fulfilled' && Array.isArray(hlsRes.value?.streams)
-          ? hlsRes.value.streams
-          : [];
-        const subtitles = subRes.status === 'fulfilled' && Array.isArray(subRes.value)
-          ? subRes.value
-          : [];
-
-        const rankStream = (s) => {
-          if (s.isLatinoDub) return 1;
-          if (s.isCastellanoDub) return 2;
-          if (s.isBluRayMaster || s.providerId === 'nova') return 3;
-          return 4;
+        const instantFastReport = {
+          tmdbId: movie.id,
+          aliasTmdbId: targetId,
+          imdbId: targetImdb || null,
+          lanIp: null,
+          isTv: targetIsTv,
+          season: targetSeason,
+          episode: targetEpisode,
+          directHlsStreams: [],
+          latinoDirectStreams: [],
+          castellanoDirectStreams: [],
+          englishMasterStreams: [],
+          subtitles: [],
+          latinoSources: [],
+          hasConfirmedLatinoDub: Boolean(targetImdb),
+          serverStatuses: {
+            auto_smart_latino: { online: true, verified: true, ping: '3ms' },
+            playlatin_es: { online: Boolean(targetImdb), verified: Boolean(targetImdb), ping: '4ms' },
+            vidlink_4k_pro: { online: true, verified: true, ping: '5ms' },
+            vidsrc_pm: { online: true, verified: true, ping: '6ms' },
+            multiembed_global: { online: true, verified: true, ping: '7ms' }
+          },
+          recommendedServer: targetImdb ? 'playlatin_es' : 'vidlink_4k_pro',
+          scanDurationMs: 0,
+          timestamp: Date.now()
         };
 
-        const combinedDirectStreams = [...spanishDirect, ...englishMasterStreams].sort(
-          (a, b) => rankStream(a) - rankStream(b)
-        );
+        if (typeof onFastStream === 'function') {
+          onFastStream(instantFastReport);
+        }
 
-        result.directHlsStreams = combinedDirectStreams;
-        result.englishMasterStreams = englishMasterStreams;
-        result.subtitles = subtitles;
+        // Backend con timeout ajustado para no bloquear reproducción en hosts compartidos
+        const timeoutPromise = new Promise((resolve) => {
+          setTimeout(() => resolve(null), 1400);
+        });
+        const backendScan = await Promise.race([backendPromise, timeoutPromise]);
+
+        if (backendScan?.lanIp && typeof window !== 'undefined') {
+          window.__CINEFLEX_LAN_IP__ = backendScan.lanIp;
+        }
+
+        const spanishDirect = Array.isArray(backendScan?.latinoDirectStreams)
+          ? backendScan.latinoDirectStreams.filter((s) => s.isLatinoDub || s.isCastellanoDub)
+          : [];
+
+        const result = {
+          tmdbId: movie.id,
+          aliasTmdbId: targetId,
+          imdbId: backendScan?.imdbId || targetImdb,
+          lanIp: backendScan?.lanIp || null,
+          isTv: targetIsTv,
+          season: targetSeason,
+          episode: targetEpisode,
+          directHlsStreams: spanishDirect,
+          latinoDirectStreams: spanishDirect.filter((s) => s.isLatinoDub),
+          castellanoDirectStreams: spanishDirect.filter((s) => s.isCastellanoDub),
+          englishMasterStreams: [],
+          subtitles: [],
+          latinoSources: backendScan?.latinoSources || [],
+          hasConfirmedLatinoDub: spanishDirect.some((s) => s.isLatinoDub),
+          serverStatuses: backendScan?.serverStatuses || {},
+          recommendedServer: backendScan?.recommendedServer || (spanishDirect.length > 0 ? 'native_hls_4k' : 'auto_smart_latino'),
+          scanDurationMs: Math.round(performance.now() - startTime),
+          timestamp: Date.now()
+        };
 
         scanCache.set(cacheKey, result);
         saveScanToStorage(cacheKey, result);
-      }).catch(() => { });
 
-      return result;
-    } finally {
-      inFlightScans.delete(cacheKey);
-    }
-  })();
+        if (typeof onFastStream === 'function') {
+          onFastStream(result);
+        }
 
-inFlightScans.set(cacheKey, scanPromise);
-return scanPromise;
+        // Subtítulos y streams en inglés de respaldo se resuelven en segundo plano sin congelar la interfaz
+        Promise.allSettled([hlsPromise, subsPromise]).then(([hlsRes, subRes]) => {
+          const englishMasterStreams = hlsRes.status === 'fulfilled' && Array.isArray(hlsRes.value?.streams)
+            ? hlsRes.value.streams
+            : [];
+          const subtitles = subRes.status === 'fulfilled' && Array.isArray(subRes.value)
+            ? subRes.value
+            : [];
+
+          const rankStream = (s) => {
+            if (s.isLatinoDub) return 1;
+            if (s.isCastellanoDub) return 2;
+            if (s.isBluRayMaster || s.providerId === 'nova') return 3;
+            return 4;
+          };
+
+          const combinedDirectStreams = [...spanishDirect, ...englishMasterStreams].sort(
+            (a, b) => rankStream(a) - rankStream(b)
+          );
+
+          result.directHlsStreams = combinedDirectStreams;
+          result.englishMasterStreams = englishMasterStreams;
+          result.subtitles = subtitles;
+
+          scanCache.set(cacheKey, result);
+          saveScanToStorage(cacheKey, result);
+        }).catch(() => { });
+
+        return result;
+      } finally {
+        inFlightScans.delete(cacheKey);
+      }
+    })();
+
+    inFlightScans.set(cacheKey, scanPromise);
+    return scanPromise;
   },
 
   async fetchBackendVerification(tmdbId, isTv, season, episode, imdbId) {
-  const resolved = resolveMediaAlias(tmdbId, isTv, season, episode, imdbId);
-  const targetId = resolved.id;
-  const targetIsTv = resolved.isTv;
-  const targetSeason = resolved.season;
-  const targetEpisode = resolved.episode;
-  const targetImdb = resolved.imdbId || imdbId;
+    const resolved = resolveMediaAlias(tmdbId, isTv, season, episode, imdbId);
+    const targetId = resolved.id;
+    const targetIsTv = resolved.isTv;
+    const targetSeason = resolved.season;
+    const targetEpisode = resolved.episode;
+    const targetImdb = resolved.imdbId || imdbId;
 
-  const params = new URLSearchParams({
-    tmdbId: String(targetId),
-    isTv: targetIsTv ? '1' : '0',
-    season: String(targetSeason),
-    episode: String(targetEpisode),
-    ...(targetImdb ? { imdbId: targetImdb } : {})
-  });
+    const params = new URLSearchParams({
+      tmdbId: String(targetId),
+      isTv: targetIsTv ? '1' : '0',
+      season: String(targetSeason),
+      episode: String(targetEpisode),
+      ...(targetImdb ? { imdbId: targetImdb } : {})
+    });
 
     const isLocalhost = typeof window !== 'undefined' && (
       window.location.hostname === 'localhost' ||
@@ -635,14 +635,14 @@ return scanPromise;
       ? `/api/scan-streams?${params.toString()}`
       : `./api.php?action=scan&${params.toString()}`;
 
-    try {
-      const res = await fetchWithTimeout(endpoint, { headers: { Accept: 'application/json' } }, 1800);
-      if (!res.ok) throw new Error('HTTP error');
-      const ct = res.headers.get('content-type') || '';
-      if (!ct.includes('json')) throw new Error('Not JSON');
-      const data = await res.json();
-      if (!data || !data.ok) throw new Error('Invalid payload');
-      return data;
+      try {
+        const res = await fetchWithTimeout(endpoint, { headers: { Accept: 'application/json' } }, 1800);
+        if (!res.ok) throw new Error('HTTP error');
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.includes('json')) throw new Error('Not JSON');
+        const data = await res.json();
+        if (!data || !data.ok) throw new Error('Invalid payload');
+        return data;
     } catch {
       // Si el backend no responde a tiempo en el host remoto, retornar fallback funcional inmediato
       return {
@@ -662,5 +662,5 @@ return scanPromise;
         }
       };
     }
-}
+  }
 };
