@@ -515,12 +515,11 @@ export const StreamScannerService = {
           hasConfirmedLatinoDub: Boolean(targetImdb),
           serverStatuses: {
             auto_smart_latino: { online: true, verified: true, ping: '3ms' },
-            playlatin_es: { online: Boolean(targetImdb), verified: Boolean(targetImdb), ping: '4ms' },
-            vidlink_4k_pro: { online: true, verified: true, ping: '5ms' },
-            vidsrc_pm: { online: true, verified: true, ping: '6ms' },
-            multiembed_global: { online: true, verified: true, ping: '7ms' }
+            vidlink_4k_pro: { online: true, verified: true, ping: '4ms' },
+            vidsrc_pm: { online: true, verified: true, ping: '5ms' },
+            multiembed_global: { online: true, verified: true, ping: '6ms' }
           },
-          recommendedServer: targetImdb ? 'playlatin_es' : 'vidlink_4k_pro',
+          recommendedServer: 'vidlink_4k_pro',
           scanDurationMs: 0,
           timestamp: Date.now()
         };
@@ -632,7 +631,7 @@ export const StreamScannerService = {
       : `./api.php?action=scan&${params.toString()}`;
 
       try {
-        const res = await fetchWithTimeout(endpoint, { headers: { Accept: 'application/json' } }, 3600);
+        const res = await fetchWithTimeout(endpoint, { headers: { Accept: 'application/json' } }, 2500);
         if (!res.ok) throw new Error('HTTP error');
         const ct = res.headers.get('content-type') || '';
         if (!ct.includes('json')) throw new Error('Not JSON');
@@ -646,15 +645,14 @@ export const StreamScannerService = {
         tmdbId: targetId,
         imdbId: targetImdb || null,
         lanIp: null,
-        recommendedServer: targetImdb ? 'playlatin_es' : 'vidlink_4k_pro',
+        recommendedServer: 'vidlink_4k_pro',
         latinoDirectStreams: [],
         latinoSources: [],
         serverStatuses: {
           auto_smart_latino: { online: true, verified: true, ping: '4ms' },
-          playlatin_es: { online: Boolean(targetImdb), verified: Boolean(targetImdb), ping: '5ms' },
-          vidlink_4k_pro: { online: true, verified: true, ping: '6ms' },
-          vidsrc_pm: { online: true, verified: true, ping: '7ms' },
-          multiembed_global: { online: true, verified: true, ping: '8ms' }
+          vidlink_4k_pro: { online: true, verified: true, ping: '5ms' },
+          vidsrc_pm: { online: true, verified: true, ping: '6ms' },
+          multiembed_global: { online: true, verified: true, ping: '7ms' }
         }
       };
     }

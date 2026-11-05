@@ -269,8 +269,8 @@ export const STREAM_PROVIDERS = [
       }
 
       return res.isTv
-        ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1&prioritize=dropload.io`
-        : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1&prioritize=dropload.io`;
+        ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
+        : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
     }
   },
   {
@@ -365,8 +365,8 @@ export const STREAM_PROVIDERS = [
       }
 
       return res.isTv
-        ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1&prioritize=doodstream.com`
-        : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1&prioritize=doodstream.com`;
+        ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
+        : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
     }
   },
   {

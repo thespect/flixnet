@@ -411,14 +411,14 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
         preg_match("/let\s+dataLink\s*=\s*(\[.*?\]);/s", $embed69Html, $mdl)
     ) {
         $challenge = $mc[1];
-        $diff = min(intval($md[1]), 5);
+        $diff = min(intval($md[1]), 4);
         $salt = $ms[1];
         $dataLink = @json_decode($mdl[1], true);
 
         if (is_array($dataLink) && count($dataLink) > 0) {
             $prefix = str_repeat('0', $diff);
             $nonce = 0;
-            while ($nonce < 300000) {
+            while ($nonce < 30000) {
                 if (strpos(hash('sha256', $challenge . $nonce), $prefix) === 0) break;
                 $nonce++;
             }
@@ -468,44 +468,14 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
         }
     }
 
-    // C. Descarga simultánea de los reproductores Dropload y VidHide en PARALELO
+    // C. Extracción directa del stream VidHide en Español Latino (Alta compatibilidad CORS y 200 OK)
     $multiExtracts = [];
-    if (!empty($dropUrlToExtract)) {
-        $multiExtracts['dropload'] = ['url' => $dropUrlToExtract, 'timeout' => 1.5, 'referer' => 'https://playlatinsrc.co/'];
-    }
     if (!empty($vidhideUrlToExtract)) {
         $multiExtracts['vidhide'] = ['url' => $vidhideUrlToExtract, 'timeout' => 1.5, 'referer' => 'https://embed69.org/'];
     }
 
     if (!empty($multiExtracts)) {
         $extracted = quickMultiGet($multiExtracts);
-
-        if (!empty($extracted['dropload'])) {
-            $unpacked = unpackPackerPhp($extracted['dropload']);
-            if (preg_match('/file\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/', $unpacked, $mdm)) {
-                $isLat = ($dropVersion === 'latino');
-                $latinoDirectStreams[] = [
-                    'id' => 'playlatin_dropload_hls_' . ($isLat ? 'latino' : 'castellano'),
-                    'name' => $isLat ? 'PlayLatin Dropload 4K Directo • Español Latino Oficial' : 'PlayLatin Dropload 4K Directo • Español Castellano',
-                    'providerId' => 'playlatin_dropload',
-                    'url' => $mdm[1],
-                    'rawUrl' => $mdm[1],
-                    'embedUrl' => $dropUrlToExtract,
-                    'type' => 'hls',
-                    'lang' => $isLat ? 'latino' : 'castellano',
-                    'langCode' => $isLat ? 'LAT' : 'ESP',
-                    'isLatinoDub' => $isLat,
-                    'isCastellanoDub' => !$isLat,
-                    'isDirectHls' => true,
-                    'castCompatible' => true,
-                    'isCamQuality' => false,
-                    'maxBandwidth' => 3600000,
-                    'quality' => '4K / 1080p Digital HD Latino',
-                    'ping' => '5ms',
-                    'verified' => true
-                ];
-            }
-        }
 
         if (!empty($extracted['vidhide'])) {
             $unpackedVh = unpackPackerPhp($extracted['vidhide']);
@@ -558,18 +528,7 @@ foreach ($latinoSources as $ls) {
     }
 }
 
-$recommendedServer = 'auto_smart_latino';
-if (count($latinoDirectStreams) > 0) {
-    $recommendedServer = 'native_hls_4k';
-} elseif ($hasVidhideSource) {
-    $recommendedServer = 'vidhide_latino';
-} elseif ($hasStreamwishSource) {
-    $recommendedServer = 'streamwish_latino';
-} elseif ($playlatinOk && !empty($imdbId)) {
-    $recommendedServer = 'playlatin_es';
-} else {
-    $recommendedServer = 'vidlink_4k_pro';
-}
+$recommendedServer = count($latinoDirectStreams) > 0 ? 'native_hls_4k' : 'vidlink_4k_pro';
 
 $responsePayload = json_encode([
     'ok' => true,

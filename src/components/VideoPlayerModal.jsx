@@ -372,10 +372,10 @@ export default function VideoPlayerModal({
           loadSubtitleTrack(-1);
           showToast('Cineflex 4K Directo activo (Español Latino Oficial • 0% Anuncios)');
         } else {
-          // Si este título no tiene .m3u8 directo en Español Latino, conmutar a PlayLatin Oficial 4K (100% Español Latino)
-          setSelectedServer('playlatin_es');
+          // Si este título no tiene .m3u8 directo, conmutar al servidor rápido 4K
+          setSelectedServer('vidlink_4k_pro');
           setSelectedAudioMode('es_latino_dub');
-          showToast('Conmutando a PlayLatin 4K Oficial (100% Español Latino)...');
+          showToast('Conmutando a VidLink 4K (Español Latino / Multi-Audio)...');
         }
       } else if (selectedServer === 'nova_4k_master') {
         if (bluRayIdx >= 0) {
@@ -390,7 +390,7 @@ export default function VideoPlayerModal({
           setActiveHlsIndex(anyLatinoIdx);
           setSelectedAudioMode('es_latino_dub');
         } else {
-          setSelectedServer('playlatin_es');
+          setSelectedServer('vidlink_4k_pro');
           setSelectedAudioMode('es_latino_dub');
         }
       } else if (anyLatinoIdx >= 0) {
@@ -424,14 +424,13 @@ export default function VideoPlayerModal({
     // Construir cadena priorizada según disponibilidad real verificada para este título
     const priorityChain = [];
     if (hasLatinoHls) priorityChain.push('native_hls_4k');
-    priorityChain.push('vidlink_4k_pro', 'vidsrc_pm');
+    priorityChain.push('vidlink_4k_pro', 'vidsrc_pm', 'multiembed_global');
     if (hasVidhide) priorityChain.push('vidhide_latino');
     if (hasStreamwish) priorityChain.push('streamwish_latino');
     if (resolvedImdbId) {
-      priorityChain.push('playlatin_es', 'playlatin_dood');
       if (hasEmbed69) priorityChain.push('embed69_latino');
+      priorityChain.push('playlatin_es');
     }
-    priorityChain.push('multiembed_global');
     if (hasBluRay) priorityChain.push('nova_4k_master');
     priorityChain.push('auto_smart_latino');
 
@@ -447,6 +446,10 @@ export default function VideoPlayerModal({
     stopSpeechSynthesis();
     playLatinReadyRef.current = false;
     setShowTrailer(false);
+    hasStartedPlayingRef.current = false;
+    isSeekingRef.current = false;
+    setIsLoading(true);
+    setIframeKey((prev) => prev + 1);
     setSelectedServer(nextServer);
     setSelectedAudioMode(nextServer === 'nova_4k_master' ? 'en_original_sub_es' : 'es_latino_dub');
     setIframeKey((k) => k + 1);
@@ -521,43 +524,49 @@ export default function VideoPlayerModal({
       const anyLatinoIdx = directHlsStreams.findIndex((s) => s.isLatinoDub);
       if (anyLatinoIdx >= 0) {
         setActiveHlsIndex(anyLatinoIdx);
+        setSelectedServer('native_hls_4k');
+      } else {
+        setSelectedServer('vidlink_4k_pro');
       }
-      setSelectedServer('playlatin_es');
       setShowTrailer(false);
+      hasStartedPlayingRef.current = false;
+      isSeekingRef.current = false;
       setIsLoading(true);
       setIframeKey((prev) => prev + 1);
       loadSubtitleTrack(-1);
-      showToast('Pista activa: Español Latino 4K (PlayLatin Oficial)');
+      showToast('Pista activa: Español Latino 4K (0% Anuncios)');
     } else if (trackId === 'es_latino_direct') {
       setPlayLatinLang('latino');
       const anyLatinoIdx = directHlsStreams.findIndex((s) => s.isLatinoDub);
       if (anyLatinoIdx >= 0) {
         setSelectedServer('native_hls_4k');
         setActiveHlsIndex(anyLatinoIdx);
-        setShowTrailer(false);
-        setIsLoading(true);
-        setIframeKey((prev) => prev + 1);
-        loadSubtitleTrack(-1);
-        showToast('Pista activa: Español Latino Directo (Reproductor Nativo HLS)');
       } else {
-        setSelectedServer('embed69_latino');
-        setShowTrailer(false);
-        setIsLoading(true);
-        setIframeKey((prev) => prev + 1);
-        showToast('Pista activa: Embed69 Multi-Latino 4K (Español Latino)');
+        setSelectedServer('vidlink_4k_pro');
       }
+      setShowTrailer(false);
+      hasStartedPlayingRef.current = false;
+      isSeekingRef.current = false;
+      setIsLoading(true);
+      setIframeKey((prev) => prev + 1);
+      loadSubtitleTrack(-1);
+      showToast('Pista activa: Español Latino Directo 4K');
     } else if (trackId === 'es_castellano_dub') {
       setPlayLatinLang('castellano');
       const castIdx = directHlsStreams.findIndex((s) => s.isCastellanoDub);
       if (castIdx >= 0) {
         setActiveHlsIndex(castIdx);
+        setSelectedServer('native_hls_4k');
+      } else {
+        setSelectedServer('vidsrc_pm');
       }
-      setSelectedServer('playlatin_es');
       setShowTrailer(false);
+      hasStartedPlayingRef.current = false;
+      isSeekingRef.current = false;
       setIsLoading(true);
       setIframeKey((prev) => prev + 1);
       loadSubtitleTrack(-1);
-      showToast('Pista activa: Español Castellano (PlayLatin Oficial)');
+      showToast('Pista activa: Español Castellano');
     } else if (trackId === 'es_ai_voiceover') {
       if (selectedServer !== 'native_hls_4k') {
         setSelectedServer('native_hls_4k');
@@ -598,12 +607,12 @@ export default function VideoPlayerModal({
       ? directHlsStreams.some((s) => s.isCastellanoDub)
       : directHlsStreams.some((s) => s.isLatinoDub);
 
+  const activeDirectStream = directHlsStreams[activeHlsIndex] || null;
+
   const isNativeServer =
     Boolean(movie?.customUrl) ||
     Boolean(currentProvider?.isNative) ||
-    (Boolean(currentProvider?.prefersNativeHls) && hasMatchingDirectDub);
-
-  const activeDirectStream = directHlsStreams[activeHlsIndex] || null;
+    (Boolean(currentProvider?.prefersNativeHls) && hasMatchingDirectDub && Boolean(activeDirectStream?.url));
 
   // Si un servidor nativo termina de escanear y no tiene stream directo en el idioma elegido, conmutar automáticamente al siguiente servidor compatible
   useEffect(() => {
@@ -822,17 +831,19 @@ export default function VideoPlayerModal({
           return;
         }
 
-        // Reintentar fragmento de red si hubo un corte temporal al adelantar
-        if (errData.type === HlsClass.ErrorTypes.NETWORK_ERROR) {
-          console.info('[Cineflex HLS] Reintentando carga de fragmento...');
-          try {
-            hls.startLoad();
-          } catch { }
-          return;
-        }
+        // Si es un error de manifiesto o código de error HTTP >= 400, o nunca inició la reproducción
+        const isManifestFail =
+          errData.details === HlsClass.ErrorDetails.MANIFEST_LOAD_ERROR ||
+          errData.details === HlsClass.ErrorDetails.MANIFEST_LOAD_TIMEOUT ||
+          errData.details === HlsClass.ErrorDetails.MANIFEST_PARSING_ERROR ||
+          (errData.response && errData.response.code >= 400);
 
-        // Solo conmutar de servidor si el error es irrecuperable y nunca comenzó la reproducción
-        if (!hasStartedPlayingRef.current && !isSeekingRef.current) {
+        if (isManifestFail || !hasStartedPlayingRef.current) {
+          try {
+            hls.destroy();
+            hlsRef.current = null;
+          } catch { }
+
           const nextLatinoIdx = directHlsStreams.findIndex(
             (s, idx) => idx > activeHlsIndex && (selectedServer === 'nova_4k_master' ? true : s.isLatinoDub)
           );
@@ -842,6 +853,16 @@ export default function VideoPlayerModal({
           } else {
             iterateNextLatinoServer('Auto-Detector Sí o Sí');
           }
+          return;
+        }
+
+        // Reintentar fragmento de red solo si la reproducción ya estaba en curso
+        if (errData.type === HlsClass.ErrorTypes.NETWORK_ERROR) {
+          console.info('[Cineflex HLS] Reintentando carga de fragmento...');
+          try {
+            hls.startLoad();
+          } catch { }
+          return;
         }
       });
     } else {
@@ -1125,6 +1146,8 @@ export default function VideoPlayerModal({
     playLatinReadyRef.current = false;
     stopSpeechSynthesis();
     setShowTrailer(false);
+    hasStartedPlayingRef.current = false;
+    isSeekingRef.current = false;
     setSelectedServer(serverId);
     setActiveMenu(null);
     setIsLoading(true);
