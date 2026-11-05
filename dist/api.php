@@ -133,8 +133,15 @@ if (isset($specialMediaMap[$tmdbId])) {
 }
 
 $cacheKey = 'cineflex_v9_' . md5("{$tmdbId}_" . ($isTv ? "tv_{$season}_{$episode}" : "movie"));
-$cacheFile = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . $cacheKey . '.json';
-if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < 900) {
+$cacheDir = __DIR__ . DIRECTORY_SEPARATOR . 'cache';
+if (!is_dir($cacheDir)) {
+    @mkdir($cacheDir, 0777, true);
+}
+$cacheFile = (is_dir($cacheDir) && is_writable($cacheDir))
+    ? $cacheDir . DIRECTORY_SEPARATOR . $cacheKey . '.json'
+    : rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . $cacheKey . '.json';
+
+if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < 14400) {
     $cachedJson = @file_get_contents($cacheFile);
     if ($cachedJson && strpos($cachedJson, '"ok":true') !== false) {
         echo $cachedJson;
@@ -142,14 +149,14 @@ if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < 900) {
     }
 }
 
-function quickGet($url, $timeout = 3, $referer = '') {
+function quickGet($url, $timeout = 1.5, $referer = '') {
     global $dropUa;
     if (function_exists('curl_init')) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
         curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
@@ -179,7 +186,7 @@ function quickGet($url, $timeout = 3, $referer = '') {
     return @file_get_contents($url, false, $ctx);
 }
 
-function quickPostJson($url, $payloadArr, $timeout = 3, $referer = '') {
+function quickPostJson($url, $payloadArr, $timeout = 1.5, $referer = '') {
     global $dropUa;
     $body = json_encode($payloadArr);
     if (function_exists('curl_init')) {
@@ -189,7 +196,7 @@ function quickPostJson($url, $payloadArr, $timeout = 3, $referer = '') {
         curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
         curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
@@ -227,7 +234,7 @@ function quickMultiGet($requests) {
     if (!function_exists('curl_multi_init')) {
         $results = [];
         foreach ($requests as $k => $req) {
-            $results[$k] = quickGet($req['url'], isset($req['timeout']) ? $req['timeout'] : 3, isset($req['referer']) ? $req['referer'] : '');
+            $results[$k] = quickGet($req['url'], isset($req['timeout']) ? $req['timeout'] : 1.5, isset($req['referer']) ? $req['referer'] : '');
         }
         return $results;
     }
@@ -238,8 +245,8 @@ function quickMultiGet($requests) {
         curl_setopt($ch, CURLOPT_URL, $req['url']);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
-        curl_setopt($ch, CURLOPT_TIMEOUT, isset($req['timeout']) ? $req['timeout'] : 3);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
+        curl_setopt($ch, CURLOPT_TIMEOUT, isset($req['timeout']) ? $req['timeout'] : 1.5);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
         curl_setopt($ch, CURLOPT_USERAGENT, $dropUa);
@@ -255,7 +262,7 @@ function quickMultiGet($requests) {
     } while ($mrc == CURLM_CALL_MULTI_PERFORM);
 
     while ($active && $mrc == CURLM_OK) {
-        if (curl_multi_select($mh, 0.2) != -1) {
+        if (curl_multi_select($mh, 0.1) != -1) {
             do {
                 $mrc = curl_multi_exec($mh, $active);
             } while ($mrc == CURLM_CALL_MULTI_PERFORM);
@@ -332,8 +339,8 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
         : "https://playlatinsrc.co/custom/movie/{$imdbId}?lang=latino";
 
     $multiPages = quickMultiGet([
-        'playlatin' => ['url' => $plPageUrl, 'timeout' => 3, 'referer' => 'https://playlatinsrc.co/'],
-        'embed69' => ['url' => "https://embed69.org/f/{$embed69Path}", 'timeout' => 3, 'referer' => 'https://embed69.org/']
+        'playlatin' => ['url' => $plPageUrl, 'timeout' => 1.5, 'referer' => 'https://playlatinsrc.co/'],
+        'embed69' => ['url' => "https://embed69.org/f/{$embed69Path}", 'timeout' => 1.5, 'referer' => 'https://embed69.org/']
     ]);
 
     $plHtml = $multiPages['playlatin'];
@@ -356,7 +363,7 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
             'episode' => $isTv ? (string)$episode : null,
             'mode' => 'custom',
             'token' => $plToken
-        ], 3, $plPageUrl);
+        ], 1.5, $plPageUrl);
 
         if ($plJson) {
             $plData = @json_decode($plJson, true);
@@ -462,10 +469,10 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
     // C. Descarga simultánea de los reproductores Dropload y VidHide en PARALELO
     $multiExtracts = [];
     if (!empty($dropUrlToExtract)) {
-        $multiExtracts['dropload'] = ['url' => $dropUrlToExtract, 'timeout' => 3, 'referer' => 'https://playlatinsrc.co/'];
+        $multiExtracts['dropload'] = ['url' => $dropUrlToExtract, 'timeout' => 1.5, 'referer' => 'https://playlatinsrc.co/'];
     }
     if (!empty($vidhideUrlToExtract)) {
-        $multiExtracts['vidhide'] = ['url' => $vidhideUrlToExtract, 'timeout' => 3, 'referer' => 'https://embed69.org/'];
+        $multiExtracts['vidhide'] = ['url' => $vidhideUrlToExtract, 'timeout' => 1.5, 'referer' => 'https://embed69.org/'];
     }
 
     if (!empty($multiExtracts)) {

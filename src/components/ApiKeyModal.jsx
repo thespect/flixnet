@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { X, Key, Check, AlertCircle, ExternalLink, Sparkles, Trash2 } from 'lucide-react';
 import { StorageService } from '../services/movieService';
 

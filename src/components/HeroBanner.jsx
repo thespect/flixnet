@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { Play, Info, Plus, Check, Volume2, VolumeX, Cast, Youtube, ChevronRight, Star } from 'lucide-react';
 import { MovieAPI } from '../services/movieService';
-import { StreamScannerService } from '../services/streamScannerService';
 
 export default function HeroBanner({ 
   movie, 
@@ -23,9 +22,6 @@ export default function HeroBanner({
   useEffect(() => {
     setShowVideoTrailer(false);
     if (movie) {
-      // Pre-calentar escaneo de flujos para inicio de reproducción instantáneo en 0ms
-      StreamScannerService.scanAllWorkingLinks(movie, 1, 1).catch(() => {});
-
       if (movie.trailer_id) {
         setTrailerKey(movie.trailer_id);
       } else {

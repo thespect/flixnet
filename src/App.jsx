@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig } from 'motion/react';
 import Navbar from './components/Navbar';
 import HeroBanner from './components/HeroBanner';
 import MovieRow from './components/MovieRow';
@@ -277,7 +277,8 @@ export default function App() {
   const showMoviesOnly = activeTab === 'movies' || activeCategoryFilter === 'movies';
 
   return (
-    <div className="min-h-screen bg-[#040407] text-white flex flex-col font-sans selection:bg-netflix-red selection:text-white relative overflow-x-hidden">
+    <MotionConfig reducedMotion="user">
+      <div className="min-h-screen bg-[#040407] text-white flex flex-col font-sans selection:bg-netflix-red selection:text-white relative overflow-x-hidden">
       {/* Luz ambiental cinemática + Ambilight dinámico sincronizado (Oculto en móvil para fluidez 60 FPS) */}
       <div className="ambient-mesh fixed inset-0 pointer-events-none z-0 hidden md:block" />
       {featuredItem?.backdrop_path && (
@@ -958,6 +959,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-    </div>
+      </div>
+    </MotionConfig>
   );
 }

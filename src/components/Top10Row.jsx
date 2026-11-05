@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { ChevronLeft, ChevronRight, Play, Plus, Check, ChevronDown } from 'lucide-react';
 
 export default function Top10Row({ 

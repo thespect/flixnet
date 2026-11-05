@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { Play, Link2, Sparkles, Film, Tv, Search, Check, AlertCircle } from 'lucide-react';
 import { MovieAPI } from '../services/movieService';
 

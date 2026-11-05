@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { Play, Plus, Check, ChevronDown, Star } from 'lucide-react';
-import { StreamScannerService } from '../services/streamScannerService';
 
 export default function MovieCard({ 
   movie, 
@@ -14,10 +13,6 @@ export default function MovieCard({
 
   const handleMouseEnter = () => {
     setIsHovered(true);
-    // Pre-calentar en caché los enlaces funcionales al pasar el cursor para inicio en 0ms
-    if (movie?.id) {
-      StreamScannerService.scanAllWorkingLinks(movie, 1, 1).catch(() => {});
-    }
   };
 
   return (

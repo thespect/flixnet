@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { ShieldCheck, ShieldAlert, X, Zap, CheckCircle2, Lock, Radio, Sparkles, RefreshCw } from 'lucide-react';
 import { AdBlockerService } from '../services/adBlockerService';
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   X,
   ArrowLeft,
@@ -622,7 +622,7 @@ export default function VideoPlayerModal({
     if (!isNativeServer && isLoading && !showTrailer) {
       const t = setTimeout(() => {
         setIsLoading(false);
-      }, 1600);
+      }, 450);
       return () => clearTimeout(t);
     }
   }, [isNativeServer, isLoading, selectedServer, iframeKey, showTrailer]);
@@ -1224,6 +1224,13 @@ export default function VideoPlayerModal({
   const handleSelectSeasonAndEpisode = (seasonNum, epNum, epName = '') => {
     saveCurrentProgress();
     stopSpeechSynthesis();
+    if (videoRef.current) {
+      try {
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0;
+        videoRef.current.src = '';
+      } catch { }
+    }
     hasStartedPlayingRef.current = false;
     isSeekingRef.current = false;
     currentLoadedUrlRef.current = '';
@@ -1233,11 +1240,6 @@ export default function VideoPlayerModal({
     setDuration(0);
     setBuffered(0);
     setResumeNotice(null);
-    if (videoRef.current) {
-      try {
-        videoRef.current.currentTime = 0;
-      } catch { }
-    }
     setCurrentSeason(seasonNum);
     setPickerSeason(seasonNum);
     setCurrentEpisode(epNum);
@@ -1252,6 +1254,13 @@ export default function VideoPlayerModal({
   const handleNextEpisode = () => {
     saveCurrentProgress();
     stopSpeechSynthesis();
+    if (videoRef.current) {
+      try {
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0;
+        videoRef.current.src = '';
+      } catch { }
+    }
     hasStartedPlayingRef.current = false;
     isSeekingRef.current = false;
     currentLoadedUrlRef.current = '';
@@ -1261,11 +1270,6 @@ export default function VideoPlayerModal({
     setDuration(0);
     setBuffered(0);
     setResumeNotice(null);
-    if (videoRef.current) {
-      try {
-        videoRef.current.currentTime = 0;
-      } catch { }
-    }
     const nextEp = currentEpisode + 1;
     setCurrentEpisode(nextEp);
     setEpisodeTitle(`Capítulo ${nextEp}`);
@@ -1278,6 +1282,13 @@ export default function VideoPlayerModal({
     if (currentEpisode > 1) {
       saveCurrentProgress();
       stopSpeechSynthesis();
+      if (videoRef.current) {
+        try {
+          videoRef.current.pause();
+          videoRef.current.currentTime = 0;
+          videoRef.current.src = '';
+        } catch { }
+      }
       hasStartedPlayingRef.current = false;
       isSeekingRef.current = false;
       currentLoadedUrlRef.current = '';
@@ -1287,11 +1298,6 @@ export default function VideoPlayerModal({
       setDuration(0);
       setBuffered(0);
       setResumeNotice(null);
-      if (videoRef.current) {
-        try {
-          videoRef.current.currentTime = 0;
-        } catch { }
-      }
       const prevEp = currentEpisode - 1;
       setCurrentEpisode(prevEp);
       setEpisodeTitle(`Capítulo ${prevEp}`);
@@ -1988,74 +1994,44 @@ export default function VideoPlayerModal({
           )}
         </AnimatePresence>
 
-        {/* HUD Interactivo de Carga e Iteración de Nodos en Español Latino 4K */}
+        {/* HUD Flotante Cinematográfico de Carga e Iteración de Servidores (Diseño No Bloqueante con Motion) */}
         <AnimatePresence>
-          {isLoading && (
+          {isLoading && !hasStartedPlayingRef.current && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#030307]/75 backdrop-blur-md p-4 pointer-events-none"
+              initial={{ opacity: 0, y: -24, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -16, scale: 0.94 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+              className="absolute top-14 sm:top-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none w-auto max-w-[92vw] px-2"
             >
-              <motion.div
-                initial={{ scale: 0.94, y: 10 }}
-                animate={{ scale: 1, y: 0 }}
-                className="relative w-full max-w-sm rounded-3xl bg-[#0b0b14]/95 border border-white/[0.14] p-5 shadow-[0_28px_80px_rgba(0,0,0,0.95)] flex flex-col items-center text-center space-y-3.5 overflow-hidden pointer-events-auto"
-              >
-                {/* Brillo ambiental superior */}
-                <div className="absolute -top-20 inset-x-0 mx-auto w-48 h-48 bg-netflix-red/25 rounded-full blur-3xl pointer-events-none" />
+              <div className="pointer-events-auto flex items-center space-x-2.5 sm:space-x-3.5 px-3.5 sm:px-4 py-2 rounded-full bg-[#0b0b14]/92 backdrop-blur-2xl border border-white/[0.16] shadow-[0_16px_48px_rgba(0,0,0,0.85)]">
+                {/* Mini radar spinner animado */}
+                <div className="relative flex items-center justify-center w-5 h-5 shrink-0">
+                  <div className="w-5 h-5 border-2 border-white/15 border-t-netflix-red border-r-emerald-400 rounded-full animate-spin" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 absolute animate-ping" />
+                </div>
 
-                {/* Anillo Radar Animado */}
-                  <div className="relative flex items-center justify-center w-14 h-14">
-                    <motion.div
-                      animate={{ scale: [1, 1.3, 1], opacity: [0.45, 0, 0.45] }}
-                      transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-                      className="absolute inset-0 rounded-full bg-netflix-red/35"
-                    />
-                    <div className="w-12 h-12 border-2 border-white/15 border-t-netflix-red border-r-emerald-400 rounded-full animate-spin" />
-                    <Zap className="w-4 h-4 text-emerald-400 absolute" />
-                  </div>
+                <div className="flex items-center space-x-2 truncate">
+                  <span className="text-white text-xs sm:text-sm font-black tracking-tight truncate">
+                    {showTrailer ? 'Tráiler 4K...' : currentProvider.name}
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full shrink-0">
+                    {currentProvider.ping || '4ms'}
+                  </span>
+                </div>
 
-                  <div className="space-y-1 relative z-10">
-                    <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-black uppercase tracking-wider">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                      <span>Nodo Activo: {currentProvider.name}</span>
-                    </div>
-                    <h3 className="text-white text-sm sm:text-base font-black tracking-tight pt-1">
-                      {showTrailer
-                        ? 'Iniciando Tráiler Oficial 4K...'
-                        : `Conectando flujo en ${currentAudioObj.shortLabel}...`}
-                    </h3>
-                    <p className="text-[11px] text-white/60">
-                      Conexión optimizada 0% anuncios · Salto automático en &lt;4s
-                    </p>
-                  </div>
-
-                  {/* Barra de progreso animada */}
-                  <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ x: '-100%' }}
-                      animate={{ x: '100%' }}
-                      transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-                      className="w-1/2 h-full bg-gradient-to-r from-netflix-red via-amber-400 to-emerald-400 rounded-full"
-                    />
-                  </div>
-
-                  {/* Botón Directo de Iteración Instantánea (Permite saltar sin esperar ni 1 segundo) */}
-                  {!showTrailer && (
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.96 }}
-                      onClick={() => iterateNextLatinoServer('Cambio Rápido')}
-                      className="pointer-events-auto w-full py-2 px-3.5 rounded-xl bg-white hover:bg-neutral-200 text-black font-black text-xs flex items-center justify-center space-x-1.5 shadow-[0_10px_30px_rgba(255,255,255,0.2)] transition-all cursor-pointer"
-                    >
-                      <RotateCw className="w-3 h-3 text-netflix-red" />
-                      <span>Saltar a Siguiente Servidor</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </motion.button>
-                  )}
-              </motion.div>
+                {!showTrailer && (
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => iterateNextLatinoServer('Cambio Rápido')}
+                    className="p-1 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-all cursor-pointer shrink-0"
+                    title="Saltar al siguiente servidor disponible"
+                  >
+                    <RotateCw className="w-3.5 h-3.5 text-netflix-red" />
+                  </motion.button>
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -2067,6 +2043,7 @@ export default function VideoPlayerModal({
             className="relative w-full h-full flex items-center justify-center overflow-hidden z-10"
           >
             <video
+              key={`native_${movie?.id}_s${currentSeason}_e${currentEpisode}_${selectedServer}_${activeHlsIndex}`}
               ref={videoRef}
               autoPlay
               playsInline
@@ -2394,16 +2371,6 @@ export default function VideoPlayerModal({
                   }
                 }}
               />
-
-              {/* Indicador de carga sutil superpuesto mientras el reproductor inicia */}
-              {isLoading && !hasStartedPlayingRef.current && (
-                <div className="absolute inset-0 bg-[#040407]/80 backdrop-blur-xs flex flex-col items-center justify-center space-y-3 pointer-events-none z-20">
-                  <div className="w-10 h-10 border-3 border-netflix-red/30 border-t-netflix-red rounded-full animate-spin" />
-                  <p className="text-xs font-semibold text-white/90 tracking-tight">
-                    Conectando a {currentProvider.name}...
-                  </p>
-                </div>
-              )}
             </div>
           </div>
         )}
