@@ -239,17 +239,11 @@ export const STREAM_PROVIDERS = [
     sandboxSafe: true,
     language: 'Español Latino Oficial (Auto-Conmutación Garantizada)',
     description: 'Verifica en tiempo real cuál de los 10 servidores tiene el título activo en Español Latino y conmuta automáticamente en menos de 2.5s si un nodo no responde.',
-    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      if (!res.imdbId) {
-        return res.isTv
-          ? `https://vidlink.pro/tv/${res.id}/${res.season}/${res.episode}?autoplay=true&primaryColor=e50914`
-          : `https://vidlink.pro/movie/${res.id}?autoplay=true&primaryColor=e50914`;
-      }
-
       return res.isTv
-        ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1&prioritize=dropload.io`
-        : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1&prioritize=dropload.io`;
+        ? `https://vidlink.pro/tv/${res.id}/${res.season}/${res.episode}?autoplay=true&primaryColor=e50914`
+        : `https://vidlink.pro/movie/${res.id}?autoplay=true&primaryColor=e50914`;
     }
   },
   {

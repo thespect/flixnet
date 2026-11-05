@@ -1,5 +1,7 @@
 <?php
 // API Backend Ultra-Rápida de Extracción Directa HLS (.m3u8) 100% en Español Latino para Producción / XAMPP / cPanel
+error_reporting(0);
+@ini_set('display_errors', '0');
 if (!ob_start('ob_gzhandler')) {
     ob_start();
 }
@@ -37,7 +39,7 @@ if ($action === 'proxy') {
         curl_setopt($ch, CURLOPT_USERAGENT, $dropUa);
         curl_setopt($ch, CURLOPT_REFERER, 'https://embed69.org/');
         $body = curl_exec($ch);
-        curl_close($ch);
+       @curl_close($ch);
     }
     if ($body === false) {
         $ctx = stream_context_create([
@@ -166,7 +168,7 @@ function quickGet($url, $timeout = 1.5, $referer = '') {
         }
         $res = curl_exec($ch);
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+       @curl_close($ch);
         if ($res !== false && $code >= 200 && $code < 400) {
             return $res;
         }
@@ -208,7 +210,7 @@ function quickPostJson($url, $payloadArr, $timeout = 1.5, $referer = '') {
         curl_setopt($ch, CURLOPT_HTTPHEADER, $httpHeaders);
         $res = curl_exec($ch);
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+       @curl_close($ch);
         if ($res !== false && $code >= 200 && $code < 400) {
             return $res;
         }
@@ -275,9 +277,9 @@ function quickMultiGet($requests) {
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $results[$k] = ($res !== false && $code >= 200 && $code < 400) ? $res : null;
         curl_multi_remove_handle($mh, $ch);
-        curl_close($ch);
+       @curl_close($ch);
     }
-    curl_multi_close($mh);
+   @curl_multi_close($mh);
     return $results;
 }
 
@@ -563,7 +565,7 @@ if (count($latinoDirectStreams) > 0) {
     $recommendedServer = 'vidhide_latino';
 } elseif ($hasStreamwishSource) {
     $recommendedServer = 'streamwish_latino';
-} elseif ($playlatinOk || !empty($imdbId)) {
+} elseif ($playlatinOk && !empty($imdbId)) {
     $recommendedServer = 'playlatin_es';
 } else {
     $recommendedServer = 'vidlink_4k_pro';

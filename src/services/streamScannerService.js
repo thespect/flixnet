@@ -529,11 +529,7 @@ export const StreamScannerService = {
           onFastStream(instantFastReport);
         }
 
-        // Backend con timeout ajustado para no bloquear reproducción en hosts compartidos
-        const timeoutPromise = new Promise((resolve) => {
-          setTimeout(() => resolve(null), 1400);
-        });
-        const backendScan = await Promise.race([backendPromise, timeoutPromise]);
+        const backendScan = await backendPromise;
 
         if (backendScan?.lanIp && typeof window !== 'undefined') {
           window.__CINEFLEX_LAN_IP__ = backendScan.lanIp;
@@ -636,7 +632,7 @@ export const StreamScannerService = {
       : `./api.php?action=scan&${params.toString()}`;
 
       try {
-        const res = await fetchWithTimeout(endpoint, { headers: { Accept: 'application/json' } }, 1800);
+        const res = await fetchWithTimeout(endpoint, { headers: { Accept: 'application/json' } }, 3600);
         if (!res.ok) throw new Error('HTTP error');
         const ct = res.headers.get('content-type') || '';
         if (!ct.includes('json')) throw new Error('Not JSON');

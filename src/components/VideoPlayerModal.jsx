@@ -310,9 +310,9 @@ export default function VideoPlayerModal({
           const anyLat = fastStreams.findIndex((s) => s.isLatinoDub);
           if (anyLat >= 0) {
             setActiveHlsIndex(anyLat);
-            setIsScanningLinks(false);
           }
         }
+        setIsScanningLinks(false);
       };
 
       const report = await StreamScannerService.scanAllWorkingLinks(
@@ -424,17 +424,14 @@ export default function VideoPlayerModal({
     // Construir cadena priorizada según disponibilidad real verificada para este título
     const priorityChain = [];
     if (hasLatinoHls) priorityChain.push('native_hls_4k');
+    priorityChain.push('vidlink_4k_pro', 'vidsrc_pm');
     if (hasVidhide) priorityChain.push('vidhide_latino');
     if (hasStreamwish) priorityChain.push('streamwish_latino');
     if (resolvedImdbId) {
       priorityChain.push('playlatin_es', 'playlatin_dood');
       if (hasEmbed69) priorityChain.push('embed69_latino');
     }
-    priorityChain.push('vidlink_4k_pro', 'vidsrc_pm', 'multiembed_global');
-    if (resolvedImdbId && !priorityChain.includes('embed69_latino')) {
-      priorityChain.push('embed69_latino');
-    }
-    priorityChain.push('vidlink_4k_pro');
+    priorityChain.push('multiembed_global');
     if (hasBluRay) priorityChain.push('nova_4k_master');
     priorityChain.push('auto_smart_latino');
 
@@ -633,7 +630,7 @@ export default function VideoPlayerModal({
     // Si la reproducción ya inició o el usuario está adelantando/retrocediendo, NUNCA cambiar ni reiniciar de servidor
     if (hasStartedPlayingRef.current || isSeekingRef.current) return;
 
-    const timeoutMs = isNativeServer ? 4200 : 5000;
+    const timeoutMs = isNativeServer ? 3500 : 2500;
     const timer = setTimeout(() => {
       if (isLoading && !hasStartedPlayingRef.current && !isSeekingRef.current) {
         if (isNativeServer) {
