@@ -90,9 +90,9 @@ export default function Top10Row({
                 {/* Sculptural Rank Number */}
                 <div className="relative -mr-4 sm:-mr-6 z-0 pointer-events-none select-none">
                   <span 
-                    className="text-7xl sm:text-8xl md:text-[134px] font-black tracking-tighter leading-none text-[#050509] transition-all duration-300 drop-shadow-[0_12px_28px_rgba(0,0,0,0.9)] group-hover/card:scale-105 inline-block"
+                    className="text-7xl sm:text-8xl md:text-[136px] font-black tracking-tighter leading-none text-transparent bg-clip-text bg-gradient-to-b from-white/25 via-netflix-red/20 to-transparent transition-all duration-300 drop-shadow-[0_14px_32px_rgba(229,9,20,0.35)] group-hover/card:scale-105 inline-block"
                     style={{
-                      WebkitTextStroke: '2.5px rgba(255, 255, 255, 0.34)',
+                      WebkitTextStroke: '2.5px rgba(255, 255, 255, 0.45)',
                       paintOrder: 'stroke fill',
                     }}
                   >

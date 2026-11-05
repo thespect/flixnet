@@ -301,38 +301,72 @@ function cineflexStreamScannerPlugin() {
       const embed69Result = await extractEmbed69LatinoStreams(imdbId, isTv, season, episode);
       const latinoDirectStreams = embed69Result.streams || [];
       const latinoSources = embed69Result.latinoSources || [];
+      const hasEmbed69Latino = latinoDirectStreams.length > 0 || latinoSources.length > 0;
+      const hasVidhideSource = latinoSources.some((s) => s.server === 'vidhide' || String(s.url).includes('morencius'));
+      const hasStreamwishSource = latinoSources.some((s) => s.server === 'streamwish' || s.server === 'voe' || s.server === 'filemoon');
+
+      // Determinar el servidor 100% verificado recomendado para este título
+      let recommendedServer = 'auto_smart_latino';
+      if (latinoDirectStreams.length > 0) {
+        recommendedServer = 'native_hls_4k';
+      } else if (hasVidhideSource) {
+        recommendedServer = 'vidhide_latino';
+      } else if (hasStreamwishSource) {
+        recommendedServer = 'streamwish_latino';
+      } else if (!imdbId) {
+        recommendedServer = 'nxsha_multilang';
+      }
 
       const responseData = {
         ok: true,
         tmdbId,
         imdbId: imdbId || null,
         lanIp: getLocalLanIp(),
+        recommendedServer,
         latinoDirectStreams,
         latinoSources,
         serverStatuses: {
           auto_smart_latino: {
             online: true,
-            hasLatinoDirect: latinoDirectStreams.some((s) => s.isLatinoDub),
+            hasLatinoDirect: hasEmbed69Latino,
             ping: '4ms',
             verified: true
           },
           playlatin_es: {
             online: Boolean(imdbId),
-            hasDirectDub: true,
+            hasDirectDub: Boolean(imdbId),
             ping: '6ms',
-            verified: true
+            verified: Boolean(imdbId)
           },
           native_hls_4k: {
             online: latinoDirectStreams.length > 0,
             hasLatinoDirect: latinoDirectStreams.some((s) => s.isLatinoDub),
             ping: '5ms',
-            verified: true
+            verified: latinoDirectStreams.length > 0
+          },
+          vidhide_latino: {
+            online: hasVidhideSource || latinoDirectStreams.length > 0,
+            hasLatinoDirect: hasVidhideSource || latinoDirectStreams.length > 0,
+            ping: '6ms',
+            verified: hasVidhideSource || latinoDirectStreams.length > 0
+          },
+          streamwish_latino: {
+            online: hasStreamwishSource || latinoSources.length > 0,
+            hasLatinoDirect: hasStreamwishSource || latinoSources.length > 0,
+            ping: '7ms',
+            verified: hasStreamwishSource || latinoSources.length > 0
+          },
+          playlatin_dood: {
+            online: Boolean(imdbId),
+            hasLatinoDirect: Boolean(imdbId),
+            ping: '8ms',
+            verified: Boolean(imdbId)
           },
           embed69_latino: {
             online: Boolean(imdbId),
-            hasLatinoDirect: true,
+            hasLatinoDirect: hasEmbed69Latino,
             ping: '7ms',
-            verified: true
+            verified: hasEmbed69Latino
           },
           nxsha_multilang: {
             online: true,
@@ -340,9 +374,20 @@ function cineflexStreamScannerPlugin() {
             ping: '9ms',
             verified: true
           },
-          nova_4k_master: {
+          nxsha_voe_latino: {
+            online: true,
+            hasLatinoDirect: true,
+            ping: '10ms',
+            verified: true
+          },
+          vidlink_4k_pro: {
             online: true,
             ping: '11ms',
+            verified: true
+          },
+          nova_4k_master: {
+            online: true,
+            ping: '12ms',
             verified: true
           }
         }

@@ -103,9 +103,13 @@ export default function HeroBanner({
                 <span className="w-1.5 h-1.5 rounded-full bg-netflix-red animate-pulse" />
                 <span>{movie.isTv ? 'SERIE DESTACADA' : 'ESTRENO EXCLUSIVO'}</span>
               </span>
-              <span className="inline-flex items-center space-x-1.5 bg-emerald-500/[0.14] backdrop-blur-2xl border border-emerald-500/30 px-3 py-1 rounded-full text-emerald-300 font-bold shadow-lg">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span>Español Latino 4K · Carga Instantánea</span>
+              <span className="inline-flex items-center space-x-2 bg-emerald-500/[0.16] backdrop-blur-2xl border border-emerald-500/35 px-3 py-1 rounded-full text-emerald-300 font-bold shadow-[0_0_20px_rgba(16,185,129,0.22)]">
+                <span className="flex items-end space-x-0.5 h-3">
+                  <span className="w-0.5 bg-emerald-400 rounded-full eq-bar-1" />
+                  <span className="w-0.5 bg-emerald-400 rounded-full eq-bar-2" />
+                  <span className="w-0.5 bg-emerald-400 rounded-full eq-bar-3" />
+                </span>
+                <span>Español Latino 4K · Auto-Detector Sí o Sí</span>
               </span>
             </div>
 
@@ -222,6 +226,31 @@ export default function HeroBanner({
                   {isMuted ? <VolumeX className="w-4 h-4 text-white/70" /> : <Volume2 className="w-4 h-4 text-white" />}
                 </motion.button>
               )}
+            </div>
+
+            {/* Selector Rápido de Servidor en 1 Clic desde el Hero Banner */}
+            <div className="pt-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-xl">
+              <span className="text-[10px] font-black uppercase tracking-wider text-white/45 shrink-0 mr-1">
+                Nodos Directos:
+              </span>
+              {[
+                { id: 'auto_smart_latino', label: 'Smart Auto 4K' },
+                { id: 'native_hls_4k', label: 'Cineflex Directo' },
+                { id: 'vidhide_latino', label: 'VidHide FHD' },
+                { id: 'streamwish_latino', label: 'StreamWish LAT' },
+                { id: 'embed69_latino', label: 'Embed69 Multi' }
+              ].map((srv) => (
+                <motion.button
+                  key={srv.id}
+                  whileHover={{ scale: 1.05, y: -1 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => onPlay(movie, 1, 1, '', srv.id)}
+                  className="px-2.5 py-1 rounded-full bg-white/[0.07] hover:bg-white/[0.16] backdrop-blur-xl border border-white/[0.14] hover:border-emerald-400/50 text-[10px] font-bold text-white/85 hover:text-white flex items-center space-x-1.5 shrink-0 transition-all cursor-pointer shadow-md"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span>{srv.label}</span>
+                </motion.button>
+              ))}
             </div>
 
             {/* Indicadores Móvil / Tablet */}

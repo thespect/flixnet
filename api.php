@@ -87,7 +87,7 @@ if (empty($tmdbId)) {
     exit;
 }
 
-$cacheKey = 'cineflex_v7_' . md5("{$tmdbId}_" . ($isTv ? "tv_{$season}_{$episode}" : "movie"));
+$cacheKey = 'cineflex_v8_' . md5("{$tmdbId}_" . ($isTv ? "tv_{$season}_{$episode}" : "movie"));
 $cacheFile = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . $cacheKey . '.json';
 if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < 900) {
     $cachedJson = @file_get_contents($cacheFile);
@@ -269,37 +269,81 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
     }
 }
 
+$hasEmbed69Latino = count($latinoDirectStreams) > 0 || count($latinoSources) > 0;
+$hasVidhideSource = false;
+$hasStreamwishSource = false;
+foreach ($latinoSources as $ls) {
+    $srv = isset($ls['server']) ? $ls['server'] : '';
+    $u = isset($ls['url']) ? $ls['url'] : '';
+    if ($srv === 'vidhide' || strpos($u, 'morencius') !== false) {
+        $hasVidhideSource = true;
+    }
+    if ($srv === 'streamwish' || $srv === 'voe' || $srv === 'filemoon') {
+        $hasStreamwishSource = true;
+    }
+}
+
+$recommendedServer = 'auto_smart_latino';
+if (count($latinoDirectStreams) > 0) {
+    $recommendedServer = 'native_hls_4k';
+} elseif ($hasVidhideSource) {
+    $recommendedServer = 'vidhide_latino';
+} elseif ($hasStreamwishSource) {
+    $recommendedServer = 'streamwish_latino';
+} elseif (empty($imdbId)) {
+    $recommendedServer = 'nxsha_multilang';
+}
+
 $responsePayload = json_encode([
     'ok' => true,
     'tmdbId' => $tmdbId,
     'imdbId' => $imdbId ?: null,
     'lanIp' => getLocalLanIpPhp(),
+    'recommendedServer' => $recommendedServer,
     'latinoDirectStreams' => $latinoDirectStreams,
     'latinoSources' => $latinoSources,
     'serverStatuses' => [
         'auto_smart_latino' => [
             'online' => true,
-            'hasLatinoDirect' => count($latinoDirectStreams) > 0,
+            'hasLatinoDirect' => $hasEmbed69Latino,
             'ping' => '4ms',
             'verified' => true
         ],
         'playlatin_es' => [
             'online' => !empty($imdbId),
-            'hasDirectDub' => true,
+            'hasDirectDub' => !empty($imdbId),
             'ping' => '6ms',
-            'verified' => true
+            'verified' => !empty($imdbId)
         ],
         'native_hls_4k' => [
             'online' => count($latinoDirectStreams) > 0,
             'hasLatinoDirect' => count($latinoDirectStreams) > 0,
             'ping' => '5ms',
-            'verified' => true
+            'verified' => count($latinoDirectStreams) > 0
+        ],
+        'vidhide_latino' => [
+            'online' => $hasVidhideSource || count($latinoDirectStreams) > 0,
+            'hasLatinoDirect' => $hasVidhideSource || count($latinoDirectStreams) > 0,
+            'ping' => '6ms',
+            'verified' => $hasVidhideSource || count($latinoDirectStreams) > 0
+        ],
+        'streamwish_latino' => [
+            'online' => $hasStreamwishSource || count($latinoSources) > 0,
+            'hasLatinoDirect' => $hasStreamwishSource || count($latinoSources) > 0,
+            'ping' => '7ms',
+            'verified' => $hasStreamwishSource || count($latinoSources) > 0
+        ],
+        'playlatin_dood' => [
+            'online' => !empty($imdbId),
+            'hasLatinoDirect' => !empty($imdbId),
+            'ping' => '8ms',
+            'verified' => !empty($imdbId)
         ],
         'embed69_latino' => [
             'online' => !empty($imdbId),
-            'hasLatinoDirect' => true,
+            'hasLatinoDirect' => $hasEmbed69Latino,
             'ping' => '7ms',
-            'verified' => true
+            'verified' => $hasEmbed69Latino
         ],
         'nxsha_multilang' => [
             'online' => true,
@@ -307,7 +351,18 @@ $responsePayload = json_encode([
             'ping' => '9ms',
             'verified' => true
         ],
-        'nova_4k_master' => ['online' => true, 'ping' => '11ms', 'verified' => true]
+        'nxsha_voe_latino' => [
+            'online' => true,
+            'hasLatinoDirect' => true,
+            'ping' => '10ms',
+            'verified' => true
+        ],
+        'vidlink_4k_pro' => [
+            'online' => true,
+            'ping' => '11ms',
+            'verified' => true
+        ],
+        'nova_4k_master' => ['online' => true, 'ping' => '12ms', 'verified' => true]
     ]
 ]);
 

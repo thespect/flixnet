@@ -124,16 +124,16 @@ export default function Navbar({
         initial={{ y: -60 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 pt-safe ${
+        className={`fixed z-40 transition-all duration-300 pt-safe ${
           isScrolled 
-            ? 'glass-chrome shadow-[0_14px_40px_rgba(0,0,0,0.85)] py-2.5 sm:py-3 border-b border-white/[0.09]' 
-            : 'bg-gradient-to-b from-[#040407]/95 via-[#040407]/75 to-transparent py-3 sm:py-4'
+            ? 'top-2 inset-x-2.5 sm:inset-x-5 lg:inset-x-8 max-w-7xl mx-auto rounded-2xl floating-nav-capsule py-2 sm:py-2.5' 
+            : 'top-0 left-0 right-0 bg-gradient-to-b from-[#040407]/95 via-[#040407]/75 to-transparent py-3 sm:py-4'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2">
+        <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-6 flex items-center justify-between gap-2">
           
           {/* Left: Brand Identity & Desktop Navigation */}
-          <div className="flex items-center space-x-5 lg:space-x-8 min-w-0">
+          <div className="flex items-center space-x-5 lg:space-x-7 min-w-0">
             <motion.div 
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.96 }}
@@ -147,9 +147,13 @@ export default function Navbar({
                 <span className="logo-font text-2xl sm:text-3xl font-black text-white tracking-wider leading-none drop-shadow-md">
                   CINE<span className="text-netflix-red">FLEX</span>
                 </span>
-                <span className="hidden xl:inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[9px] font-black text-emerald-300 tracking-wider uppercase">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>LATINO 4K</span>
+                <span className="hidden xl:inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/35 text-[9px] font-black text-emerald-300 tracking-wider uppercase shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                  <span className="flex items-end space-x-0.5 h-3">
+                    <span className="w-0.5 bg-emerald-400 rounded-full eq-bar-1" />
+                    <span className="w-0.5 bg-emerald-400 rounded-full eq-bar-2" />
+                    <span className="w-0.5 bg-emerald-400 rounded-full eq-bar-3" />
+                  </span>
+                  <span>11 NODOS 4K</span>
                 </span>
               </div>
             </motion.div>
