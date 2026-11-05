@@ -305,7 +305,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 pb-24 md:pb-16">
+      <main className="flex-1 pb-32 sm:pb-24 lg:pb-16">
         
         {/* VISTA 1: BÚSQUEDA EN VIVO (PELÍCULAS Y SERIES) */}
         {searchQuery.trim() ? (
@@ -818,8 +818,8 @@ export default function App() {
       </main>
 
       {/* Barra de Navegación Inferior Flotante Móvil y Tablet (Apple Liquid Glass Dock) */}
-      <nav className="lg:hidden fixed bottom-3 inset-x-4 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md z-40 pointer-events-none pb-safe">
-        <div className="pointer-events-auto bg-[#0b0b12]/82 backdrop-blur-2xl border border-white/[0.12] rounded-full p-1.5 shadow-[0_16px_48px_rgba(0,0,0,0.92)] flex items-center justify-around text-[10px] font-semibold">
+      <nav className="lg:hidden fixed bottom-3 inset-x-2.5 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md z-40 pointer-events-none pb-safe">
+        <div className="pointer-events-auto bg-[#0b0b12]/85 backdrop-blur-2xl border border-white/[0.14] rounded-full p-1 sm:p-1.5 shadow-[0_16px_48px_rgba(0,0,0,0.92)] flex items-center justify-around text-[10px] font-semibold">
           {[
             { id: 'home', label: 'Inicio', icon: Home },
             { id: 'movies', label: 'Películas', icon: Film },
@@ -834,7 +834,7 @@ export default function App() {
                 key={nav.id}
                 whileTap={{ scale: 0.92 }}
                 onClick={() => handleTabChange(nav.id)}
-                className={`relative flex flex-col items-center justify-center py-1.5 px-3.5 rounded-full transition-all cursor-pointer ${
+                className={`relative flex flex-col items-center justify-center py-1.5 px-2.5 sm:px-3.5 rounded-full transition-all cursor-pointer min-w-[54px] sm:min-w-0 ${
                   isActive ? 'text-black font-bold' : 'text-white/70 hover:text-white'
                 }`}
               >

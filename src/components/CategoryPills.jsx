@@ -17,7 +17,10 @@ export const CATEGORY_FILTERS = [
 export default function CategoryPills({ activeCategory, onSelectCategory }) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 select-none">
-      <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar scroll-smooth py-1">
+      <div 
+        className="flex items-center space-x-2 overflow-x-auto no-scrollbar scroll-smooth py-1"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
         {CATEGORY_FILTERS.map((cat) => {
           const isActive = activeCategory === cat.id;
           const Icon = cat.icon;

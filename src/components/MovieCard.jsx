@@ -22,7 +22,7 @@ export default function MovieCard({
 
   return (
     <motion.div 
-      className="relative shrink-0 w-36 sm:w-44 md:w-48 lg:w-52 select-none cursor-pointer group"
+      className="relative shrink-0 w-32 sm:w-40 md:w-48 lg:w-52 select-none cursor-pointer group"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setIsHovered(false)}
       whileHover={{ y: -10, scale: 1.04 }}

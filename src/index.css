@@ -406,10 +406,50 @@ input[type="range"].touch-scrubber:active::-webkit-slider-thumb {
   animation: glowPulseSubtle 2.4s ease-in-out infinite;
 }
 
+/* Optimización táctil, aceleración GPU y alto rendimiento para móviles y tablets */
+@media (max-width: 768px) {
+  /* Detener repintados continuos del fondo en celulares para 60 FPS estables */
+  .ambient-mesh {
+    animation: none !important;
+    background-size: 100% 100% !important;
+  }
+
+  /* Reducir carga del compositor de la GPU en filtros de desenfoque */
+  .glass-panel,
+  .glass-card,
+  .glass-chrome {
+    backdrop-filter: blur(12px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(160%) !important;
+  }
+
+  .btn-shimmer::after {
+    animation: none !important;
+  }
+}
+
+/* En dispositivos táctiles puros sin hover, desactivar reflejos de cursor pesados */
+@media (hover: none) {
+  .card-glare {
+    display: none !important;
+  }
+}
+
+/* Aceleración por hardware para transiciones y transformaciones suaves */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Optimización de renderizado para listas largas en dispositivos móviles */
+.row-content-optimized {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 280px;
+}
+
 /* Optimización táctil y de bordes para pantallas plegables, tablets y notch */
 @media (max-width: 640px) {
   .hero-responsive-title {
-    font-size: clamp(1.75rem, 6.5vw, 2.75rem) !important;
+    font-size: clamp(1.65rem, 6.2vw, 2.5rem) !important;
     line-height: 1.05 !important;
   }
 }

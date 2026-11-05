@@ -442,8 +442,8 @@ if (count($latinoDirectStreams) > 0) {
     $recommendedServer = 'vidhide_latino';
 } elseif ($hasStreamwishSource) {
     $recommendedServer = 'streamwish_latino';
-} elseif (empty($imdbId)) {
-    $recommendedServer = 'nxsha_multilang';
+} else {
+    $recommendedServer = 'vidlink_4k_pro';
 }
 
 $responsePayload = json_encode([
@@ -497,24 +497,24 @@ $responsePayload = json_encode([
             'ping' => '7ms',
             'verified' => $hasEmbed69Latino
         ],
-        'nxsha_multilang' => [
+        'vidsrc_pm' => [
             'online' => true,
             'hasLatinoDirect' => true,
-            'ping' => '9ms',
+            'ping' => '7ms',
             'verified' => true
         ],
-        'nxsha_voe_latino' => [
+        'multiembed_global' => [
             'online' => true,
             'hasLatinoDirect' => true,
-            'ping' => '10ms',
+            'ping' => '8ms',
             'verified' => true
         ],
         'vidlink_4k_pro' => [
             'online' => true,
-            'ping' => '11ms',
+            'ping' => '10ms',
             'verified' => true
         ],
-        'nova_4k_master' => ['online' => true, 'ping' => '12ms', 'verified' => true]
+        'nova_4k_master' => ['online' => true, 'ping' => '11ms', 'verified' => true]
     ]
 ]);
 

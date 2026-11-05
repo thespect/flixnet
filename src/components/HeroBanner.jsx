@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Info, Plus, Check, Volume2, VolumeX, Cast, Youtube, ChevronRight, Star } from 'lucide-react';
 import { MovieAPI } from '../services/movieService';
+import { StreamScannerService } from '../services/streamScannerService';
 
 export default function HeroBanner({ 
   movie, 
@@ -22,6 +23,9 @@ export default function HeroBanner({
   useEffect(() => {
     setShowVideoTrailer(false);
     if (movie) {
+      // Pre-calentar escaneo de flujos para inicio de reproducción instantáneo en 0ms
+      StreamScannerService.scanAllWorkingLinks(movie, 1, 1).catch(() => {});
+
       if (movie.trailer_id) {
         setTrailerKey(movie.trailer_id);
       } else {
@@ -103,13 +107,13 @@ export default function HeroBanner({
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
                 <span>{movie.isTv ? 'SERIE DESTACADA' : 'ESTRENO EXCLUSIVO'}</span>
               </span>
-              <span className="cinema-badge-emerald inline-flex items-center space-x-2 px-3.5 py-1 rounded-full text-emerald-300 font-bold">
+              <span className="cinema-badge-emerald inline-flex items-center space-x-1.5 sm:space-x-2 px-3 sm:px-3.5 py-1 rounded-full text-emerald-300 font-bold">
                 <span className="flex items-end space-x-0.5 h-3">
                   <span className="w-0.5 bg-emerald-400 rounded-full eq-bar-1" />
                   <span className="w-0.5 bg-emerald-400 rounded-full eq-bar-2" />
                   <span className="w-0.5 bg-emerald-400 rounded-full eq-bar-3" />
                 </span>
-                <span>Español Latino 4K · Auto-Detector Sí o Sí</span>
+                <span><span className="hidden sm:inline">Español Latino · </span>Auto-Detector 4K</span>
               </span>
             </div>
 
@@ -156,10 +160,11 @@ export default function HeroBanner({
                 whileHover={{ scale: 1.04, y: -2 }}
                 whileTap={{ scale: 0.96 }}
                 onClick={() => onPlay(movie, 1, 1)}
-                className="btn-primary-cinema btn-shimmer flex items-center justify-center space-x-2.5 px-7 sm:px-9 py-3.5 sm:py-4 rounded-full text-white font-black text-xs sm:text-sm md:text-base transition-all cursor-pointer shadow-[0_12px_38px_rgba(229,9,20,0.65)]"
+                className="btn-primary-cinema btn-shimmer flex items-center justify-center space-x-2 sm:space-x-2.5 px-5 sm:px-9 py-3 sm:py-4 rounded-full text-white font-black text-xs sm:text-sm md:text-base transition-all cursor-pointer shadow-[0_12px_38px_rgba(229,9,20,0.65)] min-h-[44px]"
               >
                 <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-white text-white shrink-0" />
-                <span>{movie.isTv ? 'Ver Episodio 1 (Latino 4K)' : 'Ver Ahora en Latino 4K'}</span>
+                <span className="hidden sm:inline">{movie.isTv ? 'Ver Episodio 1 (Latino 4K)' : 'Ver Ahora en Latino 4K'}</span>
+                <span className="sm:hidden">{movie.isTv ? 'Episodio 1' : 'Ver Ahora'}</span>
               </motion.button>
 
               {/* Botón Secundario: Más Información / Temporadas en Liquid Glass */}
@@ -167,10 +172,11 @@ export default function HeroBanner({
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.96 }}
                 onClick={() => onOpenDetails(movie)}
-                className="btn-glass-cinema flex items-center justify-center space-x-2 px-6 sm:px-7 py-3.5 sm:py-4 rounded-full text-white font-semibold text-xs sm:text-sm md:text-base transition-all cursor-pointer"
+                className="btn-glass-cinema flex items-center justify-center space-x-1.5 sm:space-x-2 px-4 sm:px-7 py-3 sm:py-4 rounded-full text-white font-semibold text-xs sm:text-sm md:text-base transition-all cursor-pointer min-h-[44px]"
               >
                 <Info className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-                <span>{movie.isTv ? 'Temporadas y Detalles' : 'Más información'}</span>
+                <span className="hidden sm:inline">{movie.isTv ? 'Temporadas y Detalles' : 'Más información'}</span>
+                <span className="sm:hidden">Detalles</span>
               </motion.button>
 
               {/* Mi Lista */}

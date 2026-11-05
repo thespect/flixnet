@@ -1,24 +1,24 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  X, 
-  ArrowLeft, 
-  Tv, 
-  RotateCw, 
-  Youtube, 
-  Zap, 
-  Activity, 
-  ChevronRight, 
+import {
+  X,
+  ArrowLeft,
+  Tv,
+  RotateCw,
+  Youtube,
+  Zap,
+  Activity,
+  ChevronRight,
   ChevronLeft,
-  Volume2, 
-  VolumeX, 
-  Play, 
-  Pause, 
-  Maximize, 
-  Minimize, 
-  Cast, 
-  ShieldCheck, 
-  Check, 
+  Volume2,
+  VolumeX,
+  Play,
+  Pause,
+  Maximize,
+  Minimize,
+  Cast,
+  ShieldCheck,
+  Check,
   Sparkles,
   Subtitles,
   Radio,
@@ -85,8 +85,8 @@ const AUDIO_LANGUAGE_TRACKS = [
   }
 ];
 
-export default function VideoPlayerModal({ 
-  movie, 
+export default function VideoPlayerModal({
+  movie,
   onClose,
   initialSeason = 1,
   initialEpisode = 1,
@@ -201,7 +201,7 @@ export default function VideoPlayerModal({
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
-      } catch {}
+      } catch { }
     }
   }, []);
 
@@ -264,13 +264,12 @@ export default function VideoPlayerModal({
 
     // Recuperar el minuto exacto donde se quedó el usuario previamente
     const saved = StorageService.getPlaybackProgress(movie.id, movie.isTv, currentSeason, currentEpisode);
-    if (saved && saved.currentTime > 5) {
-      resumeTimeRef.current = saved.currentTime;
-    } else {
-      resumeTimeRef.current = 0;
-    }
+    const isEpisodeMatch = !movie.isTv || (saved && Number(saved.season) === Number(currentSeason) && Number(saved.episode) === Number(currentEpisode));
+    const validSavedTime = (saved && isEpisodeMatch && saved.currentTime > 5) ? saved.currentTime : 0;
+    resumeTimeRef.current = validSavedTime;
+    lastSavedProgressTimeRef.current = validSavedTime;
 
-    StorageService.addToHistory(movie, selectedServer, currentSeason, currentEpisode, saved?.currentTime || 0, saved?.duration || 0);
+    StorageService.addToHistory(movie, selectedServer, currentSeason, currentEpisode, validSavedTime, isEpisodeMatch ? (saved?.duration || 0) : 0);
 
     MovieAPI.getTrailer(movie.id, movie.isTv).then((key) => {
       if (!cancelled && key) setTrailerKey(key);
@@ -285,18 +284,14 @@ export default function VideoPlayerModal({
         }
       } else if (!movie.customUrl) {
         setIsResolvingImdb(true);
-        const imdbPromise = MovieAPI.getImdbId(movie.id, movie.isTv);
-        imdbPromise.then((lateImdb) => {
-          if (!cancelled && lateImdb) {
-            setResolvedImdbId(lateImdb);
-          }
-        }).catch(() => {});
-        const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 1200));
-        imdb = await Promise.race([imdbPromise, timeoutPromise]);
-        if (!cancelled) {
-          if (imdb) setResolvedImdbId(imdb);
-          setIsResolvingImdb(false);
-        }
+          MovieAPI.getImdbId(movie.id, movie.isTv).then((lateImdb) => {
+            if (!cancelled && lateImdb) {
+              setResolvedImdbId(lateImdb);
+              setIsResolvingImdb(false);
+            }
+        }).catch(() => {
+          if (!cancelled) setIsResolvingImdb(false);
+        });
       } else {
         setIsResolvingImdb(false);
       }
@@ -308,6 +303,7 @@ export default function VideoPlayerModal({
           setResolvedImdbId(fastReport.imdbId);
           setIsResolvingImdb(false);
         }
+        setScanReport(fastReport);
         const fastStreams = fastReport.directHlsStreams || [];
         if (fastStreams.length > 0) {
           setDirectHlsStreams(fastStreams);
@@ -434,7 +430,7 @@ export default function VideoPlayerModal({
       priorityChain.push('playlatin_es', 'playlatin_dood');
       if (hasEmbed69) priorityChain.push('embed69_latino');
     }
-    priorityChain.push('nxsha_multilang', 'nxsha_voe_latino');
+    priorityChain.push('vidlink_4k_pro', 'vidsrc_pm', 'multiembed_global');
     if (resolvedImdbId && !priorityChain.includes('embed69_latino')) {
       priorityChain.push('embed69_latino');
     }
@@ -620,13 +616,24 @@ export default function VideoPlayerModal({
     }
   }, [isScanningLinks, isNativeServer, activeDirectStream, selectedServer, showTrailer, movie, iterateNextLatinoServer]);
 
+  // Auto-liberación de pantalla de carga para servidores iframe (VidLink, PlayLatin, VidSrc, etc.)
+  // Evita que trackers externos o scripts de terceros bloqueen la interfaz innecesariamente
+  useEffect(() => {
+    if (!isNativeServer && isLoading && !showTrailer) {
+      const t = setTimeout(() => {
+        setIsLoading(false);
+      }, 1600);
+      return () => clearTimeout(t);
+    }
+  }, [isNativeServer, isLoading, selectedServer, iframeKey, showTrailer]);
+
   // Watchdog Universal de Auto-Iteración Inteligente (Solo para arranque inicial si un servidor está caído)
   useEffect(() => {
-    if (!isLoading || showTrailer || isResolvingImdb) return;
+    if (!isLoading || showTrailer) return;
     // Si la reproducción ya inició o el usuario está adelantando/retrocediendo, NUNCA cambiar ni reiniciar de servidor
     if (hasStartedPlayingRef.current || isSeekingRef.current) return;
 
-    const timeoutMs = isNativeServer ? 10000 : 14000;
+    const timeoutMs = isNativeServer ? 4200 : 5000;
     const timer = setTimeout(() => {
       if (isLoading && !hasStartedPlayingRef.current && !isSeekingRef.current) {
         if (isNativeServer) {
@@ -644,7 +651,7 @@ export default function VideoPlayerModal({
     }, timeoutMs);
 
     return () => clearTimeout(timer);
-  }, [isLoading, selectedServer, showTrailer, isResolvingImdb, isNativeServer, activeHlsIndex, directHlsStreams, iterateNextLatinoServer, showToast]);
+  }, [isLoading, selectedServer, showTrailer, isNativeServer, activeHlsIndex, directHlsStreams, iterateNextLatinoServer, showToast]);
 
   // Doblaje Voz IA en Español sincronizado con subtítulos cuando el usuario elige 'es_ai_voiceover'
   useEffect(() => {
@@ -687,7 +694,7 @@ export default function VideoPlayerModal({
         };
 
         window.speechSynthesis.speak(utter);
-      } catch {}
+      } catch { }
     }
   }, [activeCueText, selectedAudioMode, isPlaying, isMuted, volume]);
 
@@ -788,9 +795,14 @@ export default function VideoPlayerModal({
           } catch (e) {
             console.warn('Error al reanudar punto de guardado:', e);
           }
+        } else {
+          try {
+            video.currentTime = 0;
+            setCurrentTime(0);
+          } catch { }
         }
 
-        video.play().catch(() => {});
+        video.play().catch(() => { });
       });
 
       hls.on(HlsClass.Events.AUDIO_TRACKS_UPDATED, () => {
@@ -809,7 +821,7 @@ export default function VideoPlayerModal({
           console.info('[Cineflex HLS] Recuperando error de decodificación tras adelantar...');
           try {
             hls.recoverMediaError();
-          } catch {}
+          } catch { }
           return;
         }
 
@@ -818,7 +830,7 @@ export default function VideoPlayerModal({
           console.info('[Cineflex HLS] Reintentando carga de fragmento...');
           try {
             hls.startLoad();
-          } catch {}
+          } catch { }
           return;
         }
 
@@ -840,7 +852,25 @@ export default function VideoPlayerModal({
       video.volume = volume;
       video.src = resolvedNativeUrl;
       video.load();
-      video.play().catch(() => {});
+      if (resumeTimeRef.current > 5) {
+        const resumePoint = resumeTimeRef.current;
+        resumeTimeRef.current = 0;
+        try {
+          video.currentTime = resumePoint;
+          setCurrentTime(resumePoint);
+          const m = Math.floor(resumePoint / 60);
+          const s = Math.floor(resumePoint % 60);
+          const formatted = `${m}:${s < 10 ? '0' : ''}${s}`;
+          setResumeNotice({ time: resumePoint, text: formatted });
+          showToast(`Reanudando reproducción desde el minuto ${formatted}`);
+        } catch { }
+      } else {
+        try {
+          video.currentTime = 0;
+          setCurrentTime(0);
+        } catch { }
+      }
+      video.play().catch(() => { });
     }
 
     return () => {
@@ -853,10 +883,16 @@ export default function VideoPlayerModal({
 
   const saveCurrentProgress = useCallback(() => {
     if (videoRef.current && videoRef.current.currentTime > 3) {
+      const cur = videoRef.current.currentTime;
+      const dur = videoRef.current.duration || 0;
+      if (dur > 30 && cur > dur - 15) {
+        StorageService.clearPlaybackProgress(movie?.id, movie?.isTv, currentSeason, currentEpisode);
+        return;
+      }
       StorageService.savePlaybackProgress(
         movie,
-        videoRef.current.currentTime,
-        videoRef.current.duration || 0,
+        cur,
+        dur,
         selectedServer,
         currentSeason,
         currentEpisode
@@ -947,7 +983,7 @@ export default function VideoPlayerModal({
         if (activeMenu) {
           setActiveMenu(null);
         } else if (isFullscreen) {
-          document.exitFullscreen?.().catch(() => {});
+          document.exitFullscreen?.().catch(() => { });
         } else {
           handleModalClose();
         }
@@ -1069,8 +1105,8 @@ export default function VideoPlayerModal({
     selectedServer === 'vidhide_latino' && directDecryptedMirrorUrl
       ? directDecryptedMirrorUrl
       : selectedServer === 'streamwish_latino' && directStreamwishMirrorUrl
-      ? directStreamwishMirrorUrl
-      : currentProvider.getUrl(
+        ? directStreamwishMirrorUrl
+        : currentProvider.getUrl(
           movie.id,
           specialAlias ? true : movie.isTv,
           currentSeason,
@@ -1080,7 +1116,7 @@ export default function VideoPlayerModal({
         );
 
   const activeTrailerKey = movie.trailer_id || trailerKey;
-  const trailerUrl = activeTrailerKey 
+  const trailerUrl = activeTrailerKey
     ? `https://www.youtube-nocookie.com/embed/${activeTrailerKey}?autoplay=1&rel=0&vq=hd2160&modestbranding=1&hl=es`
     : null;
 
@@ -1166,7 +1202,7 @@ export default function VideoPlayerModal({
     setIframeKey(prev => prev + 1);
     if (videoRef.current) {
       videoRef.current.load();
-      videoRef.current.play().catch(() => {});
+      videoRef.current.play().catch(() => { });
     }
   };
 
@@ -1191,6 +1227,8 @@ export default function VideoPlayerModal({
     hasStartedPlayingRef.current = false;
     isSeekingRef.current = false;
     currentLoadedUrlRef.current = '';
+    resumeTimeRef.current = 0;
+    lastSavedProgressTimeRef.current = 0;
     setCurrentTime(0);
     setDuration(0);
     setBuffered(0);
@@ -1198,7 +1236,7 @@ export default function VideoPlayerModal({
     if (videoRef.current) {
       try {
         videoRef.current.currentTime = 0;
-      } catch {}
+      } catch { }
     }
     setCurrentSeason(seasonNum);
     setPickerSeason(seasonNum);
@@ -1217,6 +1255,8 @@ export default function VideoPlayerModal({
     hasStartedPlayingRef.current = false;
     isSeekingRef.current = false;
     currentLoadedUrlRef.current = '';
+    resumeTimeRef.current = 0;
+    lastSavedProgressTimeRef.current = 0;
     setCurrentTime(0);
     setDuration(0);
     setBuffered(0);
@@ -1224,7 +1264,7 @@ export default function VideoPlayerModal({
     if (videoRef.current) {
       try {
         videoRef.current.currentTime = 0;
-      } catch {}
+      } catch { }
     }
     const nextEp = currentEpisode + 1;
     setCurrentEpisode(nextEp);
@@ -1241,6 +1281,8 @@ export default function VideoPlayerModal({
       hasStartedPlayingRef.current = false;
       isSeekingRef.current = false;
       currentLoadedUrlRef.current = '';
+      resumeTimeRef.current = 0;
+      lastSavedProgressTimeRef.current = 0;
       setCurrentTime(0);
       setDuration(0);
       setBuffered(0);
@@ -1248,7 +1290,7 @@ export default function VideoPlayerModal({
       if (videoRef.current) {
         try {
           videoRef.current.currentTime = 0;
-        } catch {}
+        } catch { }
       }
       const prevEp = currentEpisode - 1;
       setCurrentEpisode(prevEp);
@@ -1262,7 +1304,7 @@ export default function VideoPlayerModal({
   const togglePlayPause = () => {
     if (!videoRef.current) return;
     if (videoRef.current.paused) {
-      videoRef.current.play().catch(() => {});
+      videoRef.current.play().catch(() => { });
       setIsPlaying(true);
     } else {
       videoRef.current.pause();
@@ -1347,7 +1389,7 @@ export default function VideoPlayerModal({
         }
         // Intentar rotar a horizontal automáticamente en celulares y tablets
         if (window.screen?.orientation?.lock) {
-          window.screen.orientation.lock('landscape').catch(() => {});
+          window.screen.orientation.lock('landscape').catch(() => { });
         }
       } else {
         if (doc.exitFullscreen) {
@@ -1360,7 +1402,7 @@ export default function VideoPlayerModal({
           window.screen.orientation.unlock();
         }
       }
-    } catch {}
+    } catch { }
   };
 
   const handleQualitySelect = (qualityId) => {
@@ -1389,7 +1431,7 @@ export default function VideoPlayerModal({
   const latinoSourcesCount = scanReport?.latinoSources?.length || 0;
 
   return (
-    <motion.div 
+    <motion.div
       ref={containerRef}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -1432,14 +1474,14 @@ export default function VideoPlayerModal({
       </AnimatePresence>
 
       {/* BARRA SUPERIOR LIQUID GLASS (Estilo Apple TV+ / Max — Monocromática, Elegante y 100% Responsiva) */}
-      <motion.header 
+      <motion.header
         animate={{ y: controlsVisible ? 0 : -110, opacity: controlsVisible ? 1 : 0 }}
         transition={{ duration: 0.25 }}
         className="bg-black/78 backdrop-blur-2xl border-b border-white/[0.08] px-3 sm:px-6 py-2.5 sm:py-3 pt-safe flex items-center justify-between gap-2 z-30 shrink-0 shadow-[0_10px_40px_rgba(0,0,0,0.85)]"
       >
         {/* Izquierda: Volver y Título */}
         <div className="flex items-center space-x-2.5 sm:space-x-3.5 min-w-0 flex-1">
-          <motion.button 
+          <motion.button
             whileTap={{ scale: 0.92 }}
             onClick={handleModalClose}
             className="flex items-center space-x-1.5 px-3 sm:px-3.5 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.15] text-white/95 font-semibold text-xs transition-all border border-white/[0.12] shrink-0"
@@ -1478,8 +1520,8 @@ export default function VideoPlayerModal({
                 {showTrailer
                   ? 'Tráiler Oficial 4K'
                   : selectedServer === 'auto_smart_latino' && activeDirectStream?.name
-                  ? `Smart Auto → ${activeDirectStream.name}`
-                  : currentProvider.name}
+                    ? `Smart Auto → ${activeDirectStream.name}`
+                    : currentProvider.name}
               </span>
               <span>·</span>
               <span className="text-white/70 truncate">
@@ -1501,7 +1543,7 @@ export default function VideoPlayerModal({
 
         {/* Derecha: Toolbar Liquid Glass Monocromático (Apple TV+ HIG) */}
         <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
-          
+
           {/* Selector de Temporadas y Capítulos */}
           {movie.isTv && (
             <button
@@ -1509,11 +1551,10 @@ export default function VideoPlayerModal({
                 setPickerSeason(currentSeason);
                 setActiveMenu(activeMenu === 'episodes' ? null : 'episodes');
               }}
-              className={`flex items-center space-x-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition-all ${
-                activeMenu === 'episodes'
+              className={`flex items-center space-x-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition-all ${activeMenu === 'episodes'
                   ? 'bg-white text-black border-white shadow-lg'
                   : 'bg-white/[0.08] hover:bg-white/[0.14] text-white border-white/[0.12]'
-              }`}
+                }`}
               title="Seleccionar Temporada y Capítulo"
             >
               <Tv className="w-3.5 h-3.5 shrink-0" />
@@ -1526,11 +1567,10 @@ export default function VideoPlayerModal({
           <div className="hidden lg:flex items-center bg-white/[0.06] border border-white/[0.12] rounded-full p-0.5 text-[11px] font-semibold">
             <button
               onClick={() => handleSelectAudioTrack('es_latino_dub')}
-              className={`px-3 py-1 rounded-full transition-all cursor-pointer flex items-center space-x-1.5 ${
-                playLatinLang === 'latino' && selectedAudioMode !== 'en_original_sub_es'
+              className={`px-3 py-1 rounded-full transition-all cursor-pointer flex items-center space-x-1.5 ${playLatinLang === 'latino' && selectedAudioMode !== 'en_original_sub_es'
                   ? 'bg-emerald-500 text-black font-bold shadow'
                   : 'text-white/75 hover:text-white'
-              }`}
+                }`}
               title="Reproducir en Español Latino Oficial 4K"
             >
               <Globe className="w-3 h-3 shrink-0" />
@@ -1538,11 +1578,10 @@ export default function VideoPlayerModal({
             </button>
             <button
               onClick={() => handleSelectAudioTrack('es_castellano_dub')}
-              className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
-                playLatinLang === 'castellano' && selectedAudioMode === 'es_castellano_dub'
+              className={`px-3 py-1 rounded-full transition-all cursor-pointer ${playLatinLang === 'castellano' && selectedAudioMode === 'es_castellano_dub'
                   ? 'bg-white text-black font-bold shadow'
                   : 'text-white/75 hover:text-white'
-              }`}
+                }`}
               title="Reproducir en Español Castellano"
             >
               Castellano
@@ -1552,11 +1591,10 @@ export default function VideoPlayerModal({
           {/* Selector de Pista de Audio / Idioma */}
           <button
             onClick={() => setActiveMenu(activeMenu === 'audio' ? null : 'audio')}
-            className={`flex items-center space-x-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition-all ${
-              activeMenu === 'audio'
+            className={`flex items-center space-x-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition-all ${activeMenu === 'audio'
                 ? 'bg-white text-black border-white shadow-lg'
                 : 'bg-white/[0.08] hover:bg-white/[0.14] text-white border-white/[0.12]'
-            }`}
+              }`}
             title="Cambiar Pista de Audio / Idioma (Español Latino, Castellano, Inglés)"
           >
             <Headphones className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
@@ -1569,13 +1607,12 @@ export default function VideoPlayerModal({
           {isNativeServer && !showTrailer && (
             <button
               onClick={() => setActiveMenu(activeMenu === 'subs' ? null : 'subs')}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition-all ${
-                activeMenu === 'subs'
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition-all ${activeMenu === 'subs'
                   ? 'bg-white text-black border-white'
                   : activeSubIndex >= 0
-                  ? 'bg-white/[0.14] text-white border-white/[0.22]'
-                  : 'bg-white/[0.08] hover:bg-white/[0.14] text-white/80 border-white/[0.12]'
-              }`}
+                    ? 'bg-white/[0.14] text-white border-white/[0.22]'
+                    : 'bg-white/[0.08] hover:bg-white/[0.14] text-white/80 border-white/[0.12]'
+                }`}
               title="Subtítulos en Español"
             >
               <Subtitles className="w-3.5 h-3.5" />
@@ -1584,13 +1621,12 @@ export default function VideoPlayerModal({
           )}
 
           {/* Calidad 4K */}
-          <button 
+          <button
             onClick={() => setActiveMenu(activeMenu === 'quality' ? null : 'quality')}
-            className={`hidden sm:flex items-center space-x-1 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition-all ${
-              activeMenu === 'quality'
+            className={`hidden sm:flex items-center space-x-1 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition-all ${activeMenu === 'quality'
                 ? 'bg-white text-black border-white'
                 : 'bg-white/[0.08] hover:bg-white/[0.14] text-white/90 border-white/[0.12]'
-            }`}
+              }`}
             title="Resolución 4K y Nitidez HDR"
           >
             <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
@@ -1598,9 +1634,9 @@ export default function VideoPlayerModal({
           </button>
 
           {/* Chromecast & AirPlay */}
-          <button 
+          <button
             onClick={() => setIsCastModalOpen(true)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.14] text-white/90 border border-white/[0.12] text-[11px] sm:text-xs font-semibold transition-all"
+            className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.14] text-white/90 border border-white/[0.12] text-[11px] sm:text-xs font-semibold transition-all"
             title="Transmitir por Chromecast o AirPlay a Smart TV"
           >
             <Cast className="w-3.5 h-3.5 shrink-0" />
@@ -1608,7 +1644,7 @@ export default function VideoPlayerModal({
           </button>
 
           {/* Recargar */}
-          <button 
+          <button
             onClick={handleReload}
             className="p-2 rounded-full bg-white/[0.08] hover:bg-white/[0.14] text-white/80 hover:text-white border border-white/[0.12] transition-all"
             title="Recargar reproductor"
@@ -1617,7 +1653,7 @@ export default function VideoPlayerModal({
           </button>
 
           {/* Cerrar */}
-          <button 
+          <button
             onClick={handleModalClose}
             className="p-2 rounded-full bg-white/[0.12] hover:bg-netflix-red text-white border border-white/[0.15] transition-all"
             title="Cerrar reproductor"
@@ -1675,11 +1711,10 @@ export default function VideoPlayerModal({
                       <button
                         key={sNum}
                         onClick={() => setPickerSeason(sNum)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-black shrink-0 transition-all border ${
-                          pickerSeason === sNum
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black shrink-0 transition-all border ${pickerSeason === sNum
                             ? 'bg-netflix-red text-white border-netflix-red shadow-lg'
                             : 'bg-white/5 text-gray-300 hover:text-white hover:bg-white/10 border-white/10'
-                        }`}
+                          }`}
                       >
                         Temp. {sNum}
                       </button>
@@ -1697,23 +1732,22 @@ export default function VideoPlayerModal({
                       {(seasonEpisodes.length > 0
                         ? seasonEpisodes
                         : Array.from({ length: 12 }, (_, idx) => ({
-                            episode_number: idx + 1,
-                            name: `Capítulo ${idx + 1}`,
-                            overview: `Episodio ${idx + 1} de la Temporada ${pickerSeason} en 4K y Español Latino.`,
-                            still_path: movie.backdrop_path || movie.poster_path,
-                            runtime: '48m'
-                          }))
+                          episode_number: idx + 1,
+                          name: `Capítulo ${idx + 1}`,
+                          overview: `Episodio ${idx + 1} de la Temporada ${pickerSeason} en 4K y Español Latino.`,
+                          still_path: movie.backdrop_path || movie.poster_path,
+                          runtime: '48m'
+                        }))
                       ).map((ep) => {
                         const isCurrentEp = currentSeason === pickerSeason && currentEpisode === ep.episode_number;
                         return (
                           <button
                             key={ep.episode_number}
                             onClick={() => handleSelectSeasonAndEpisode(pickerSeason, ep.episode_number, ep.name)}
-                            className={`w-full text-left p-2.5 rounded-2xl border transition-all flex items-center gap-3 group ${
-                              isCurrentEp
+                            className={`w-full text-left p-2.5 rounded-2xl border transition-all flex items-center gap-3 group ${isCurrentEp
                                 ? 'bg-netflix-red/25 border-netflix-red text-white shadow-lg'
                                 : 'bg-white/[0.04] hover:bg-white/10 border-white/10 text-gray-200'
-                            }`}
+                              }`}
                           >
                             <div className="relative w-24 aspect-video bg-zinc-900 rounded-xl overflow-hidden shrink-0 border border-white/10">
                               {ep.still_path ? (
@@ -1761,11 +1795,10 @@ export default function VideoPlayerModal({
                       <button
                         key={track.id}
                         onClick={() => handleSelectAudioTrack(track.id)}
-                        className={`w-full text-left p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
-                          isSelected
+                        className={`w-full text-left p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${isSelected
                             ? 'bg-emerald-600/25 border-emerald-400 text-white shadow-lg'
                             : 'bg-white/[0.05] hover:bg-white/10 border-white/10 text-gray-200'
-                        }`}
+                          }`}
                       >
                         <div className="min-w-0 flex-1 space-y-0.5">
                           <div className="flex items-center space-x-2">
@@ -1804,9 +1837,8 @@ export default function VideoPlayerModal({
                             setActiveMenu(null);
                             showToast(`Pista HLS seleccionada: ${t.name || t.lang || `Audio ${idx + 1}`}`);
                           }}
-                          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between ${
-                            activeHlsAudioTrack === idx ? 'bg-netflix-red text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                          }`}
+                          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between ${activeHlsAudioTrack === idx ? 'bg-netflix-red text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                            }`}
                         >
                           <span>{t.name || t.lang || `Pista de Audio #${idx + 1}`}</span>
                           {activeHlsAudioTrack === idx && <Check className="w-3.5 h-3.5" />}
@@ -1825,9 +1857,8 @@ export default function VideoPlayerModal({
                       loadSubtitleTrack(-1);
                       setActiveMenu(null);
                     }}
-                    className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between ${
-                      activeSubIndex === -1 ? 'bg-netflix-red text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                    }`}
+                    className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between ${activeSubIndex === -1 ? 'bg-netflix-red text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                      }`}
                   >
                     <span>Desactivar Subtítulos</span>
                     {activeSubIndex === -1 && <Check className="w-4 h-4" />}
@@ -1841,9 +1872,8 @@ export default function VideoPlayerModal({
                           loadSubtitleTrack(idx);
                           setActiveMenu(null);
                         }}
-                        className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between ${
-                          activeSubIndex === idx ? 'bg-emerald-600 text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                        }`}
+                        className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between ${activeSubIndex === idx ? 'bg-emerald-600 text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                          }`}
                       >
                         <span className="truncate">{sub.label}</span>
                         {activeSubIndex === idx && <Check className="w-4 h-4 shrink-0" />}
@@ -1871,9 +1901,8 @@ export default function VideoPlayerModal({
                       </div>
                       <p className="text-[11px] text-gray-400">Realce de nitidez y contraste de cine</p>
                     </div>
-                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${
-                      enhance4kEnabled ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-white/10 text-gray-400'
-                    }`}>
+                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${enhance4kEnabled ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-white/10 text-gray-400'
+                      }`}>
                       {enhance4kEnabled ? 'ACTIVO' : 'APAGADO'}
                     </span>
                   </button>
@@ -1882,11 +1911,10 @@ export default function VideoPlayerModal({
                     <button
                       key={q.id}
                       onClick={() => handleQualitySelect(q.id)}
-                      className={`w-full text-left p-3 rounded-2xl text-xs font-semibold flex items-center justify-between transition-colors border ${
-                        selectedResolution === q.id 
-                          ? 'bg-netflix-red/25 border-netflix-red text-white' 
+                      className={`w-full text-left p-3 rounded-2xl text-xs font-semibold flex items-center justify-between transition-colors border ${selectedResolution === q.id
+                          ? 'bg-netflix-red/25 border-netflix-red text-white'
                           : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'
-                      }`}
+                        }`}
                     >
                       <div>
                         <div className="font-black text-sm flex items-center space-x-1.5">
@@ -1918,7 +1946,7 @@ export default function VideoPlayerModal({
             className="absolute inset-0 w-full h-full object-cover blur-[120px] opacity-25 scale-125 saturate-200 pointer-events-none select-none"
           />
         )}
-        
+
         {/* Notificación Flotante del Auto-Detector */}
         <AnimatePresence>
           {autoSwitchNotice && (
@@ -1963,70 +1991,70 @@ export default function VideoPlayerModal({
         {/* HUD Interactivo de Carga e Iteración de Nodos en Español Latino 4K */}
         <AnimatePresence>
           {isLoading && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#030307]/88 backdrop-blur-2xl p-4"
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#030307]/75 backdrop-blur-md p-4 pointer-events-none"
             >
               <motion.div
-                initial={{ scale: 0.92, y: 12 }}
+                initial={{ scale: 0.94, y: 10 }}
                 animate={{ scale: 1, y: 0 }}
-                className="relative w-full max-w-md rounded-3xl bg-[#0b0b14]/90 border border-white/[0.14] p-6 shadow-[0_28px_80px_rgba(0,0,0,0.95)] flex flex-col items-center text-center space-y-4 overflow-hidden"
+                className="relative w-full max-w-sm rounded-3xl bg-[#0b0b14]/95 border border-white/[0.14] p-5 shadow-[0_28px_80px_rgba(0,0,0,0.95)] flex flex-col items-center text-center space-y-3.5 overflow-hidden pointer-events-auto"
               >
                 {/* Brillo ambiental superior */}
-                <div className="absolute -top-20 inset-x-0 mx-auto w-56 h-56 bg-netflix-red/25 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -top-20 inset-x-0 mx-auto w-48 h-48 bg-netflix-red/25 rounded-full blur-3xl pointer-events-none" />
 
                 {/* Anillo Radar Animado */}
-                <div className="relative flex items-center justify-center w-16 h-16">
-                  <motion.div
-                    animate={{ scale: [1, 1.35, 1], opacity: [0.45, 0, 0.45] }}
-                    transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-                    className="absolute inset-0 rounded-full bg-netflix-red/35"
-                  />
-                  <div className="w-14 h-14 border-2 border-white/15 border-t-netflix-red border-r-emerald-400 rounded-full animate-spin" />
-                  <Zap className="w-5 h-5 text-emerald-400 absolute" />
-                </div>
-
-                <div className="space-y-1 relative z-10">
-                  <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-black uppercase tracking-wider">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                    <span>Nodo Activo: {currentProvider.name}</span>
+                  <div className="relative flex items-center justify-center w-14 h-14">
+                    <motion.div
+                      animate={{ scale: [1, 1.3, 1], opacity: [0.45, 0, 0.45] }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                      className="absolute inset-0 rounded-full bg-netflix-red/35"
+                    />
+                    <div className="w-12 h-12 border-2 border-white/15 border-t-netflix-red border-r-emerald-400 rounded-full animate-spin" />
+                    <Zap className="w-4 h-4 text-emerald-400 absolute" />
                   </div>
-                  <h3 className="text-white text-sm sm:text-base font-black tracking-tight pt-1">
-                    {showTrailer
-                      ? 'Iniciando Tráiler Oficial 4K...'
-                      : `Conectando flujo en ${currentAudioObj.shortLabel}...`}
-                  </h3>
-                  <p className="text-[11px] text-white/60">
-                    Verificación automática anti-anuncios · Si tarda más de 4s saltará al siguiente servidor
-                  </p>
-                </div>
 
-                {/* Barra de progreso animada */}
-                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ x: '-100%' }}
-                    animate={{ x: '100%' }}
-                    transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-                    className="w-1/2 h-full bg-gradient-to-r from-netflix-red via-amber-400 to-emerald-400 rounded-full"
-                  />
-                </div>
+                  <div className="space-y-1 relative z-10">
+                    <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-black uppercase tracking-wider">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                      <span>Nodo Activo: {currentProvider.name}</span>
+                    </div>
+                    <h3 className="text-white text-sm sm:text-base font-black tracking-tight pt-1">
+                      {showTrailer
+                        ? 'Iniciando Tráiler Oficial 4K...'
+                        : `Conectando flujo en ${currentAudioObj.shortLabel}...`}
+                    </h3>
+                    <p className="text-[11px] text-white/60">
+                      Conexión optimizada 0% anuncios · Salto automático en &lt;4s
+                    </p>
+                  </div>
 
-                {/* Botón Directo de Iteración Instantánea (Permite saltar sin esperar ni 1 segundo) */}
-                {!showTrailer && (
-                  <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.96 }}
-                    onClick={() => iterateNextLatinoServer('Cambio Rápido')}
-                    className="pointer-events-auto w-full py-2.5 px-4 rounded-2xl bg-white hover:bg-neutral-200 text-black font-black text-xs flex items-center justify-center space-x-2 shadow-[0_10px_30px_rgba(255,255,255,0.2)] transition-all cursor-pointer"
-                  >
-                    <RotateCw className="w-3.5 h-3.5 text-netflix-red" />
-                    <span>Saltar al Siguiente Servidor en Español Latino</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </motion.button>
-                )}
+                  {/* Barra de progreso animada */}
+                  <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ x: '-100%' }}
+                      animate={{ x: '100%' }}
+                      transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                      className="w-1/2 h-full bg-gradient-to-r from-netflix-red via-amber-400 to-emerald-400 rounded-full"
+                    />
+                  </div>
+
+                  {/* Botón Directo de Iteración Instantánea (Permite saltar sin esperar ni 1 segundo) */}
+                  {!showTrailer && (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.96 }}
+                      onClick={() => iterateNextLatinoServer('Cambio Rápido')}
+                      className="pointer-events-auto w-full py-2 px-3.5 rounded-xl bg-white hover:bg-neutral-200 text-black font-black text-xs flex items-center justify-center space-x-1.5 shadow-[0_10px_30px_rgba(255,255,255,0.2)] transition-all cursor-pointer"
+                    >
+                      <RotateCw className="w-3 h-3 text-netflix-red" />
+                      <span>Saltar a Siguiente Servidor</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </motion.button>
+                  )}
               </motion.div>
             </motion.div>
           )}
@@ -2034,7 +2062,7 @@ export default function VideoPlayerModal({
 
         {/* REPRODUCTOR 1: MODO NATIVO HLS / MP4 4K (100% Responsivo en Celular, Tablet y PC) */}
         {isNativeServer && !showTrailer ? (
-          <div 
+          <div
             onClick={handleVideoTouchOrClick}
             className="relative w-full h-full flex items-center justify-center overflow-hidden z-10"
           >
@@ -2126,6 +2154,11 @@ export default function VideoPlayerModal({
                     } catch (e) {
                       console.warn('Error reanudando minuto guardado:', e);
                     }
+                  } else if (resumeTimeRef.current <= 5) {
+                    try {
+                      videoRef.current.currentTime = 0;
+                      setCurrentTime(0);
+                    } catch { }
                   }
                 }
               }}
@@ -2140,9 +2173,8 @@ export default function VideoPlayerModal({
             {/* Overlay de Subtítulos Cinema 4K Responsivo */}
             {activeCueText && (
               <div
-                className={`absolute inset-x-0 z-20 flex justify-center px-3 sm:px-8 pointer-events-none transition-all duration-200 ${
-                  controlsVisible ? 'bottom-28 sm:bottom-32' : 'bottom-6 sm:bottom-10'
-                }`}
+                className={`absolute inset-x-0 z-20 flex justify-center px-3 sm:px-8 pointer-events-none transition-all duration-200 ${controlsVisible ? 'bottom-28 sm:bottom-32' : 'bottom-6 sm:bottom-10'
+                  }`}
               >
                 <div className="bg-black/80 backdrop-blur-md text-white font-bold text-xs sm:text-base md:text-xl px-3.5 py-1.5 rounded-xl border border-white/10 text-center max-w-[92vw] sm:max-w-3xl shadow-2xl leading-snug whitespace-pre-line">
                   {activeCueText}
@@ -2193,11 +2225,10 @@ export default function VideoPlayerModal({
                   <button
                     key={node.id}
                     onClick={() => setActiveHlsIndex(idx)}
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all shrink-0 ${
-                      activeHlsIndex === idx
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all shrink-0 ${activeHlsIndex === idx
                         ? 'bg-white text-black'
                         : 'bg-white/10 text-gray-300 hover:text-white'
-                    }`}
+                      }`}
                   >
                     #{idx + 1} ({node.ping})
                   </button>
@@ -2208,7 +2239,7 @@ export default function VideoPlayerModal({
             {/* Botón Central de Play cuando está en pausa */}
             <AnimatePresence>
               {!isPlaying && !isLoading && (
-                <motion.button 
+                <motion.button
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.8, opacity: 0 }}
@@ -2224,20 +2255,19 @@ export default function VideoPlayerModal({
             </AnimatePresence>
 
             {/* BARRA DE CONTROLES FLOTANTE DEL REPRODUCTOR NATIVO (Adaptada a Móvil, Tablet y PC) */}
-            <motion.div 
+            <motion.div
               animate={{ opacity: controlsVisible ? 1 : 0, y: controlsVisible ? 0 : 30 }}
               transition={{ duration: 0.22 }}
               onClick={(e) => e.stopPropagation()}
-              className={`absolute bottom-2 sm:bottom-4 left-2 right-2 sm:left-4 sm:right-4 z-20 max-w-5xl mx-auto bg-[#0b0b12]/88 backdrop-blur-2xl border border-white/[0.14] rounded-2xl p-2.5 sm:p-4 shadow-[0_24px_60px_rgba(0,0,0,0.9)] space-y-2 ${
-                controlsVisible ? 'pointer-events-auto' : 'pointer-events-none'
-              }`}
+              className={`absolute bottom-2 sm:bottom-4 left-2 right-2 sm:left-4 sm:right-4 z-20 max-w-5xl mx-auto bg-[#0b0b12]/88 backdrop-blur-2xl border border-white/[0.14] rounded-2xl p-2.5 sm:p-4 shadow-[0_24px_60px_rgba(0,0,0,0.9)] space-y-2 ${controlsVisible ? 'pointer-events-auto' : 'pointer-events-none'
+                }`}
             >
               {/* Fila 1: Línea de Tiempo Táctil + Tiempo */}
               <div className="flex items-center space-x-2.5">
                 <span className="text-[10px] sm:text-xs font-mono text-gray-200 shrink-0">
                   {formatTime(currentTime)}
                 </span>
-                <input 
+                <input
                   type="range"
                   min="0"
                   max={duration || 100}
@@ -2255,7 +2285,7 @@ export default function VideoPlayerModal({
               <div className="flex items-center justify-between gap-1.5 flex-wrap sm:flex-nowrap">
                 {/* Controles Izquierdos */}
                 <div className="flex items-center space-x-1.5 sm:space-x-3">
-                  <button 
+                  <button
                     onClick={togglePlayPause}
                     className="text-white hover:text-netflix-red transition-colors p-1.5 rounded-lg bg-white/10 sm:bg-transparent"
                     title={isPlaying ? "Pausar" : "Reproducir"}
@@ -2263,14 +2293,14 @@ export default function VideoPlayerModal({
                     {isPlaying ? <Pause className="w-4 h-4 sm:w-5 sm:h-5 fill-current" /> : <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />}
                   </button>
 
-                  <button 
+                  <button
                     onClick={() => skipTime(-10)}
                     className="text-gray-200 hover:text-white transition-colors text-[11px] font-black px-2 py-1 rounded-lg bg-white/10 active:scale-95"
                     title="Retroceder 10s"
                   >
                     -10s
                   </button>
-                  <button 
+                  <button
                     onClick={() => skipTime(10)}
                     className="text-gray-200 hover:text-white transition-colors text-[11px] font-black px-2 py-1 rounded-lg bg-white/10 active:scale-95"
                     title="Adelantar 10s"
@@ -2283,7 +2313,7 @@ export default function VideoPlayerModal({
                     <button onClick={toggleMute} className="text-gray-300 hover:text-white p-1">
                       {isMuted || volume === 0 ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4" />}
                     </button>
-                    <input 
+                    <input
                       type="range"
                       min="0"
                       max="1"
@@ -2346,33 +2376,33 @@ export default function VideoPlayerModal({
           /* REPRODUCTOR 2: SERVIDORES EN ESPAÑOL LATINO (Carga Instantánea en 0ms sin esperar escaneos secundarios) */
           <div className="relative w-full h-full flex items-center justify-center p-0 sm:p-3 md:p-5 z-10">
             <div className="relative w-full h-full max-w-7xl sm:aspect-video flex items-center justify-center">
-              {!showTrailer && isResolvingImdb ? (
-                <div className="flex flex-col items-center justify-center space-y-3 p-4 text-center">
-                  <div className="w-11 h-11 border-2 border-white/15 border-t-white rounded-full animate-spin" />
-                  <p className="text-sm font-semibold text-white tracking-tight">Conectando a Español Latino 4K...</p>
+              <iframe
+                key={`${selectedServer}_${playLatinLang}_s${currentSeason}_e${currentEpisode}_${iframeKey}`}
+                src={showTrailer ? trailerUrl : streamUrl}
+                title={`Reproductor ${movie.title}`}
+                className="w-full h-full sm:rounded-2xl shadow-[0_28px_80px_rgba(0,0,0,0.95)] border-0 sm:border sm:border-white/[0.14] bg-[#040407]"
+                allowFullScreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                referrerPolicy="no-referrer-when-downgrade"
+                onLoad={() => {
+                  setIsLoading(false);
+                  hasStartedPlayingRef.current = true;
+                }}
+                onError={() => {
+                  if (!hasStartedPlayingRef.current) {
+                    iterateNextLatinoServer('Auto-Detector Sí o Sí');
+                  }
+                }}
+              />
+
+              {/* Indicador de carga sutil superpuesto mientras el reproductor inicia */}
+              {isLoading && !hasStartedPlayingRef.current && (
+                <div className="absolute inset-0 bg-[#040407]/80 backdrop-blur-xs flex flex-col items-center justify-center space-y-3 pointer-events-none z-20">
+                  <div className="w-10 h-10 border-3 border-netflix-red/30 border-t-netflix-red rounded-full animate-spin" />
+                  <p className="text-xs font-semibold text-white/90 tracking-tight">
+                    Conectando a {currentProvider.name}...
+                  </p>
                 </div>
-              ) : (
-                <iframe 
-                  key={`${selectedServer}_${playLatinLang}_${iframeKey}`}
-                  src={showTrailer ? trailerUrl : streamUrl}
-                  title={`Reproductor ${movie.title}`}
-                  className="w-full h-full sm:rounded-2xl shadow-[0_28px_80px_rgba(0,0,0,0.95)] border-0 sm:border sm:border-white/[0.14] bg-[#040407]"
-                  allowFullScreen
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  {...(currentProvider.sandboxSafe !== false ? {
-                    sandbox: "allow-scripts allow-same-origin allow-forms allow-presentation allow-downloads allow-pointer-lock"
-                  } : {})}
-                  onLoad={() => {
-                    setIsLoading(false);
-                    hasStartedPlayingRef.current = true;
-                  }}
-                  onError={() => {
-                    if (!hasStartedPlayingRef.current) {
-                      iterateNextLatinoServer('Auto-Detector Sí o Sí');
-                    }
-                  }}
-                />
               )}
             </div>
           </div>
@@ -2381,13 +2411,13 @@ export default function VideoPlayerModal({
       </main>
 
       {/* BARRA INFERIOR DE SERVIDORES Y EPISODIOS (Liquid Glass Dock — Apple TV+ / Max Style) */}
-      <motion.footer 
+      <motion.footer
         animate={{ y: controlsVisible ? 0 : 100, opacity: controlsVisible ? 1 : 0 }}
         transition={{ duration: 0.25 }}
         className="bg-black/82 backdrop-blur-2xl border-t border-white/[0.08] px-3 sm:px-6 py-2.5 pb-safe shrink-0 z-30 shadow-2xl"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
-          
+
           {/* Carrusel Horizontal Deslizable de Servidores + Botón de Iteración Rápida */}
           <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar py-0.5 flex-1 min-w-0">
             <motion.button
@@ -2413,33 +2443,29 @@ export default function VideoPlayerModal({
                   whileHover={{ scale: 1.04, y: -1 }}
                   whileTap={{ scale: 0.94 }}
                   onClick={() => handleServerChange(provider.id)}
-                  className={`relative px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap cursor-pointer ${
-                    isActive
+                  className={`relative px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap cursor-pointer ${isActive
                       ? 'text-black font-bold shadow-[0_4px_20px_rgba(255,255,255,0.4)]'
                       : 'text-white/80 hover:text-white bg-white/[0.07] hover:bg-white/[0.14] border border-white/[0.12]'
-                  }`}
+                    }`}
                 >
                   {isActive && (
-                    <motion.div 
+                    <motion.div
                       layoutId="activeServerPill"
                       className="absolute inset-0 bg-white rounded-full glow-active-server"
                       transition={{ type: "spring", stiffness: 420, damping: 32 }}
                     />
                   )}
                   <span
-                    className={`w-1.5 h-1.5 rounded-full relative z-10 shrink-0 ${
-                      isVerifiedOnline ? 'bg-emerald-500' : 'bg-amber-400'
-                    }`}
+                    className={`w-1.5 h-1.5 rounded-full relative z-10 shrink-0 ${isVerifiedOnline ? 'bg-emerald-500' : 'bg-amber-400'
+                      }`}
                   />
                   <span className="relative z-10">{provider.name}</span>
-                  <span className={`relative z-10 text-[9px] px-1.5 py-0.2 rounded-full font-bold ${
-                    isActive ? 'bg-black/10 text-black/80' : 'bg-white/10 text-white/60'
-                  }`}>
+                  <span className={`relative z-10 text-[9px] px-1.5 py-0.2 rounded-full font-bold ${isActive ? 'bg-black/10 text-black/80' : 'bg-white/10 text-white/60'
+                    }`}>
                     {provider.badge}
                   </span>
-                  <span className={`relative z-10 text-[9px] font-mono hidden md:inline ${
-                    isActive ? 'text-black/60' : 'text-emerald-400/80'
-                  }`}>
+                  <span className={`relative z-10 text-[9px] font-mono hidden md:inline ${isActive ? 'text-black/60' : 'text-emerald-400/80'
+                    }`}>
                     {livePing}
                   </span>
                 </motion.button>
@@ -2451,14 +2477,13 @@ export default function VideoPlayerModal({
                 whileHover={{ scale: 1.04, y: -1 }}
                 whileTap={{ scale: 0.94 }}
                 onClick={handleOpenTrailer}
-                className={`relative px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap cursor-pointer ${
-                  showTrailer
+                className={`relative px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap cursor-pointer ${showTrailer
                     ? 'text-black font-bold shadow-lg'
                     : 'text-white/80 hover:text-white bg-white/[0.07] hover:bg-white/[0.14] border border-white/[0.12]'
-                }`}
+                  }`}
               >
                 {showTrailer && (
-                  <motion.div 
+                  <motion.div
                     layoutId="activeServerPill"
                     className="absolute inset-0 bg-white rounded-full glow-active-server"
                     transition={{ type: "spring", stiffness: 420, damping: 32 }}
@@ -2514,7 +2539,7 @@ export default function VideoPlayerModal({
       {/* Modal de Transmisión a Smart TV (Chromecast y AirPlay 2 en Español Latino 4K) */}
       <AnimatePresence>
         {isCastModalOpen && (
-          <CastModal 
+          <CastModal
             isOpen={isCastModalOpen}
             onClose={() => setIsCastModalOpen(false)}
             movie={movie}
@@ -2529,7 +2554,7 @@ export default function VideoPlayerModal({
       {/* Modal de Control CineShield™ AdBlocker */}
       <AnimatePresence>
         {isAdBlockModalOpen && (
-          <AdBlockModal 
+          <AdBlockModal
             isOpen={isAdBlockModalOpen}
             onClose={() => setIsAdBlockModalOpen(false)}
           />

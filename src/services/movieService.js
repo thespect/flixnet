@@ -243,8 +243,8 @@ export const STREAM_PROVIDERS = [
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
       if (!res.imdbId) {
         return res.isTv
-          ? `https://web.nxsha.app/embed/tv/${res.id}/${res.season}/${res.episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
-          : `https://web.nxsha.app/embed/movie/${res.id}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
+          ? `https://vidlink.pro/tv/${res.id}/${res.season}/${res.episode}?autoplay=true&primaryColor=e50914`
+          : `https://vidlink.pro/movie/${res.id}?autoplay=true&primaryColor=e50914`;
       }
 
       return res.isTv
@@ -270,8 +270,8 @@ export const STREAM_PROVIDERS = [
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
       if (!res.imdbId) {
         return res.isTv
-          ? `https://web.nxsha.app/embed/tv/${res.id}/${res.season}/${res.episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
-          : `https://web.nxsha.app/embed/movie/${res.id}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
+          ? `https://vidlink.pro/tv/${res.id}/${res.season}/${res.episode}?autoplay=true&primaryColor=e50914`
+          : `https://vidlink.pro/movie/${res.id}?autoplay=true&primaryColor=e50914`;
       }
 
       return res.isTv
@@ -312,8 +312,8 @@ export const STREAM_PROVIDERS = [
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
       if (!res.imdbId) {
         return res.isTv
-          ? `https://web.nxsha.app/embed/tv/${res.id}/${res.season}/${res.episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
-          : `https://web.nxsha.app/embed/movie/${res.id}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
+          ? `https://vidsrc.pm/embed/tv/${res.id}/${res.season}/${res.episode}`
+          : `https://vidsrc.pm/embed/movie/${res.id}`;
       }
 
       const epPad = String(res.episode).padStart(2, '0');
@@ -339,8 +339,8 @@ export const STREAM_PROVIDERS = [
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
       if (!res.imdbId) {
         return res.isTv
-          ? `https://web.nxsha.app/embed/tv/${res.id}/${res.season}/${res.episode}?lang=esla&server=voe&autoplay=true&disable_app_ad=true&disable_dl_button=true`
-          : `https://web.nxsha.app/embed/movie/${res.id}?lang=esla&server=voe&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
+          ? `https://multiembed.mov/?video_id=${res.id}&tmdb=1&s=${res.season}&e=${res.episode}`
+          : `https://multiembed.mov/?video_id=${res.id}&tmdb=1`;
       }
 
       const epPad = String(res.episode).padStart(2, '0');
@@ -366,8 +366,8 @@ export const STREAM_PROVIDERS = [
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
       if (!res.imdbId) {
         return res.isTv
-          ? `https://web.nxsha.app/embed/tv/${res.id}/${res.season}/${res.episode}?lang=esla&server=voe&autoplay=true&disable_app_ad=true&disable_dl_button=true`
-          : `https://web.nxsha.app/embed/movie/${res.id}?lang=esla&server=voe&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
+          ? `https://multiembed.mov/?video_id=${res.id}&tmdb=1&s=${res.season}&e=${res.episode}`
+          : `https://multiembed.mov/?video_id=${res.id}&tmdb=1`;
       }
 
       return res.isTv
@@ -392,8 +392,8 @@ export const STREAM_PROVIDERS = [
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
       if (!res.imdbId) {
         return res.isTv
-          ? `https://web.nxsha.app/embed/tv/${res.id}/${res.season}/${res.episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
-          : `https://web.nxsha.app/embed/movie/${res.id}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
+          ? `https://vidsrc.pm/embed/tv/${res.id}/${res.season}/${res.episode}`
+          : `https://vidsrc.pm/embed/movie/${res.id}`;
       }
 
       const epPad = String(res.episode).padStart(2, '0');
@@ -402,43 +402,43 @@ export const STREAM_PROVIDERS = [
     }
   },
   {
-    id: 'nxsha_multilang',
-    name: 'MbPly Latino FHD',
-    subtitle: 'Doblaje Español Latino Full HD (MbPly ESLA Ultra)',
-    badge: 'LATINO 1080p',
-    tag: 'MbPly ESLA',
-    quality: '1080p Full HD Latino',
+    id: 'vidsrc_pm',
+    name: 'VidSrc PM Ultra',
+    subtitle: 'Servidor Estable #1 (Vidflix HTML5) • Multi-Audio & Subtítulos',
+    badge: 'VIDSRC FHD',
+    tag: 'VidSrc PM',
+    quality: '1080p Full HD',
+    ping: '7ms',
+    isNative: false,
+    isDirectHls: false,
+    sandboxSafe: true,
+    language: 'Multi-Audio / Doblaje y Subtítulos',
+    description: 'Servidor ultra rápido y estable en alta definición con controles HTML5 y cero anuncios.',
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
+      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
+      return res.isTv
+        ? `https://vidsrc.pm/embed/tv/${res.id}/${res.season}/${res.episode}`
+        : `https://vidsrc.pm/embed/movie/${res.id}`;
+    }
+  },
+  {
+    id: 'multiembed_global',
+    name: 'MultiEmbed VIP Cloud',
+    subtitle: 'Clúster Global Multi-Servidor (VOE, StreamWish, Filemoon, Dood)',
+    badge: 'MULTIEMBED',
+    tag: 'Multi-Espejos',
+    quality: '1080p Full HD / 4K',
     ping: '8ms',
     isNative: false,
     isDirectHls: false,
     sandboxSafe: true,
-    language: 'Español Latino 1080p (esla dub)',
-    description: 'Servidor rápido y estable conectado a MbPly con doblaje predeterminado en Español Latino 1080p y aislamiento Sandbox contra popups.',
+    language: 'Multi-Audio Español Latino / Castellano / Sub',
+    description: 'Selector automático con múltiples espejos en la nube para garantizar 100% disponibilidad en cualquier dispositivo.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
       return res.isTv
-        ? `https://web.nxsha.app/embed/tv/${res.id}/${res.season}/${res.episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
-        : `https://web.nxsha.app/embed/movie/${res.id}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
-    }
-  },
-  {
-    id: 'nxsha_voe_latino',
-    name: 'Nxsha VOE Latino',
-    subtitle: 'Nodo Alternativo VOE Cloud en Español Latino (Alta Disponibilidad)',
-    badge: 'VOE LATINO',
-    tag: 'VOE ESLA',
-    quality: '1080p Full HD Latino',
-    ping: '9ms',
-    isNative: false,
-    isDirectHls: false,
-    sandboxSafe: true,
-    language: 'Español Latino (VOE Cloud)',
-    description: 'Nodo independiente VOE Cloud con soporte para estrenos recientes y series en Español Latino.',
-    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
-      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      return res.isTv
-        ? `https://web.nxsha.app/embed/tv/${res.id}/${res.season}/${res.episode}?lang=esla&server=voe&autoplay=true&disable_app_ad=true&disable_dl_button=true`
-        : `https://web.nxsha.app/embed/movie/${res.id}?lang=esla&server=voe&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
+        ? `https://multiembed.mov/?video_id=${res.id}&tmdb=1&s=${res.season}&e=${res.episode}`
+        : `https://multiembed.mov/?video_id=${res.id}&tmdb=1`;
     }
   },
   {
@@ -602,15 +602,21 @@ export const StorageService = {
     }
   },
 
-  getPlaybackProgress: (mediaId, isTv = false, season = 1, episode = 1) => {
+  getPlaybackProgress: (mediaId, isTv = false, season = null, episode = null) => {
     try {
       const progressMap = StorageService.getAllPlaybackProgress();
       const numId = Number(mediaId);
       if (isTv) {
-        const epKey = `tv_${numId}_s${season}_e${episode}`;
-        if (progressMap[epKey]) return progressMap[epKey];
+        if (season != null && episode != null) {
+          const epKey = `tv_${numId}_s${Number(season)}_e${Number(episode)}`;
+          const epData = progressMap[epKey];
+          if (epData && Number(epData.season) === Number(season) && Number(epData.episode) === Number(episode)) {
+            return epData;
+          }
+          return null;
+        }
         const latestKey = `tv_${numId}_latest`;
-        if (progressMap[latestKey]) return progressMap[latestKey];
+        return progressMap[latestKey] || null;
       }
       return progressMap[`movie_${numId}`] || null;
     } catch {

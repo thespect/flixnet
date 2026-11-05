@@ -230,31 +230,6 @@ class AdBlockerEngine {
       },
       true // Capture phase: se ejecuta antes que los scripts del anuncio
     );
-
-    // Neutralizar trampas de clics invisibles (overlays transparentes con alto z-index)
-    if (typeof MutationObserver !== 'undefined') {
-      try {
-        const observer = new MutationObserver((mutations) => {
-          if (!self.isShieldActive || !self.isWatchingVideo) return;
-          for (const m of mutations) {
-            for (const node of m.addedNodes) {
-              if (node.nodeType === 1) {
-                const el = node;
-                const tag = el.tagName;
-                if (tag === 'IFRAME' || tag === 'SCRIPT') {
-                  const src = (el.src || '').toLowerCase();
-                  if (self.isAdUrl(src)) {
-                    el.remove();
-                    self.registerBlockedAd(`Script/Iframe publicitario neutralizado (${tag})`);
-                  }
-                }
-              }
-            }
-          }
-        });
-        observer.observe(document.documentElement, { childList: true, subtree: true });
-      } catch {}
-    }
   }
 
   setWatchingVideo(status) {

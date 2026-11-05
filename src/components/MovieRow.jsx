@@ -98,7 +98,7 @@ export default function MovieRow({
         <div 
           ref={rowRef}
           onScroll={checkScrollPosition}
-          className="flex items-start space-x-3 sm:space-x-4 overflow-x-auto no-scrollbar scroll-smooth px-4 sm:px-6 lg:px-8 py-2.5"
+          className="flex items-start space-x-3 sm:space-x-4 overflow-x-auto no-scrollbar scroll-smooth px-4 sm:px-6 lg:px-8 py-2.5 row-content-optimized"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {movies.map((movie) => (
