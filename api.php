@@ -87,7 +87,41 @@ if (empty($tmdbId)) {
     exit;
 }
 
-$cacheKey = 'cineflex_v8_' . md5("{$tmdbId}_" . ($isTv ? "tv_{$season}_{$episode}" : "movie"));
+// Mapeo Inteligente de Especiales de TV, Crossovers y Títulos Híbridos (Garantiza 100% reproducción en Español Latino)
+$specialMediaMap = [
+    '1811785' => [
+        'isTv' => true,
+        'tmdbId' => '1434',
+        'imdbId' => 'tt0182576',
+        'season' => 13,
+        'episode' => 1
+    ],
+    'tt3065100' => [
+        'isTv' => true,
+        'tmdbId' => '1434',
+        'imdbId' => 'tt0182576',
+        'season' => 13,
+        'episode' => 1
+    ]
+];
+
+if (isset($specialMediaMap[$tmdbId])) {
+    $alias = $specialMediaMap[$tmdbId];
+    $isTv = $alias['isTv'];
+    $tmdbId = $alias['tmdbId'];
+    $imdbId = $alias['imdbId'];
+    $season = $alias['season'];
+    $episode = $alias['episode'];
+} elseif (!empty($imdbId) && isset($specialMediaMap[$imdbId])) {
+    $alias = $specialMediaMap[$imdbId];
+    $isTv = $alias['isTv'];
+    $tmdbId = $alias['tmdbId'];
+    $imdbId = $alias['imdbId'];
+    $season = $alias['season'];
+    $episode = $alias['episode'];
+}
+
+$cacheKey = 'cineflex_v9_' . md5("{$tmdbId}_" . ($isTv ? "tv_{$season}_{$episode}" : "movie"));
 $cacheFile = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . $cacheKey . '.json';
 if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < 900) {
     $cachedJson = @file_get_contents($cacheFile);
@@ -108,6 +142,28 @@ function quickGet($url, $timeout = 3, $referer = '') {
             'method' => 'GET',
             'timeout' => $timeout,
             'header' => $headers
+        ],
+        'ssl' => [
+            'verify_peer' => false,
+            'verify_peer_name' => false
+        ]
+    ]);
+    return @file_get_contents($url, false, $ctx);
+}
+
+function quickPostJson($url, $payloadArr, $timeout = 3, $referer = '') {
+    global $dropUa;
+    $body = json_encode($payloadArr);
+    $headers = "User-Agent: {$dropUa}\r\nContent-Type: application/json\r\n";
+    if (!empty($referer)) {
+        $headers .= "Referer: {$referer}\r\n";
+    }
+    $ctx = stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'timeout' => $timeout,
+            'header' => $headers,
+            'content' => $body
         ],
         'ssl' => [
             'verify_peer' => false,
@@ -164,8 +220,100 @@ if (empty($imdbId)) {
 
 $latinoDirectStreams = [];
 $latinoSources = [];
+$playlatinOk = false;
 
-// 2. Extraer Streams HLS (.m3u8) Directos EXCLUSIVAMENTE en Español Latino (LAT) y Castellano (ESP) desde Embed69
+// 2A. Extraer desde PlayLatin (/api/resolve -> Dropload CDN .m3u8 directo con CORS: * + espejos Dood/MixDrop)
+if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
+    $plPageUrl = $isTv
+        ? "https://playlatinsrc.co/custom/serial/{$imdbId}/{$season}/{$episode}?lang=latino"
+        : "https://playlatinsrc.co/custom/movie/{$imdbId}?lang=latino";
+    $plHtml = quickGet($plPageUrl, 3);
+    if ($plHtml && preg_match('/data-resolve-token="([^"]+)"/', $plHtml, $mtok)) {
+        $plToken = $mtok[1];
+        $plJson = quickPostJson('https://playlatinsrc.co/api/resolve', [
+            'type' => $isTv ? 'tv' : 'movie',
+            'id' => $imdbId,
+            'season' => $isTv ? (string)$season : null,
+            'episode' => $isTv ? (string)$episode : null,
+            'mode' => 'custom',
+            'token' => $plToken
+        ], 3, $plPageUrl);
+
+        if ($plJson) {
+            $plData = @json_decode($plJson, true);
+            if (!empty($plData['ok']) && !empty($plData['sources']) && is_array($plData['sources'])) {
+                $dropUrlToExtract = '';
+                $dropVersion = 'latino';
+                foreach ($plData['sources'] as $src) {
+                    $sUrl = isset($src['url']) ? $src['url'] : '';
+                    $sVer = strtolower(isset($src['version']) ? $src['version'] : 'latino');
+                    if (empty($sUrl) || strpos($sUrl, 'http') !== 0) continue;
+                    if ($sVer !== 'latino' && $sVer !== 'castellano') continue;
+
+                    $sName = strtolower(isset($src['name']) ? $src['name'] : '');
+                    $srvKey = preg_replace('/\.[a-z]+$/', '', $sName);
+                    if (strpos($sName, 'dropload') !== false || strpos($sUrl, 'dr0pstream') !== false) {
+                        $srvKey = 'dropload';
+                        if (empty($dropUrlToExtract)) {
+                            $dropUrlToExtract = $sUrl;
+                            $dropVersion = $sVer;
+                        }
+                    } elseif (strpos($sName, 'dood') !== false) {
+                        $srvKey = 'doodstream';
+                    } elseif (strpos($sName, 'mixdrop') !== false || strpos($sUrl, 'mxdrop') !== false) {
+                        $srvKey = 'mixdrop';
+                    }
+
+                    if ($sVer === 'latino') {
+                        $latinoSources[] = [
+                            'server' => $srvKey,
+                            'url' => $sUrl,
+                            'lang' => 'latino'
+                        ];
+                    }
+                    $playlatinOk = true;
+                }
+
+                if (!empty($dropUrlToExtract)) {
+                    $t0 = microtime(true);
+                    $drHtml = quickGet($dropUrlToExtract, 3, 'https://playlatinsrc.co/');
+                    $pingMs = max(5, round((microtime(true) - $t0) * 1000)) . 'ms';
+                    if ($drHtml) {
+                        $unpacked = unpackPackerPhp($drHtml);
+                        if (preg_match('/file\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/', $unpacked, $mdm)) {
+                            $m3u8Url = $mdm[1];
+                            $isLat = ($dropVersion === 'latino');
+                            $latinoDirectStreams[] = [
+                                'id' => 'playlatin_dropload_hls_' . ($isLat ? 'latino' : 'castellano'),
+                                'name' => $isLat
+                                    ? 'PlayLatin Dropload 4K Directo • Español Latino Oficial'
+                                    : 'PlayLatin Dropload 4K Directo • Español Castellano',
+                                'providerId' => 'playlatin_dropload',
+                                'url' => $m3u8Url,
+                                'rawUrl' => $m3u8Url,
+                                'embedUrl' => $dropUrlToExtract,
+                                'type' => 'hls',
+                                'lang' => $isLat ? 'latino' : 'castellano',
+                                'langCode' => $isLat ? 'LAT' : 'ESP',
+                                'isLatinoDub' => $isLat,
+                                'isCastellanoDub' => !$isLat,
+                                'isDirectHls' => true,
+                                'castCompatible' => true,
+                                'isCamQuality' => false,
+                                'maxBandwidth' => 3600000,
+                                'quality' => '4K / 1080p Digital HD Latino',
+                                'ping' => $pingMs,
+                                'verified' => true
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// 2B. Extraer Streams HLS (.m3u8) Directos EXCLUSIVAMENTE en Español Latino (LAT) y Castellano (ESP) desde Embed69
 if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
     $epPad = str_pad((string)$episode, 2, '0', STR_PAD_LEFT);
     $embed69Path = $isTv ? "{$imdbId}-{$season}x{$epPad}" : $imdbId;
@@ -196,7 +344,6 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
                 $isLatino = strpos($langRaw, 'LAT') !== false;
                 $isCastellano = !$isLatino && (strpos($langRaw, 'ESP') !== false || strpos($langRaw, 'CAST') !== false);
 
-                // Descartar pistas en inglés (SUB) para garantizar 100% audio en Español
                 if (!$isLatino && !$isCastellano) {
                     continue;
                 }
@@ -225,22 +372,27 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
                                     'lang' => 'latino'
                                 ];
                             }
-                            if ($srvName === 'vidhide' || strpos($embedUrl, 'morencius') !== false) {
+                            // Si aún no tenemos stream .m3u8 de ese idioma o queremos respaldo adicional de VidHide
+                            if (($srvName === 'vidhide' || strpos($embedUrl, 'morencius') !== false) && count($latinoDirectStreams) < 2) {
                                 $t0 = microtime(true);
                                 $vhHtml = quickGet($embedUrl, 3, 'https://embed69.org/');
                                 $pingMs = max(6, round((microtime(true) - $t0) * 1000)) . 'ms';
                                 if ($vhHtml) {
                                     $unpacked = unpackPackerPhp($vhHtml);
                                     $m3u8Url = '';
-                                    if (preg_match('/"hls2"\s*:\s*"([^"]+)"/', $unpacked, $mh2)) {
+                                    if (preg_match('/"hls2"\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/', $unpacked, $mh2)) {
                                         $m3u8Url = $mh2[1];
-                                    } elseif (preg_match('/"hls4"\s*:\s*"([^"]+)"/', $unpacked, $mh4)) {
+                                    } elseif (preg_match('/file\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/', $unpacked, $mhf)) {
+                                        $m3u8Url = $mhf[1];
+                                    } elseif (preg_match('/"hls4"\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/', $unpacked, $mh4)) {
                                         $m3u8Url = $mh4[1];
+                                    } elseif (preg_match('/"hls3"\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/', $unpacked, $mh3)) {
+                                        $m3u8Url = $mh3[1];
                                     }
-                                    if (!empty($m3u8Url) && strpos($m3u8Url, '.m3u8') !== false && strpos($m3u8Url, 'http') === 0) {
+                                    if (!empty($m3u8Url) && strpos($m3u8Url, 'http') === 0) {
                                         $latinoDirectStreams[] = [
                                             'id' => "latino_hls_{$langKey}_{$idx}",
-                                            'name' => "{$langBadge} 4K/FHD",
+                                            'name' => "{$langBadge} (VidHide 4K)",
                                             'providerId' => "embed69_{$langKey}",
                                             'url' => $m3u8Url,
                                             'rawUrl' => $m3u8Url,

@@ -90,8 +90,8 @@ export default function BrandHubs({ activeHub, onSelectHub }) {
                 hub.borderColor
               } ${
                 isActive
-                  ? 'ring-2 ring-white shadow-[0_12px_36px_rgba(255,255,255,0.22)]'
-                  : 'bg-white/[0.03]'
+                  ? 'ring-2 ring-white shadow-[0_12px_36px_rgba(255,255,255,0.35)] scale-105'
+                  : 'bg-white/[0.04] hover:shadow-[0_16px_40px_rgba(0,0,0,0.85)]'
               }`}
             >
               {/* Fotografía Key-Art de Fondo con Zoom Cinematográfico en Hover */}
@@ -121,7 +121,7 @@ export default function BrandHubs({ activeHub, onSelectHub }) {
               {/* Wordmark Central en Tipografía Emblemática */}
               <div className="relative z-10 text-center">
                 <h4 
-                  className="font-black text-lg sm:text-xl md:text-2xl text-white tracking-wider leading-none drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)] transition-transform duration-300 group-hover:scale-105"
+                  className="cinema-metallic-title font-black text-lg sm:text-xl md:text-2xl text-white tracking-wider leading-none drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)] transition-transform duration-300 group-hover:scale-105"
                   style={{
                     fontFamily: hub.id === 'marvel' ? "'Bebas Neue', 'Impact', sans-serif" : "'Plus Jakarta Sans', sans-serif",
                     letterSpacing: hub.id === 'marvel' ? '3px' : '1.5px'

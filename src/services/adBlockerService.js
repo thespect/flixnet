@@ -66,7 +66,23 @@ const AD_DOMAINS_BLACKLIST = [
   'creative.xlviirdr.com',
   'tsyndicate.com',
   'exdynsrv.com',
-  'pemsrv.com'
+  'pemsrv.com',
+  'alwingulla.com',
+  'highperformanceformat.com',
+  'effectivecpmgate.com',
+  'gloaphoo.net',
+  'bidgear.com',
+  'ad-maven.com',
+  'deloton.com',
+  'cootlogu.net',
+  'onclickalgo.com',
+  'onclas.com',
+  'yllix.com',
+  'adbuffs.com',
+  'bidvertiser.com',
+  'histats.com',
+  'whos.amung.us',
+  'trafficstars.com'
 ];
 
 const AD_KEYWORDS = [
@@ -77,6 +93,13 @@ const AD_KEYWORDS = [
   'monetag',
   'propellerads',
   'clickadu',
+  'alwingulla',
+  'bidgear',
+  'gloaphoo',
+  'deloton',
+  'cootlogu',
+  'onclickalgo',
+  'cpmgate',
   '1xbet',
   'bet365',
   'betano',
@@ -127,8 +150,23 @@ class AdBlockerEngine {
     this._installClickHijackGuard();
     this._installNavigationGuard();
     this._installMessageFilter();
+    this._installWindowBlurSuppressor();
 
     console.info(`[CineShield™] Escudo Anti-Publicidad 4K Activo (${this.blockedCount} anuncios neutralizados)`);
+  }
+
+  // Supresor automático de ventanas emergentes y popunders por desenfoque al reproducir video
+  _installWindowBlurSuppressor() {
+    const self = this;
+    window.addEventListener('blur', () => {
+      if (self.isShieldActive && self.isWatchingVideo) {
+        setTimeout(() => {
+          try {
+            window.focus();
+          } catch {}
+        }, 120);
+      }
+    });
   }
 
   // Interceptor global de window.open (bloquea el 100% de ventanas emergentes/popups de streaming)
@@ -177,12 +215,14 @@ class AdBlockerEngine {
         while (target && target !== document.body) {
           if (target.tagName === 'A' && target.href) {
             const href = target.href.toLowerCase();
-            if (self.isAdUrl(href)) {
-              e.preventDefault();
-              e.stopPropagation();
-              e.stopImmediatePropagation();
-              self.registerBlockedAd(`Enlace publicitario neutralizado: ${href.slice(0, 45)}`);
-              return false;
+            if (self.isAdUrl(href) || target.target === '_blank' && !target.href.includes(window.location.hostname)) {
+              if (self.isAdUrl(href)) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                self.registerBlockedAd(`Clic fantasma neutralizado: ${href.slice(0, 45)}`);
+                return false;
+              }
             }
           }
           target = target.parentElement;
@@ -190,6 +230,31 @@ class AdBlockerEngine {
       },
       true // Capture phase: se ejecuta antes que los scripts del anuncio
     );
+
+    // Neutralizar trampas de clics invisibles (overlays transparentes con alto z-index)
+    if (typeof MutationObserver !== 'undefined') {
+      try {
+        const observer = new MutationObserver((mutations) => {
+          if (!self.isShieldActive || !self.isWatchingVideo) return;
+          for (const m of mutations) {
+            for (const node of m.addedNodes) {
+              if (node.nodeType === 1) {
+                const el = node;
+                const tag = el.tagName;
+                if (tag === 'IFRAME' || tag === 'SCRIPT') {
+                  const src = (el.src || '').toLowerCase();
+                  if (self.isAdUrl(src)) {
+                    el.remove();
+                    self.registerBlockedAd(`Script/Iframe publicitario neutralizado (${tag})`);
+                  }
+                }
+              }
+            }
+          }
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+      } catch {}
+    }
   }
 
   setWatchingVideo(status) {

@@ -27,7 +27,7 @@ import {
   Sliders,
   Airplay
 } from 'lucide-react';
-import { STREAM_PROVIDERS, StorageService, MovieAPI, REAL_4K_SOURCES, KNOWN_IMDB_IDS } from '../services/movieService';
+import { STREAM_PROVIDERS, StorageService, MovieAPI, REAL_4K_SOURCES, KNOWN_IMDB_IDS, SPECIAL_MEDIA_ALIASES, resolveMediaAlias } from '../services/movieService';
 import { StreamScannerService } from '../services/streamScannerService';
 import { CastService } from '../services/castService';
 import { AdBlockerService } from '../services/adBlockerService';
@@ -93,7 +93,13 @@ export default function VideoPlayerModal({
   initialEpisodeTitle = '',
   initialServer = null
 }) {
-  const initialCachedScan = StreamScannerService.getCachedScan(movie, initialSeason, initialEpisode);
+  const specialAlias = SPECIAL_MEDIA_ALIASES[movie?.id] || (movie?.imdb_id ? SPECIAL_MEDIA_ALIASES[movie?.imdb_id] : null);
+  const effectiveSeason = specialAlias ? specialAlias.season : initialSeason;
+  const effectiveEpisode = specialAlias ? specialAlias.episode : initialEpisode;
+  const effectiveEpisodeTitle = specialAlias ? specialAlias.title : initialEpisodeTitle;
+  const effectiveImdbId = specialAlias?.imdbId || movie?.imdb_id || KNOWN_IMDB_IDS[movie?.id] || null;
+
+  const initialCachedScan = StreamScannerService.getCachedScan(movie, effectiveSeason, effectiveEpisode);
   const [selectedServer, setSelectedServer] = useState(
     initialServer && STREAM_PROVIDERS.some((p) => p.id === initialServer)
       ? initialServer
@@ -112,18 +118,18 @@ export default function VideoPlayerModal({
   const [iframeKey, setIframeKey] = useState(0);
   const [trailerKey, setTrailerKey] = useState(movie?.trailer_id || null);
   const [resolvedImdbId, setResolvedImdbId] = useState(
-    movie?.imdb_id || KNOWN_IMDB_IDS[movie?.id] || initialCachedScan?.imdbId || null
+    effectiveImdbId || initialCachedScan?.imdbId || null
   );
   const [isResolvingImdb, setIsResolvingImdb] = useState(
-    !Boolean(movie?.imdb_id || KNOWN_IMDB_IDS[movie?.id] || initialCachedScan?.imdbId || movie?.customUrl)
+    !Boolean(effectiveImdbId || initialCachedScan?.imdbId || movie?.customUrl)
   );
 
   // Estado de Serie y Selector de Temporadas / Capítulos dentro del Reproductor
-  const [currentSeason, setCurrentSeason] = useState(initialSeason);
-  const [currentEpisode, setCurrentEpisode] = useState(initialEpisode);
-  const [episodeTitle, setEpisodeTitle] = useState(initialEpisodeTitle);
-  const [pickerSeason, setPickerSeason] = useState(initialSeason);
-  const [totalSeasonsCount, setTotalSeasonsCount] = useState(movie?.isTv ? 4 : 1);
+  const [currentSeason, setCurrentSeason] = useState(effectiveSeason);
+  const [currentEpisode, setCurrentEpisode] = useState(effectiveEpisode);
+  const [episodeTitle, setEpisodeTitle] = useState(effectiveEpisodeTitle);
+  const [pickerSeason, setPickerSeason] = useState(effectiveSeason);
+  const [totalSeasonsCount, setTotalSeasonsCount] = useState(specialAlias ? 23 : (movie?.isTv ? 4 : 1));
   const [seasonEpisodes, setSeasonEpisodes] = useState([]);
   const [isLoadingSeasonEpisodes, setIsLoadingSeasonEpisodes] = useState(false);
 
@@ -151,6 +157,13 @@ export default function VideoPlayerModal({
   const playLatinReadyRef = useRef(false);
   const playLatinHandshakeTimerRef = useRef(null);
   const failedServersRef = useRef(new Set());
+  const hasStartedPlayingRef = useRef(false);
+  const isSeekingRef = useRef(false);
+  const seekTimeoutRef = useRef(null);
+  const currentLoadedUrlRef = useRef('');
+  const resumeTimeRef = useRef(0);
+  const lastSavedProgressTimeRef = useRef(0);
+  const [resumeNotice, setResumeNotice] = useState(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(1);
@@ -248,14 +261,23 @@ export default function VideoPlayerModal({
     playLatinReadyRef.current = false;
     setIsScanningLinks(!Boolean(cached));
     setIsLoading(true);
-    StorageService.addToHistory(movie, selectedServer, currentSeason, currentEpisode);
+
+    // Recuperar el minuto exacto donde se quedó el usuario previamente
+    const saved = StorageService.getPlaybackProgress(movie.id, movie.isTv, currentSeason, currentEpisode);
+    if (saved && saved.currentTime > 5) {
+      resumeTimeRef.current = saved.currentTime;
+    } else {
+      resumeTimeRef.current = 0;
+    }
+
+    StorageService.addToHistory(movie, selectedServer, currentSeason, currentEpisode, saved?.currentTime || 0, saved?.duration || 0);
 
     MovieAPI.getTrailer(movie.id, movie.isTv).then((key) => {
       if (!cancelled && key) setTrailerKey(key);
     });
 
     (async () => {
-      let imdb = movie.imdb_id || KNOWN_IMDB_IDS[movie.id] || cached?.imdbId || null;
+      let imdb = specialAlias?.imdbId || movie.imdb_id || KNOWN_IMDB_IDS[movie.id] || cached?.imdbId || null;
       if (imdb) {
         if (!cancelled) {
           setResolvedImdbId(imdb);
@@ -263,7 +285,14 @@ export default function VideoPlayerModal({
         }
       } else if (!movie.customUrl) {
         setIsResolvingImdb(true);
-        imdb = await MovieAPI.getImdbId(movie.id, movie.isTv);
+        const imdbPromise = MovieAPI.getImdbId(movie.id, movie.isTv);
+        imdbPromise.then((lateImdb) => {
+          if (!cancelled && lateImdb) {
+            setResolvedImdbId(lateImdb);
+          }
+        }).catch(() => {});
+        const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 1200));
+        imdb = await Promise.race([imdbPromise, timeoutPromise]);
         if (!cancelled) {
           if (imdb) setResolvedImdbId(imdb);
           setIsResolvingImdb(false);
@@ -317,17 +346,29 @@ export default function VideoPlayerModal({
       const anyLatinoIdx = streams.findIndex((s) => s.isLatinoDub);
       const bluRayIdx = streams.findIndex((s) => s.isBluRayMaster || s.providerId === 'nova');
 
-      if (selectedServer === 'auto_smart_latino' || selectedServer === 'playlatin_es') {
+      if (selectedServer === 'auto_smart_latino') {
+        if (anyLatinoIdx >= 0) {
+          setActiveHlsIndex(anyLatinoIdx);
+          setSelectedAudioMode('es_latino_dub');
+          loadSubtitleTrack(-1);
+          showToast(`Smart Auto 4K: Reproduciendo ${streams[anyLatinoIdx]?.name || 'Español Latino Directo'} (0% Anuncios)`);
+        } else if (report.recommendedServer && report.recommendedServer !== 'auto_smart_latino' && report.recommendedServer !== 'native_hls_4k') {
+          setSelectedServer(report.recommendedServer);
+          setSelectedAudioMode('es_latino_dub');
+          const recProv = STREAM_PROVIDERS.find((p) => p.id === report.recommendedServer);
+          showToast(`Smart Auto 4K: Servidor compatible detectado → ${recProv?.name || 'Español Latino 4K'}`);
+        } else if (bluRayIdx >= 0 && (report.latinoSources?.length || 0) === 0) {
+          setSelectedServer('nxsha_multilang');
+          setSelectedAudioMode('es_latino_dub');
+          showToast('Smart Auto 4K: Conmutando a MbPly Latino FHD (Español Latino)...');
+        }
+      } else if (selectedServer === 'playlatin_es') {
         if (anyLatinoIdx >= 0) {
           setActiveHlsIndex(anyLatinoIdx);
         }
         setSelectedAudioMode('es_latino_dub');
         loadSubtitleTrack(-1);
-        showToast(
-          selectedServer === 'auto_smart_latino'
-            ? 'Smart Auto 4K: Conectado a Español Latino Oficial (0% Anuncios)'
-            : 'PlayLatin Oficial 4K activo (100% Español Latino • 0% Anuncios)'
-        );
+        showToast('PlayLatin Oficial 4K activo (100% Español Latino • 0% Anuncios)');
       } else if (selectedServer === 'native_hls_4k') {
         if (anyLatinoIdx >= 0) {
           setActiveHlsIndex(anyLatinoIdx);
@@ -446,13 +487,18 @@ export default function VideoPlayerModal({
         const versions = Array.isArray(event.data.versions) ? event.data.versions : ['latino'];
         const hasSpanishInPlayLatin = versions.some((v) => /lat|esp|cast/i.test(String(v)));
 
-        // Si PlayLatin solo tiene subtitulado para esta película pero tenemos stream Español Latino directo en Cineflex CDN, cambiar automáticamente a Español Latino
-        if (!hasSpanishInPlayLatin && directHlsStreams.some((s) => s.isLatinoDub)) {
-          const latIdx = directHlsStreams.findIndex((s) => s.isLatinoDub);
-          setActiveHlsIndex(latIdx);
-          setSelectedServer('native_hls_4k');
-          showToast('Auto-Detector: Conmutado a Cineflex 4K Directo para garantizar audio Español Latino');
-          return;
+        // Si PlayLatin solo tiene subtitulado para esta película/serie, cambiar automáticamente al siguiente servidor en Español Latino
+        if (!hasSpanishInPlayLatin) {
+          if (directHlsStreams.some((s) => s.isLatinoDub)) {
+            const latIdx = directHlsStreams.findIndex((s) => s.isLatinoDub);
+            setActiveHlsIndex(latIdx);
+            setSelectedServer('native_hls_4k');
+            showToast('Auto-Detector: Conmutado a Cineflex 4K Directo para garantizar audio Español Latino');
+            return;
+          } else {
+            iterateNextLatinoServer('Auto-Detector Sí o Sí');
+            return;
+          }
         }
 
         showToast(`Servidor Compatible Verificado: Audio ${versions.map((v) => String(v).toUpperCase()).join(' / ')}`);
@@ -568,19 +614,21 @@ export default function VideoPlayerModal({
 
   // Si un servidor nativo termina de escanear y no tiene stream directo en el idioma elegido, conmutar automáticamente al siguiente servidor compatible
   useEffect(() => {
-    if (isScanningLinks || showTrailer || movie?.customUrl) return;
+    if (isScanningLinks || showTrailer || movie?.customUrl || hasStartedPlayingRef.current) return;
     if (isNativeServer && (!activeDirectStream?.url || (selectedServer === 'native_hls_4k' && !activeDirectStream?.isLatinoDub && !activeDirectStream?.isCastellanoDub))) {
       iterateNextLatinoServer('Auto-Detector Sí o Sí');
     }
   }, [isScanningLinks, isNativeServer, activeDirectStream, selectedServer, showTrailer, movie, iterateNextLatinoServer]);
 
-  // Watchdog Universal de Auto-Iteración Inteligente (100% Español Latino • 4.2s)
+  // Watchdog Universal de Auto-Iteración Inteligente (Solo para arranque inicial si un servidor está caído)
   useEffect(() => {
     if (!isLoading || showTrailer || isResolvingImdb) return;
+    // Si la reproducción ya inició o el usuario está adelantando/retrocediendo, NUNCA cambiar ni reiniciar de servidor
+    if (hasStartedPlayingRef.current || isSeekingRef.current) return;
 
-    const timeoutMs = isNativeServer ? 4200 : 4500;
+    const timeoutMs = isNativeServer ? 10000 : 14000;
     const timer = setTimeout(() => {
-      if (isLoading) {
+      if (isLoading && !hasStartedPlayingRef.current && !isSeekingRef.current) {
         if (isNativeServer) {
           const nextLatinoIdx = directHlsStreams.findIndex(
             (s, idx) => idx > activeHlsIndex && (selectedServer === 'nova_4k_master' ? true : s.isLatinoDub)
@@ -591,7 +639,7 @@ export default function VideoPlayerModal({
             return;
           }
         }
-        iterateNextLatinoServer('Auto-Iterador');
+        iterateNextLatinoServer('Auto-Iterador Inicial');
       }
     }, timeoutMs);
 
@@ -661,6 +709,12 @@ export default function VideoPlayerModal({
   useEffect(() => {
     if (!isNativeServer || showTrailer || !videoRef.current || !resolvedNativeUrl) return;
 
+    // Si ya estamos reproduciendo este mismo stream exacto y HLS está activo, NO reiniciar el reproductor
+    if (currentLoadedUrlRef.current === resolvedNativeUrl && hlsRef.current) {
+      return;
+    }
+
+    currentLoadedUrlRef.current = resolvedNativeUrl;
     const video = videoRef.current;
     setIsLoading(true);
     setHlsAudioTracks([]);
@@ -718,6 +772,24 @@ export default function VideoPlayerModal({
 
         video.muted = isMuted;
         video.volume = volume;
+
+        // Reanudar automáticamente en el minuto exacto guardado
+        if (resumeTimeRef.current > 5) {
+          const resumePoint = resumeTimeRef.current;
+          resumeTimeRef.current = 0;
+          try {
+            video.currentTime = resumePoint;
+            setCurrentTime(resumePoint);
+            const m = Math.floor(resumePoint / 60);
+            const s = Math.floor(resumePoint % 60);
+            const formatted = `${m}:${s < 10 ? '0' : ''}${s}`;
+            setResumeNotice({ time: resumePoint, text: formatted });
+            showToast(`Reanudando reproducción desde el minuto ${formatted}`);
+          } catch (e) {
+            console.warn('Error al reanudar punto de guardado:', e);
+          }
+        }
+
         video.play().catch(() => {});
       });
 
@@ -728,7 +800,30 @@ export default function VideoPlayerModal({
       });
 
       hls.on(HlsClass.Events.ERROR, (_, errData) => {
-        if (errData.fatal) {
+        if (!errData.fatal) return;
+
+        console.warn('[Cineflex HLS] Error fatal capturado:', errData.type, errData.details);
+
+        // Recuperar error de medios/decodificación tras adelantar tiempo
+        if (errData.type === HlsClass.ErrorTypes.MEDIA_ERROR) {
+          console.info('[Cineflex HLS] Recuperando error de decodificación tras adelantar...');
+          try {
+            hls.recoverMediaError();
+          } catch {}
+          return;
+        }
+
+        // Reintentar fragmento de red si hubo un corte temporal al adelantar
+        if (errData.type === HlsClass.ErrorTypes.NETWORK_ERROR) {
+          console.info('[Cineflex HLS] Reintentando carga de fragmento...');
+          try {
+            hls.startLoad();
+          } catch {}
+          return;
+        }
+
+        // Solo conmutar de servidor si el error es irrecuperable y nunca comenzó la reproducción
+        if (!hasStartedPlayingRef.current && !isSeekingRef.current) {
           const nextLatinoIdx = directHlsStreams.findIndex(
             (s, idx) => idx > activeHlsIndex && (selectedServer === 'nova_4k_master' ? true : s.isLatinoDub)
           );
@@ -736,9 +831,7 @@ export default function VideoPlayerModal({
             setActiveHlsIndex(nextLatinoIdx);
             showToast(`Auto-Detector: Conmutando a ${directHlsStreams[nextLatinoIdx].name}...`);
           } else {
-            setSelectedServer('playlatin_es');
-            setSelectedAudioMode('es_latino_dub');
-            showToast('Auto-Detector: Conmutando a PlayLatin 4K Oficial (Español Latino)');
+            iterateNextLatinoServer('Auto-Detector Sí o Sí');
           }
         }
       });
@@ -756,7 +849,34 @@ export default function VideoPlayerModal({
         hlsRef.current = null;
       }
     };
-  }, [isNativeServer, selectedServer, iframeKey, showTrailer, resolvedNativeUrl, isHlsStream, activeHlsIndex, directHlsStreams, showToast]);
+  }, [isNativeServer, selectedServer, iframeKey, showTrailer, resolvedNativeUrl, isHlsStream, activeHlsIndex, showToast]);
+
+  const saveCurrentProgress = useCallback(() => {
+    if (videoRef.current && videoRef.current.currentTime > 3) {
+      StorageService.savePlaybackProgress(
+        movie,
+        videoRef.current.currentTime,
+        videoRef.current.duration || 0,
+        selectedServer,
+        currentSeason,
+        currentEpisode
+      );
+    }
+  }, [movie, selectedServer, currentSeason, currentEpisode]);
+
+  // Guardar automáticamente al cerrar la ventana, pestaña o salir de la app
+  useEffect(() => {
+    const handleUnload = () => {
+      saveCurrentProgress();
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    window.addEventListener('pagehide', handleUnload);
+    return () => {
+      saveCurrentProgress();
+      window.removeEventListener('beforeunload', handleUnload);
+      window.removeEventListener('pagehide', handleUnload);
+    };
+  }, [saveCurrentProgress]);
 
   // 5. CARGAR SUBTÍTULOS EN ESPAÑOL LATINO AUTOMÁTICAMENTE CUANDO EL AUDIO ES INGLÉS O VOZ IA
   useEffect(() => {
@@ -829,7 +949,7 @@ export default function VideoPlayerModal({
         } else if (isFullscreen) {
           document.exitFullscreen?.().catch(() => {});
         } else {
-          onClose();
+          handleModalClose();
         }
       } else if (e.key === ' ' || e.key === 'k' || e.key === 'K') {
         e.preventDefault();
@@ -917,7 +1037,14 @@ export default function VideoPlayerModal({
   if (!movie) return null;
 
   // Stream URL con soporte de idioma dinámico y espejos directos desencriptados para VidHide y StreamWish/VOE
+  const isScanReportCurrent = Boolean(
+    scanReport &&
+    Number(scanReport.season) === Number(currentSeason) &&
+    Number(scanReport.episode) === Number(currentEpisode)
+  );
+
   const directDecryptedMirrorUrl = (() => {
+    if (!isScanReportCurrent) return null;
     const fromStream = directHlsStreams.find((s) => s.isLatinoDub && s.embedUrl)?.embedUrl;
     if (fromStream) return fromStream;
     const fromSources = (scanReport?.latinoSources || []).find(
@@ -929,6 +1056,7 @@ export default function VideoPlayerModal({
   })();
 
   const directStreamwishMirrorUrl = (() => {
+    if (!isScanReportCurrent) return null;
     const swSource = (scanReport?.latinoSources || []).find(
       (s) => s.url && (s.server === 'streamwish' || s.server === 'voe' || s.server === 'filemoon' || s.server === 'doodstream')
     )?.url;
@@ -944,10 +1072,10 @@ export default function VideoPlayerModal({
       ? directStreamwishMirrorUrl
       : currentProvider.getUrl(
           movie.id,
-          movie.isTv,
+          specialAlias ? true : movie.isTv,
           currentSeason,
           currentEpisode,
-          resolvedImdbId,
+          resolvedImdbId || specialAlias?.imdbId,
           playLatinLang
         );
 
@@ -1042,8 +1170,36 @@ export default function VideoPlayerModal({
     }
   };
 
+  const handleModalClose = () => {
+    saveCurrentProgress();
+    onClose();
+  };
+
+  const handleRestartFromBeginning = () => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+      setCurrentTime(0);
+      setResumeNotice(null);
+      StorageService.clearPlaybackProgress(movie.id, movie.isTv, currentSeason, currentEpisode);
+      showToast('Reproduciendo desde el inicio (0:00)');
+    }
+  };
+
   const handleSelectSeasonAndEpisode = (seasonNum, epNum, epName = '') => {
+    saveCurrentProgress();
     stopSpeechSynthesis();
+    hasStartedPlayingRef.current = false;
+    isSeekingRef.current = false;
+    currentLoadedUrlRef.current = '';
+    setCurrentTime(0);
+    setDuration(0);
+    setBuffered(0);
+    setResumeNotice(null);
+    if (videoRef.current) {
+      try {
+        videoRef.current.currentTime = 0;
+      } catch {}
+    }
     setCurrentSeason(seasonNum);
     setPickerSeason(seasonNum);
     setCurrentEpisode(epNum);
@@ -1056,7 +1212,20 @@ export default function VideoPlayerModal({
   };
 
   const handleNextEpisode = () => {
+    saveCurrentProgress();
     stopSpeechSynthesis();
+    hasStartedPlayingRef.current = false;
+    isSeekingRef.current = false;
+    currentLoadedUrlRef.current = '';
+    setCurrentTime(0);
+    setDuration(0);
+    setBuffered(0);
+    setResumeNotice(null);
+    if (videoRef.current) {
+      try {
+        videoRef.current.currentTime = 0;
+      } catch {}
+    }
     const nextEp = currentEpisode + 1;
     setCurrentEpisode(nextEp);
     setEpisodeTitle(`Capítulo ${nextEp}`);
@@ -1067,7 +1236,20 @@ export default function VideoPlayerModal({
 
   const handlePrevEpisode = () => {
     if (currentEpisode > 1) {
+      saveCurrentProgress();
       stopSpeechSynthesis();
+      hasStartedPlayingRef.current = false;
+      isSeekingRef.current = false;
+      currentLoadedUrlRef.current = '';
+      setCurrentTime(0);
+      setDuration(0);
+      setBuffered(0);
+      setResumeNotice(null);
+      if (videoRef.current) {
+        try {
+          videoRef.current.currentTime = 0;
+        } catch {}
+      }
       const prevEp = currentEpisode - 1;
       setCurrentEpisode(prevEp);
       setEpisodeTitle(`Capítulo ${prevEp}`);
@@ -1085,6 +1267,7 @@ export default function VideoPlayerModal({
     } else {
       videoRef.current.pause();
       setIsPlaying(false);
+      saveCurrentProgress();
       stopSpeechSynthesis();
     }
   };
@@ -1106,20 +1289,41 @@ export default function VideoPlayerModal({
     }
   };
 
+  const markSeeking = () => {
+    isSeekingRef.current = true;
+    if (seekTimeoutRef.current) clearTimeout(seekTimeoutRef.current);
+    seekTimeoutRef.current = setTimeout(() => {
+      isSeekingRef.current = false;
+    }, 2500);
+  };
+
   const skipTime = (seconds) => {
     if (!videoRef.current) return;
+    markSeeking();
+    const cur = videoRef.current.currentTime || 0;
+    const dur = videoRef.current.duration || 0;
     const nextTime = Math.max(
       0,
-      Math.min(videoRef.current.duration || 0, videoRef.current.currentTime + seconds)
+      Math.min(dur > 0 ? dur - 1 : cur + seconds, cur + seconds)
     );
-    videoRef.current.currentTime = nextTime;
+    try {
+      videoRef.current.currentTime = nextTime;
+      setCurrentTime(nextTime);
+    } catch (e) {
+      console.warn('Error al adelantar tiempo:', e);
+    }
   };
 
   const handleSeek = (e) => {
     if (!videoRef.current) return;
+    markSeeking();
     const seekTime = parseFloat(e.target.value);
-    videoRef.current.currentTime = seekTime;
-    setCurrentTime(seekTime);
+    try {
+      videoRef.current.currentTime = seekTime;
+      setCurrentTime(seekTime);
+    } catch (e) {
+      console.warn('Error al cambiar tiempo:', e);
+    }
   };
 
   // Pantalla Completa 100% compatible con Celulares (iOS Safari webkitEnterFullscreen + Android Landscape Lock) y Tablets
@@ -1237,7 +1441,7 @@ export default function VideoPlayerModal({
         <div className="flex items-center space-x-2.5 sm:space-x-3.5 min-w-0 flex-1">
           <motion.button 
             whileTap={{ scale: 0.92 }}
-            onClick={onClose}
+            onClick={handleModalClose}
             className="flex items-center space-x-1.5 px-3 sm:px-3.5 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.15] text-white/95 font-semibold text-xs transition-all border border-white/[0.12] shrink-0"
             title="Volver al catálogo"
           >
@@ -1250,7 +1454,7 @@ export default function VideoPlayerModal({
               <h2 className="text-white text-xs sm:text-base md:text-lg font-bold tracking-tight truncate">
                 {movie.title}
               </h2>
-              {movie.isTv && (
+              {(movie.isTv || specialAlias) && (
                 <span className="bg-white/[0.12] border border-white/[0.14] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
                   T{currentSeason} · E{currentEpisode}
                 </span>
@@ -1281,6 +1485,16 @@ export default function VideoPlayerModal({
               <span className="text-white/70 truncate">
                 {currentAudioObj.shortLabel}
               </span>
+              {!showTrailer && (
+                <button
+                  onClick={() => iterateNextLatinoServer('Salto Manual')}
+                  className="ml-1.5 inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-netflix-red/25 hover:bg-netflix-red/50 text-white border border-netflix-red/40 text-[9px] sm:text-[10px] font-bold tracking-tight cursor-pointer transition-all"
+                  title="Cambiar al siguiente servidor compatible en Español Latino"
+                >
+                  <RotateCw className="w-2.5 h-2.5 text-rose-400" />
+                  <span>Siguiente Servidor</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1404,7 +1618,7 @@ export default function VideoPlayerModal({
 
           {/* Cerrar */}
           <button 
-            onClick={onClose}
+            onClick={handleModalClose}
             className="p-2 rounded-full bg-white/[0.12] hover:bg-netflix-red text-white border border-white/[0.15] transition-all"
             title="Cerrar reproductor"
           >
@@ -1834,27 +2048,90 @@ export default function VideoPlayerModal({
               style={{
                 filter: enhance4kEnabled ? currentQualityObj.filter : 'none'
               }}
+              onError={() => {
+                const err = videoRef.current?.error;
+                if (err?.code === 1 || isSeekingRef.current) {
+                  return;
+                }
+                console.warn('[Cineflex Video] Fallo en stream HTML5 nativo:', err);
+                if (!hasStartedPlayingRef.current) {
+                  iterateNextLatinoServer('Auto-Detector Sí o Sí');
+                }
+              }}
               onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
-              onWaiting={() => setIsLoading(true)}
-              onPlaying={() => setIsLoading(false)}
+              onPause={() => {
+                setIsPlaying(false);
+                saveCurrentProgress();
+              }}
+              onSeeking={() => {
+                isSeekingRef.current = true;
+              }}
+              onSeeked={() => {
+                setIsLoading(false);
+                setTimeout(() => {
+                  isSeekingRef.current = false;
+                }, 400);
+              }}
+              onWaiting={() => {
+                if (!hasStartedPlayingRef.current) {
+                  setIsLoading(true);
+                }
+              }}
+              onPlaying={() => {
+                setIsLoading(false);
+                hasStartedPlayingRef.current = true;
+                isSeekingRef.current = false;
+              }}
               onTimeUpdate={() => {
-                if (videoRef.current) {
-                  setCurrentTime(videoRef.current.currentTime);
-                  setDuration(videoRef.current.duration || 0);
+                if (videoRef.current && !isSeekingRef.current) {
+                  const cur = videoRef.current.currentTime;
+                  const dur = videoRef.current.duration || 0;
+                  setCurrentTime(cur);
+                  setDuration(dur);
                   if (videoRef.current.buffered.length > 0) {
                     setBuffered(videoRef.current.buffered.end(videoRef.current.buffered.length - 1));
+                  }
+                  // Guardar el minuto exacto donde se quedó el usuario de forma persistente
+                  if (cur > 4 && Math.abs(cur - lastSavedProgressTimeRef.current) > 3.5) {
+                    lastSavedProgressTimeRef.current = cur;
+                    StorageService.savePlaybackProgress(
+                      movie,
+                      cur,
+                      dur,
+                      selectedServer,
+                      currentSeason,
+                      currentEpisode
+                    );
                   }
                 }
               }}
               onLoadedMetadata={() => {
                 setIsLoading(false);
                 if (videoRef.current) {
-                  setDuration(videoRef.current.duration || 0);
+                  const dur = videoRef.current.duration || 0;
+                  setDuration(dur);
+
+                  // Reanudar automáticamente en el minuto exacto donde se quedó el usuario
+                  if (resumeTimeRef.current > 5 && resumeTimeRef.current < dur - 15) {
+                    const resumePoint = resumeTimeRef.current;
+                    resumeTimeRef.current = 0;
+                    try {
+                      videoRef.current.currentTime = resumePoint;
+                      setCurrentTime(resumePoint);
+                      const m = Math.floor(resumePoint / 60);
+                      const s = Math.floor(resumePoint % 60);
+                      const formatted = `${m}:${s < 10 ? '0' : ''}${s}`;
+                      setResumeNotice({ time: resumePoint, text: formatted });
+                      showToast(`Reanudando reproducción desde el minuto ${formatted}`);
+                    } catch (e) {
+                      console.warn('Error reanudando minuto guardado:', e);
+                    }
+                  }
                 }
               }}
               onCanPlay={() => setIsLoading(false)}
               onEnded={() => {
+                StorageService.clearPlaybackProgress(movie.id, movie.isTv, currentSeason, currentEpisode);
                 if (movie.isTv) handleNextEpisode();
               }}
               className="w-full h-full max-h-full max-w-full object-contain"
@@ -1873,8 +2150,40 @@ export default function VideoPlayerModal({
               </div>
             )}
 
+            {/* Chip Elegante de Reanudación de Minuto Guardado (Apple TV / Netflix HIG) */}
+            <AnimatePresence>
+              {resumeNotice && (
+                <motion.div
+                  initial={{ opacity: 0, y: -16, scale: 0.94 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -16, scale: 0.94 }}
+                  transition={{ type: "spring", stiffness: 420, damping: 26 }}
+                  className="absolute top-4 left-3 sm:left-6 z-30 flex items-center space-x-2.5 bg-[#0a0a14]/90 backdrop-blur-2xl border border-white/20 px-3.5 py-1.5 rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.85)] text-xs text-white pointer-events-auto"
+                >
+                  <span className="w-2 h-2 rounded-full bg-netflix-red animate-pulse shrink-0" />
+                  <span className="text-white/90 text-[11px] sm:text-xs">
+                    Reanudado en <strong className="text-white font-mono font-bold">{resumeNotice.text}</strong>
+                  </span>
+                  <button
+                    onClick={handleRestartFromBeginning}
+                    className="ml-1 px-2.5 py-0.5 rounded-full bg-white/15 hover:bg-white/25 text-[10px] sm:text-[11px] font-bold text-white transition-all cursor-pointer border border-white/15 active:scale-95"
+                    title="Reiniciar reproducción desde el minuto 0"
+                  >
+                    Ver desde el inicio
+                  </button>
+                  <button
+                    onClick={() => setResumeNotice(null)}
+                    className="text-white/50 hover:text-white p-0.5 ml-0.5"
+                    title="Cerrar aviso"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Selector rápido de Nodos HLS Directos (arriba a la derecha) */}
-            {selectedServer === 'native_hls_4k' && directHlsStreams.length > 1 && controlsVisible && (
+            {(selectedServer === 'native_hls_4k' || selectedServer === 'auto_smart_latino') && directHlsStreams.length > 1 && controlsVisible && (
               <div
                 onClick={(e) => e.stopPropagation()}
                 className="absolute top-2.5 right-3 sm:right-6 z-20 flex items-center space-x-1 bg-black/80 backdrop-blur-xl px-2.5 py-1 rounded-full border border-white/15 max-w-[90vw] overflow-x-auto no-scrollbar"
@@ -2044,30 +2353,23 @@ export default function VideoPlayerModal({
                 </div>
               ) : (
                 <iframe 
-                  key={`${selectedServer}_${playLatinLang}_${iframeKey}_${resolvedImdbId || ''}`}
+                  key={`${selectedServer}_${playLatinLang}_${iframeKey}`}
                   src={showTrailer ? trailerUrl : streamUrl}
                   title={`Reproductor ${movie.title}`}
                   className="w-full h-full sm:rounded-2xl shadow-[0_28px_80px_rgba(0,0,0,0.95)] border-0 sm:border sm:border-white/[0.14] bg-[#040407]"
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                   allowFullScreen
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                   referrerPolicy="no-referrer-when-downgrade"
+                  {...(currentProvider.sandboxSafe !== false ? {
+                    sandbox: "allow-scripts allow-same-origin allow-forms allow-presentation allow-downloads allow-pointer-lock"
+                  } : {})}
                   onLoad={() => {
                     setIsLoading(false);
-                    if (
-                      !showTrailer &&
-                      (selectedServer === 'auto_smart_latino' ||
-                        selectedServer === 'playlatin_es' ||
-                        selectedServer === 'playlatin_dood')
-                    ) {
-                      if (playLatinHandshakeTimerRef.current) {
-                        clearTimeout(playLatinHandshakeTimerRef.current);
-                      }
-                      playLatinHandshakeTimerRef.current = setTimeout(() => {
-                        if (!playLatinReadyRef.current) {
-                          iterateNextLatinoServer('Auto-Detector Sí o Sí');
-                        }
-                      }, 2800);
+                    hasStartedPlayingRef.current = true;
+                  }}
+                  onError={() => {
+                    if (!hasStartedPlayingRef.current) {
+                      iterateNextLatinoServer('Auto-Detector Sí o Sí');
                     }
                   }}
                 />
@@ -2106,19 +2408,21 @@ export default function VideoPlayerModal({
               const livePing = statusObj?.ping || provider.ping;
 
               return (
-                <button
+                <motion.button
                   key={provider.id}
+                  whileHover={{ scale: 1.04, y: -1 }}
+                  whileTap={{ scale: 0.94 }}
                   onClick={() => handleServerChange(provider.id)}
-                  className={`relative px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap ${
+                  className={`relative px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap cursor-pointer ${
                     isActive
-                      ? 'text-black shadow-lg'
-                      : 'text-white/75 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1]'
+                      ? 'text-black font-bold shadow-[0_4px_20px_rgba(255,255,255,0.4)]'
+                      : 'text-white/80 hover:text-white bg-white/[0.07] hover:bg-white/[0.14] border border-white/[0.12]'
                   }`}
                 >
                   {isActive && (
                     <motion.div 
                       layoutId="activeServerPill"
-                      className="absolute inset-0 bg-white rounded-full"
+                      className="absolute inset-0 bg-white rounded-full glow-active-server"
                       transition={{ type: "spring", stiffness: 420, damping: 32 }}
                     />
                   )}
@@ -2138,29 +2442,31 @@ export default function VideoPlayerModal({
                   }`}>
                     {livePing}
                   </span>
-                </button>
+                </motion.button>
               );
             })}
 
             {activeTrailerKey && (
-              <button
+              <motion.button
+                whileHover={{ scale: 1.04, y: -1 }}
+                whileTap={{ scale: 0.94 }}
                 onClick={handleOpenTrailer}
-                className={`relative px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap ${
+                className={`relative px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap cursor-pointer ${
                   showTrailer
-                    ? 'text-black shadow-lg'
-                    : 'text-white/75 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1]'
+                    ? 'text-black font-bold shadow-lg'
+                    : 'text-white/80 hover:text-white bg-white/[0.07] hover:bg-white/[0.14] border border-white/[0.12]'
                 }`}
               >
                 {showTrailer && (
                   <motion.div 
                     layoutId="activeServerPill"
-                    className="absolute inset-0 bg-white rounded-full"
+                    className="absolute inset-0 bg-white rounded-full glow-active-server"
                     transition={{ type: "spring", stiffness: 420, damping: 32 }}
                   />
                 )}
                 <Youtube className={`w-3.5 h-3.5 relative z-10 ${showTrailer ? 'text-netflix-red' : 'text-red-400'}`} />
                 <span className="relative z-10">Tráiler 4K</span>
-              </button>
+              </motion.button>
             )}
           </div>
 

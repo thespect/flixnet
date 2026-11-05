@@ -32,7 +32,7 @@ export default function MovieCard({
       {/* Poster Container */}
       <div 
         onClick={() => onOpenDetails(movie)}
-        className="specular-card relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-[#0a0a12] border border-white/[0.12] transition-all duration-300 group-hover:border-netflix-red/70 group-hover:shadow-[0_22px_50px_-10px_rgba(229,9,20,0.48)]"
+        className="specular-card cinema-card-glow relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-[#0a0a12] border border-white/[0.12] transition-all duration-300 group-hover:border-netflix-red/70"
       >
         {/* Reflejo diagonal dinámico al pasar el cursor */}
         <div className="card-glare" />
@@ -50,22 +50,32 @@ export default function MovieCard({
 
         {/* Top Badges: Español Latino 4K + Rating */}
         <div className="absolute top-2.5 inset-x-2.5 z-10 flex items-center justify-between pointer-events-none">
-          <span className="bg-black/75 backdrop-blur-xl text-emerald-300 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full border border-emerald-400/35 shadow-lg flex items-center space-x-1">
+          <span className="cinema-badge-emerald text-emerald-300 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full flex items-center space-x-1">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span>LATINO 4K</span>
           </span>
-          <span className="bg-black/75 backdrop-blur-xl text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center border border-white/[0.18] shadow-lg">
+          <span className="cinema-badge-amber text-amber-300 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center">
             <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400 inline mr-1" />
             {Number(movie.vote_average || 8.4).toFixed(1)}
           </span>
         </div>
+
+        {/* Barra de progreso de reproducción guardada (Netflix style) */}
+        {movie.progressPercent > 0 && (
+          <div className="absolute bottom-0 inset-x-0 h-1.5 bg-black/70 z-10 overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-netflix-red to-rose-500 shadow-[0_0_10px_rgba(229,9,20,0.9)] transition-all duration-300"
+              style={{ width: `${Math.min(100, Math.max(4, movie.progressPercent))}%` }}
+            />
+          </div>
+        )}
 
         {/* Hover Quick Action Overlay (Desktop / Tablet) con animación de elevación */}
         <motion.div 
           initial={false}
           animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 10 }}
           transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-          className="absolute inset-0 bg-gradient-to-t from-[#050509] via-[#050509]/70 to-transparent flex flex-col justify-end p-3 z-20 pointer-events-auto"
+          className="absolute inset-0 bg-gradient-to-t from-[#050509] via-[#050509]/75 to-transparent flex flex-col justify-end p-3 z-20 pointer-events-auto"
         >
           <div className="flex items-center space-x-1.5 mb-2">
             <motion.button 
@@ -75,7 +85,7 @@ export default function MovieCard({
                 e.stopPropagation();
                 onPlay(movie, 1, 1);
               }}
-              className="btn-shimmer flex-1 h-8 px-3 rounded-full bg-gradient-to-r from-netflix-red to-rose-600 text-white flex items-center justify-center space-x-1.5 hover:from-red-600 hover:to-rose-500 shadow-[0_6px_20px_rgba(229,9,20,0.55)] text-[11px] font-black cursor-pointer border border-white/20"
+              className="btn-primary-cinema btn-shimmer flex-1 h-8 px-3 rounded-full text-white flex items-center justify-center space-x-1.5 text-[11px] font-black cursor-pointer"
               title="Reproducir ahora en Español Latino 4K"
             >
               <Play className="w-3 h-3 fill-white text-white shrink-0" />
@@ -125,9 +135,18 @@ export default function MovieCard({
           {movie.title}
         </h4>
         <div className="flex items-center space-x-1.5 text-[10px] text-white/45 group-hover:text-emerald-400/90 transition-colors font-medium truncate">
-          <span>{movie.release_date?.slice(0, 4) || '2025'}</span>
-          <span>•</span>
-          <span className="truncate">{movie.genres?.[0] || 'Español Latino'}</span>
+          {movie.savedMinuteText ? (
+            <span className="text-netflix-red font-bold truncate">
+              {movie.isTv && movie.lastEpisode ? `T${movie.lastSeason || 1}:E${movie.lastEpisode} · ` : ''}
+              {movie.savedMinuteText}
+            </span>
+          ) : (
+            <>
+              <span>{movie.release_date?.slice(0, 4) || '2025'}</span>
+              <span>•</span>
+              <span className="truncate">{movie.genres?.[0] || 'Español Latino'}</span>
+            </>
+          )}
         </div>
       </div>
     </motion.div>

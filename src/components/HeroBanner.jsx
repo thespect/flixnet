@@ -98,12 +98,12 @@ export default function HeroBanner({
             className="max-w-2xl space-y-3.5 sm:space-y-4"
           >
             {/* Editorial Kicker (Estilo Apple TV+ / Max Originals) */}
-            <div className="flex flex-wrap items-center gap-2 text-[11px] sm:text-xs font-semibold tracking-wider uppercase text-white/85">
-              <span className="inline-flex items-center space-x-1.5 bg-white/[0.11] backdrop-blur-2xl border border-white/[0.18] px-3 py-1 rounded-full text-white font-bold shadow-lg">
-                <span className="w-1.5 h-1.5 rounded-full bg-netflix-red animate-pulse" />
+            <div className="flex flex-wrap items-center gap-2.5 text-[11px] sm:text-xs font-semibold tracking-wider uppercase">
+              <span className="cinema-badge-red inline-flex items-center space-x-1.5 px-3.5 py-1 rounded-full text-white font-black tracking-widest">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
                 <span>{movie.isTv ? 'SERIE DESTACADA' : 'ESTRENO EXCLUSIVO'}</span>
               </span>
-              <span className="inline-flex items-center space-x-2 bg-emerald-500/[0.16] backdrop-blur-2xl border border-emerald-500/35 px-3 py-1 rounded-full text-emerald-300 font-bold shadow-[0_0_20px_rgba(16,185,129,0.22)]">
+              <span className="cinema-badge-emerald inline-flex items-center space-x-2 px-3.5 py-1 rounded-full text-emerald-300 font-bold">
                 <span className="flex items-end space-x-0.5 h-3">
                   <span className="w-0.5 bg-emerald-400 rounded-full eq-bar-1" />
                   <span className="w-0.5 bg-emerald-400 rounded-full eq-bar-2" />
@@ -114,7 +114,7 @@ export default function HeroBanner({
             </div>
 
             {/* Title with High-Impact Editorial Typography */}
-            <h1 className="hero-metallic-text text-3xl sm:text-5xl md:text-6xl lg:text-[4.25rem] font-black tracking-tight drop-shadow-[0_14px_38px_rgba(0,0,0,0.95)] leading-[0.96] line-clamp-2 pb-1">
+            <h1 className="cinema-metallic-title hero-responsive-title text-3xl sm:text-5xl md:text-6xl lg:text-[4.5rem] font-black tracking-tight leading-[0.94] line-clamp-2 pb-1">
               {movie.title}
             </h1>
 
@@ -156,7 +156,7 @@ export default function HeroBanner({
                 whileHover={{ scale: 1.04, y: -2 }}
                 whileTap={{ scale: 0.96 }}
                 onClick={() => onPlay(movie, 1, 1)}
-                className="btn-shimmer flex items-center justify-center space-x-2.5 px-6 sm:px-8 py-3 sm:py-3.5 rounded-full bg-gradient-to-r from-netflix-red via-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-black text-xs sm:text-sm md:text-base shadow-[0_12px_38px_rgba(229,9,20,0.55)] border border-white/25 transition-all cursor-pointer"
+                className="btn-primary-cinema btn-shimmer flex items-center justify-center space-x-2.5 px-7 sm:px-9 py-3.5 sm:py-4 rounded-full text-white font-black text-xs sm:text-sm md:text-base transition-all cursor-pointer shadow-[0_12px_38px_rgba(229,9,20,0.65)]"
               >
                 <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-white text-white shrink-0" />
                 <span>{movie.isTv ? 'Ver Episodio 1 (Latino 4K)' : 'Ver Ahora en Latino 4K'}</span>
@@ -167,7 +167,7 @@ export default function HeroBanner({
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.96 }}
                 onClick={() => onOpenDetails(movie)}
-                className="flex items-center justify-center space-x-2 px-5 sm:px-6 py-3 sm:py-3.5 rounded-full bg-white/[0.1] hover:bg-white/[0.18] backdrop-blur-2xl text-white font-semibold text-xs sm:text-sm md:text-base transition-all border border-white/[0.15] cursor-pointer shadow-lg"
+                className="btn-glass-cinema flex items-center justify-center space-x-2 px-6 sm:px-7 py-3.5 sm:py-4 rounded-full text-white font-semibold text-xs sm:text-sm md:text-base transition-all cursor-pointer"
               >
                 <Info className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
                 <span>{movie.isTv ? 'Temporadas y Detalles' : 'Más información'}</span>

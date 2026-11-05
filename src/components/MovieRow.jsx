@@ -62,7 +62,7 @@ export default function MovieRow({
             {title}
           </h3>
           {badgeText && (
-            <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/[0.06] border border-white/[0.12] text-emerald-300">
+            <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider cinema-badge-emerald text-emerald-300">
               {badgeText}
             </span>
           )}

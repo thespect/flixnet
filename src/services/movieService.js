@@ -82,15 +82,23 @@ export const REAL_4K_SOURCES = [
   }
 ];
 
-// Mapa rápido de IMDb IDs conocidos para respuesta instantánea (0ms) en Español Latino
+// Títulos aún no estrenados en cines/plataformas digitales (0 fuentes en servidores) — se excluyen para garantizar 100% reproducción
+export const UNRELEASED_PLACEHOLDER_IDS = new Set([
+  791523,  // Wildwood: El bosque salvaje (No estrenada)
+  1381071, // Godzilla Minus Zero (No estrenada)
+  969681,  // Spider-Man: Brand New Day (No estrenada)
+  1368337, // La Odisea (No estrenada)
+  1813355, // Una historia de Derry (No estrenada)
+  891621,  // Caballo salvaje nueve (No estrenada)
+  279246   // La emperatriz divorciada (No estrenada)
+]);
+
+// Mapa rápido de IMDb IDs verificados con streams activos en Español Latino 4K/Full HD
 export const KNOWN_IMDB_IDS = {
-  969681: 'tt22084616',  // Spider-Man: Brand New Day / Un nuevo día
-  1368337: 'tt33764258', // La Odisea
   1058424: 'tt27369017', // Hope: El primer impacto
   1423191: 'tt35538033', // Resident Evil: Noche cero
   1283515: 'tt32261958', // Verity: La sombra de un engaño
   1101412: 'tt31192372', // Vértigo 2: Punto muerto
-  1381071: 'tt34384661', // Godzilla Minus Zero
   1400940: 'tt34890576', // Clayface
   1507696: 'tt37522541', // Apocalipsis Z: Nuevo mundo
   1384216: 'tt21285562', // La guerra de los últimos
@@ -99,23 +107,28 @@ export const KNOWN_IMDB_IDS = {
   1514026: 'tt37281055', // Buddy
   1596275: 'tt37180686', // Velocidad y Deseo
   1657630: 'tt39120306', // El despertar
-  1813355: 'tt50389959', // Una historia de Derry
-  791523: 'tt2056785',   // Wildwood: El bosque salvaje
-  891621: 'tt15799564',  // Caballo salvaje nueve
   354912: 'tt2380307',   // Coco
   213375: 'tt23112594',  // VisionQuest
   247718: 'tt31510819',  // Tierra de Mafia
+  248830: 'tt31710249',  // Stick: El swing perfecto
   258989: 'tt15715850',  // Muhammad Ali: El más grande
   259909: 'tt33043892',  // Dexter: Resurrección
-  279246: 'tt39325975',  // La emperatriz divorciada
   289517: 'tt36458668',  // Un trabajo maldito
   292741: 'tt26598805',  // Nocturno
   96677: 'tt2531336',    // Lupin
+  5920: 'tt1196946',     // El mentalista
+  2316: 'tt0386676',     // La Oficina (The Office)
+  1100: 'tt0460649',     // Cómo conocí a tu madre
+  60735: 'tt3107288',    // Flash
+  18165: 'tt1405406',    // Diarios de Vampiros
+  1421: 'tt1442437',     // Una Familia Moderna
+  1408: 'tt0412142',     // Dr. House
   533535: 'tt6263850',   // Deadpool & Wolverine
   693134: 'tt15239678',  // Dune: Part Two
   1022789: 'tt22022452', // Intensamente 2
   945961: 'tt18412256',  // Alien: Romulus
   912649: 'tt16366836',  // Venom: El Último Baile
+  1241982: 'tt13622970', // Moana 2
   550: 'tt0137523',      // El Club de la Pelea
   1399: 'tt0944947',     // Juego de Tronos
   1396: 'tt0903747',     // Breaking Bad
@@ -132,7 +145,8 @@ export const KNOWN_IMDB_IDS = {
   1011985: 'tt15354916', // Kung Fu Panda 4
   872585: 'tt15398776',  // Oppenheimer
   346698: 'tt1517268',   // Barbie
-  100088: 'tt11198330',  // The Last of Us
+  100088: 'tt3581920',   // The Last of Us
+  94997: 'tt11198330',   // House of the Dragon
   85937: 'tt8772296',    // Euphoria
   66732: 'tt4574334',    // Stranger Things
   119051: 'tt13443470',  // Wednesday (Merlina)
@@ -151,7 +165,7 @@ export const KNOWN_IMDB_IDS = {
 // Cargar caché persistente de IMDb IDs desde localStorage para carga en 0ms
 try {
   if (typeof window !== 'undefined') {
-    const savedImdbs = localStorage.getItem('cinestream_imdb_map_v2');
+    const savedImdbs = localStorage.getItem('cinestream_imdb_map_v4');
     if (savedImdbs) {
       const parsed = JSON.parse(savedImdbs);
       Object.assign(KNOWN_IMDB_IDS, parsed);
@@ -159,39 +173,83 @@ try {
   }
 } catch {}
 
-// Servidores verificados: 10 Nodos con Auto-Búsqueda "Sí o Sí" en Español Latino 4K/Full HD y 0% Anuncios
+// Mapeo Inteligente de Especiales de TV, Crossovers y Títulos Híbridos (Garantiza 100% de reproducción)
+export const SPECIAL_MEDIA_ALIASES = {
+  1811785: {
+    aliasId: 1434, // Family Guy (Show ID)
+    isTv: true,
+    season: 13,
+    episode: 1,
+    imdbId: 'tt0182576',
+    streamPath: 'tt0182576-13x01',
+    title: 'Family Guy: The Simpsons Guy (T13:E01 Especial Crossover)'
+  },
+  'tt3065100': {
+    aliasId: 1434,
+    isTv: true,
+    season: 13,
+    episode: 1,
+    imdbId: 'tt0182576',
+    streamPath: 'tt0182576-13x01',
+    title: 'Family Guy: The Simpsons Guy (T13:E01 Especial Crossover)'
+  }
+};
+
+export function resolveMediaAlias(id, isTv = false, season = 1, episode = 1, imdbId = null) {
+  const numId = Number(id);
+  const alias = SPECIAL_MEDIA_ALIASES[numId] || (imdbId ? SPECIAL_MEDIA_ALIASES[imdbId] : null);
+  if (alias) {
+    return {
+      id: alias.aliasId,
+      isTv: true,
+      season: alias.season,
+      episode: alias.episode,
+      imdbId: alias.imdbId,
+      streamPath: alias.streamPath
+    };
+  }
+  return {
+    id,
+    isTv: Boolean(isTv),
+    season: Number(season) || 1,
+    episode: Number(episode) || 1,
+    imdbId: (imdbId && String(imdbId).startsWith('tt'))
+      ? imdbId
+      : (KNOWN_IMDB_IDS[id] && String(KNOWN_IMDB_IDS[id]).startsWith('tt'))
+        ? KNOWN_IMDB_IDS[id]
+        : null,
+    streamPath: null
+  };
+}
+
+// Servidores verificados: 11 Nodos con Auto-Búsqueda "Sí o Sí" en Español Latino 4K/Full HD y 0% Anuncios
 export const STREAM_PROVIDERS = [
   {
     id: 'auto_smart_latino',
     name: 'Smart Auto 4K',
-    subtitle: 'Auto-Detector Sí o Sí • Busca y Conecta al Servidor Compatible en Español Latino 4K/FHD',
+    subtitle: 'Auto-Detector Sí o Sí • Busca en los 11 Servidores y Reproduce el Mejor Flujo en Español Latino 4K',
     badge: 'AUTO SÍ O SÍ',
     tag: 'Auto-Detect',
     quality: '4K / 1080p Full HD Latino',
     ping: '4ms',
     isNative: false,
     isAutoNode: true,
-    prefersNativeHls: false,
+    prefersNativeHls: true,
     isDirectHls: true,
     sandboxSafe: true,
     language: 'Español Latino Oficial (Auto-Conmutación Garantizada)',
     description: 'Verifica en tiempo real cuál de los 10 servidores tiene el título activo en Español Latino y conmuta automáticamente en menos de 2.5s si un nodo no responde.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
-      const validImdb = (imdbId && String(imdbId).startsWith('tt'))
-        ? imdbId
-        : (KNOWN_IMDB_IDS[id] && String(KNOWN_IMDB_IDS[id]).startsWith('tt'))
-          ? KNOWN_IMDB_IDS[id]
-          : null;
-
-      if (!validImdb) {
-        return isTv
-          ? `https://web.nxsha.app/embed/tv/${id}/${season}/${episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
-          : `https://web.nxsha.app/embed/movie/${id}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
+      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
+      if (!res.imdbId) {
+        return res.isTv
+          ? `https://web.nxsha.app/embed/tv/${res.id}/${res.season}/${res.episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
+          : `https://web.nxsha.app/embed/movie/${res.id}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
       }
 
-      return isTv
-        ? `https://playlatinsrc.co/custom/serial/${validImdb}/${season}/${episode}?lang=${lang}&autoplay=1&prioritize=dropload.io`
-        : `https://playlatinsrc.co/custom/movie/${validImdb}?lang=${lang}&autoplay=1&prioritize=dropload.io`;
+      return res.isTv
+        ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1&prioritize=dropload.io`
+        : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1&prioritize=dropload.io`;
     }
   },
   {
@@ -203,27 +261,22 @@ export const STREAM_PROVIDERS = [
     quality: '1080p / 4K UHD Latino',
     ping: '5ms',
     isNative: false,
-    prefersNativeHls: false,
-    isDirectHls: false,
+    prefersNativeHls: true,
+    isDirectHls: true,
     sandboxSafe: true,
     language: 'Español Latino Oficial (Doblaje Real)',
     description: 'Servidor oficial PlayLatin conectado al nodo prioritario Dropload en Español Latino Full HD / 4K con blindaje Sandbox 0% anuncios.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
-      const validImdb = (imdbId && String(imdbId).startsWith('tt'))
-        ? imdbId
-        : (KNOWN_IMDB_IDS[id] && String(KNOWN_IMDB_IDS[id]).startsWith('tt'))
-          ? KNOWN_IMDB_IDS[id]
-          : null;
-
-      if (!validImdb) {
-        return isTv
-          ? `https://web.nxsha.app/embed/tv/${id}/${season}/${episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
-          : `https://web.nxsha.app/embed/movie/${id}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
+      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
+      if (!res.imdbId) {
+        return res.isTv
+          ? `https://web.nxsha.app/embed/tv/${res.id}/${res.season}/${res.episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
+          : `https://web.nxsha.app/embed/movie/${res.id}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
       }
 
-      return isTv
-        ? `https://playlatinsrc.co/custom/serial/${validImdb}/${season}/${episode}?lang=${lang}&autoplay=1&prioritize=dropload.io`
-        : `https://playlatinsrc.co/custom/movie/${validImdb}?lang=${lang}&autoplay=1&prioritize=dropload.io`;
+      return res.isTv
+        ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1&prioritize=dropload.io`
+        : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1&prioritize=dropload.io`;
     }
   },
   {
@@ -250,25 +303,21 @@ export const STREAM_PROVIDERS = [
     quality: '1080p / 4K Español Latino',
     ping: '6ms',
     isNative: false,
-    isDirectHls: false,
+    prefersNativeHls: true,
+    isDirectHls: true,
     sandboxSafe: true,
     language: 'Español Latino Oficial (Nodo Directo VidHide)',
     description: 'Conecta directamente al reproductor desencriptado VidHide en Español Latino sin páginas intermedias y con escudo Sandbox 0% anuncios.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
-      const validImdb = (imdbId && String(imdbId).startsWith('tt'))
-        ? imdbId
-        : (KNOWN_IMDB_IDS[id] && String(KNOWN_IMDB_IDS[id]).startsWith('tt'))
-          ? KNOWN_IMDB_IDS[id]
-          : null;
-
-      if (!validImdb) {
-        return isTv
-          ? `https://web.nxsha.app/embed/tv/${id}/${season}/${episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
-          : `https://web.nxsha.app/embed/movie/${id}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
+      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
+      if (!res.imdbId) {
+        return res.isTv
+          ? `https://web.nxsha.app/embed/tv/${res.id}/${res.season}/${res.episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
+          : `https://web.nxsha.app/embed/movie/${res.id}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
       }
 
-      const epPad = String(episode).padStart(2, '0');
-      const path = isTv ? `${validImdb}-${season}x${epPad}` : validImdb;
+      const epPad = String(res.episode).padStart(2, '0');
+      const path = res.streamPath || (res.isTv ? `${res.imdbId}-${res.season}x${epPad}` : res.imdbId);
       return `https://embed69.org/f/${path}`;
     }
   },
@@ -281,25 +330,21 @@ export const STREAM_PROVIDERS = [
     quality: '1080p Full HD Español Latino',
     ping: '6ms',
     isNative: false,
-    isDirectHls: false,
+    prefersNativeHls: true,
+    isDirectHls: true,
     sandboxSafe: true,
     language: 'Español Latino Oficial (Espejo StreamWish / VOE)',
     description: 'Segundo espejo directo desencriptado en Español Latino para máxima disponibilidad cuando el nodo principal está saturado.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
-      const validImdb = (imdbId && String(imdbId).startsWith('tt'))
-        ? imdbId
-        : (KNOWN_IMDB_IDS[id] && String(KNOWN_IMDB_IDS[id]).startsWith('tt'))
-          ? KNOWN_IMDB_IDS[id]
-          : null;
-
-      if (!validImdb) {
-        return isTv
-          ? `https://web.nxsha.app/embed/tv/${id}/${season}/${episode}?lang=esla&server=voe&autoplay=true&disable_app_ad=true&disable_dl_button=true`
-          : `https://web.nxsha.app/embed/movie/${id}?lang=esla&server=voe&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
+      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
+      if (!res.imdbId) {
+        return res.isTv
+          ? `https://web.nxsha.app/embed/tv/${res.id}/${res.season}/${res.episode}?lang=esla&server=voe&autoplay=true&disable_app_ad=true&disable_dl_button=true`
+          : `https://web.nxsha.app/embed/movie/${res.id}?lang=esla&server=voe&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
       }
 
-      const epPad = String(episode).padStart(2, '0');
-      const path = isTv ? `${validImdb}-${season}x${epPad}` : validImdb;
+      const epPad = String(res.episode).padStart(2, '0');
+      const path = res.streamPath || (res.isTv ? `${res.imdbId}-${res.season}x${epPad}` : res.imdbId);
       return `https://embed69.org/f/${path}`;
     }
   },
@@ -318,21 +363,16 @@ export const STREAM_PROVIDERS = [
     language: 'Español Latino Oficial (Clúster Secundario)',
     description: 'Conecta directamente al segundo clúster de PlayLatin (DoodStream / MixDrop) en Español Latino.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
-      const validImdb = (imdbId && String(imdbId).startsWith('tt'))
-        ? imdbId
-        : (KNOWN_IMDB_IDS[id] && String(KNOWN_IMDB_IDS[id]).startsWith('tt'))
-          ? KNOWN_IMDB_IDS[id]
-          : null;
-
-      if (!validImdb) {
-        return isTv
-          ? `https://web.nxsha.app/embed/tv/${id}/${season}/${episode}?lang=esla&server=voe&autoplay=true&disable_app_ad=true&disable_dl_button=true`
-          : `https://web.nxsha.app/embed/movie/${id}?lang=esla&server=voe&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
+      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
+      if (!res.imdbId) {
+        return res.isTv
+          ? `https://web.nxsha.app/embed/tv/${res.id}/${res.season}/${res.episode}?lang=esla&server=voe&autoplay=true&disable_app_ad=true&disable_dl_button=true`
+          : `https://web.nxsha.app/embed/movie/${res.id}?lang=esla&server=voe&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
       }
 
-      return isTv
-        ? `https://playlatinsrc.co/custom/serial/${validImdb}/${season}/${episode}?lang=${lang}&autoplay=1&prioritize=doodstream.com`
-        : `https://playlatinsrc.co/custom/movie/${validImdb}?lang=${lang}&autoplay=1&prioritize=doodstream.com`;
+      return res.isTv
+        ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1&prioritize=doodstream.com`
+        : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1&prioritize=doodstream.com`;
     }
   },
   {
@@ -349,20 +389,15 @@ export const STREAM_PROVIDERS = [
     language: 'Español Latino Oficial (LAT) y Castellano (ESP)',
     description: 'Clúster dedicado exclusivamente a Español Latino y Castellano con múltiples espejos de alta velocidad (VidHide, StreamWish, VOE, Filemoon) y bloqueo total de popups.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
-      const validImdb = (imdbId && String(imdbId).startsWith('tt'))
-        ? imdbId
-        : (KNOWN_IMDB_IDS[id] && String(KNOWN_IMDB_IDS[id]).startsWith('tt'))
-          ? KNOWN_IMDB_IDS[id]
-          : null;
-
-      if (!validImdb) {
-        return isTv
-          ? `https://web.nxsha.app/embed/tv/${id}/${season}/${episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
-          : `https://web.nxsha.app/embed/movie/${id}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
+      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
+      if (!res.imdbId) {
+        return res.isTv
+          ? `https://web.nxsha.app/embed/tv/${res.id}/${res.season}/${res.episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
+          : `https://web.nxsha.app/embed/movie/${res.id}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
       }
 
-      const epPad = String(episode).padStart(2, '0');
-      const path = isTv ? `${validImdb}-${season}x${epPad}` : validImdb;
+      const epPad = String(res.episode).padStart(2, '0');
+      const path = res.streamPath || (res.isTv ? `${res.imdbId}-${res.season}x${epPad}` : res.imdbId);
       return `https://embed69.org/f/${path}`;
     }
   },
@@ -379,10 +414,12 @@ export const STREAM_PROVIDERS = [
     sandboxSafe: true,
     language: 'Español Latino 1080p (esla dub)',
     description: 'Servidor rápido y estable conectado a MbPly con doblaje predeterminado en Español Latino 1080p y aislamiento Sandbox contra popups.',
-    getUrl: (id, isTv = false, season = 1, episode = 1) =>
-      isTv
-        ? `https://web.nxsha.app/embed/tv/${id}/${season}/${episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
-        : `https://web.nxsha.app/embed/movie/${id}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
+      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
+      return res.isTv
+        ? `https://web.nxsha.app/embed/tv/${res.id}/${res.season}/${res.episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
+        : `https://web.nxsha.app/embed/movie/${res.id}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
+    }
   },
   {
     id: 'nxsha_voe_latino',
@@ -397,10 +434,12 @@ export const STREAM_PROVIDERS = [
     sandboxSafe: true,
     language: 'Español Latino (VOE Cloud)',
     description: 'Nodo independiente VOE Cloud con soporte para estrenos recientes y series en Español Latino.',
-    getUrl: (id, isTv = false, season = 1, episode = 1) =>
-      isTv
-        ? `https://web.nxsha.app/embed/tv/${id}/${season}/${episode}?lang=esla&server=voe&autoplay=true&disable_app_ad=true&disable_dl_button=true`
-        : `https://web.nxsha.app/embed/movie/${id}?lang=esla&server=voe&autoplay=true&disable_app_ad=true&disable_dl_button=true`
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
+      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
+      return res.isTv
+        ? `https://web.nxsha.app/embed/tv/${res.id}/${res.season}/${res.episode}?lang=esla&server=voe&autoplay=true&disable_app_ad=true&disable_dl_button=true`
+        : `https://web.nxsha.app/embed/movie/${res.id}?lang=esla&server=voe&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
+    }
   },
   {
     id: 'vidlink_4k_pro',
@@ -412,13 +451,15 @@ export const STREAM_PROVIDERS = [
     ping: '10ms',
     isNative: false,
     isDirectHls: false,
-    sandboxSafe: true,
+    sandboxSafe: false, // Requiere no tener sandbox para evitar la advertencia "Please Disable Sandbox"
     language: 'Multi-Audio / Subtítulos Español',
     description: 'Respaldo global que garantiza reproducción inmediata incluso en películas recién estrenadas hoy en cines.',
-    getUrl: (id, isTv = false, season = 1, episode = 1) =>
-      isTv
-        ? `https://vidlink.pro/tv/${id}/${season}/${episode}?autoplay=true&primaryColor=e50914`
-        : `https://vidlink.pro/movie/${id}?autoplay=true&primaryColor=e50914`
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
+      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
+      return res.isTv
+        ? `https://vidlink.pro/tv/${res.id}/${res.season}/${res.episode}?autoplay=true&primaryColor=e50914`
+        : `https://vidlink.pro/movie/${res.id}?autoplay=true&primaryColor=e50914`;
+    }
   },
   {
     id: 'nova_4k_master',
@@ -474,22 +515,118 @@ export const StorageService = {
       return [];
     }
   },
-  addToHistory: (item, serverId = 'native_hls_4k', season = 1, episode = 1) => {
-    const history = StorageService.getHistory();
-    const filtered = history.filter(i => i.id !== item.id);
-    const updated = [
-      {
-        ...item,
-        lastWatched: new Date().toISOString(),
-        lastServer: serverId,
-        lastSeason: season,
-        lastEpisode: episode,
-        progress: item.progress || Math.floor(Math.random() * 40) + 40
-      },
-      ...filtered
-    ].slice(0, 15);
-    localStorage.setItem('cinestream_history', JSON.stringify(updated));
-    return updated;
+  addToHistory: (item, serverId = 'native_hls_4k', season = 1, episode = 1, currentTime = 0, duration = 0) => {
+    if (!item?.id) return [];
+    try {
+      const history = StorageService.getHistory();
+      const filtered = history.filter(i => i.id !== item.id);
+      const percent = duration > 0 ? Math.min(100, Math.round((currentTime / duration) * 100)) : 0;
+      const mins = Math.floor(currentTime / 60);
+      const secs = Math.floor(currentTime % 60);
+      const formattedTime = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+
+      const updated = [
+        {
+          ...item,
+          lastWatched: new Date().toISOString(),
+          lastServer: serverId,
+          lastSeason: season,
+          lastEpisode: episode,
+          savedTime: currentTime,
+          savedDuration: duration,
+          progressPercent: percent,
+          savedMinuteText: currentTime > 10 ? `Minuto ${formattedTime}` : null
+        },
+        ...filtered
+      ].slice(0, 15);
+      localStorage.setItem('cinestream_history', JSON.stringify(updated));
+      return updated;
+    } catch {
+      return [];
+    }
+  },
+
+  // Guarda el minuto y segundo exacto de reproducción persistente para películas y series
+  savePlaybackProgress: (mediaItem, currentTime, duration = 0, serverId = 'native_hls_4k', season = 1, episode = 1) => {
+    if (!mediaItem?.id || typeof window === 'undefined' || !currentTime || currentTime < 3) return;
+
+    try {
+      const mediaId = Number(mediaItem.id);
+      const isTv = Boolean(mediaItem.isTv);
+      const progressKey = isTv ? `tv_${mediaId}_s${season}_e${episode}` : `movie_${mediaId}`;
+      const percent = duration > 0 ? Math.min(100, Math.round((currentTime / duration) * 100)) : 0;
+
+      const progressMap = StorageService.getAllPlaybackProgress();
+      progressMap[progressKey] = {
+        mediaId,
+        isTv,
+        season: Number(season) || 1,
+        episode: Number(episode) || 1,
+        currentTime: Math.round(currentTime * 10) / 10,
+        duration: Math.round(duration * 10) / 10,
+        percent,
+        serverId,
+        updatedAt: Date.now()
+      };
+
+      // Si es una serie, también guardamos la última posición general de la serie
+      if (isTv) {
+        progressMap[`tv_${mediaId}_latest`] = {
+          mediaId,
+          isTv: true,
+          season: Number(season) || 1,
+          episode: Number(episode) || 1,
+          currentTime: Math.round(currentTime * 10) / 10,
+          duration: Math.round(duration * 10) / 10,
+          percent,
+          serverId,
+          updatedAt: Date.now()
+        };
+      }
+
+      localStorage.setItem('cinestream_playback_progress_v2', JSON.stringify(progressMap));
+
+      // Sincronizar también con la fila "Continuar Viendo" / Historial
+      StorageService.addToHistory(mediaItem, serverId, season, episode, currentTime, duration);
+    } catch (e) {
+      console.warn('Error guardando progreso de reproducción:', e);
+    }
+  },
+
+  getAllPlaybackProgress: () => {
+    try {
+      const data = localStorage.getItem('cinestream_playback_progress_v2');
+      return data ? JSON.parse(data) : {};
+    } catch {
+      return {};
+    }
+  },
+
+  getPlaybackProgress: (mediaId, isTv = false, season = 1, episode = 1) => {
+    try {
+      const progressMap = StorageService.getAllPlaybackProgress();
+      const numId = Number(mediaId);
+      if (isTv) {
+        const epKey = `tv_${numId}_s${season}_e${episode}`;
+        if (progressMap[epKey]) return progressMap[epKey];
+        const latestKey = `tv_${numId}_latest`;
+        if (progressMap[latestKey]) return progressMap[latestKey];
+      }
+      return progressMap[`movie_${numId}`] || null;
+    } catch {
+      return null;
+    }
+  },
+
+  clearPlaybackProgress: (mediaId, isTv = false, season = 1, episode = 1) => {
+    try {
+      const progressMap = StorageService.getAllPlaybackProgress();
+      const numId = Number(mediaId);
+      const progressKey = isTv ? `tv_${numId}_s${season}_e${episode}` : `movie_${numId}`;
+      delete progressMap[progressKey];
+      if (isTv) delete progressMap[`tv_${numId}_latest`];
+      localStorage.setItem('cinestream_playback_progress_v2', JSON.stringify(progressMap));
+    } catch {}
   }
 };
 
@@ -743,7 +880,7 @@ export const MovieAPI = {
 
     if (cacheKey && typeof window !== 'undefined') {
       try {
-        const cached = sessionStorage.getItem(`cineflex_v2_${cacheKey}`);
+        const cached = sessionStorage.getItem(`cineflex_v5_${cacheKey}`);
         if (cached) {
           const parsed = JSON.parse(cached);
           memoryCache.set(cacheKey, parsed);
@@ -760,11 +897,17 @@ export const MovieAPI = {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       const data = await res.json();
-      const rawResults = (data.results || []).filter(m => m && (m.backdrop_path || m.poster_path));
-      // Priorizar títulos con streams verificados (en KNOWN_IMDB_IDS o con votos reales >= 20) por encima de placeholders sin estrenar
+      const rawResults = (data.results || []).filter(
+        (m) =>
+          m &&
+          (m.backdrop_path || m.poster_path) &&
+          !UNRELEASED_PLACEHOLDER_IDS.has(Number(m.id)) &&
+          (Boolean(KNOWN_IMDB_IDS[m.id]) || (m.vote_count || 0) >= 15)
+      );
+      // Priorizar títulos con streams verificados (en KNOWN_IMDB_IDS o con votos reales >= 40)
       rawResults.sort((a, b) => {
-        const aReady = Boolean(KNOWN_IMDB_IDS[a.id]) || (a.vote_count || 0) >= 20 ? 1 : 0;
-        const bReady = Boolean(KNOWN_IMDB_IDS[b.id]) || (b.vote_count || 0) >= 20 ? 1 : 0;
+        const aReady = Boolean(KNOWN_IMDB_IDS[a.id]) || (a.vote_count || 0) >= 40 ? 1 : 0;
+        const bReady = Boolean(KNOWN_IMDB_IDS[b.id]) || (b.vote_count || 0) >= 40 ? 1 : 0;
         return bReady - aReady;
       });
       const formatted = rawResults.map(m => formatMedia(m, isTv, cacheKey));
@@ -772,7 +915,7 @@ export const MovieAPI = {
       if (cacheKey) {
         memoryCache.set(cacheKey, formatted);
         try {
-          sessionStorage.setItem(`cineflex_v3_${cacheKey}`, JSON.stringify(formatted));
+          sessionStorage.setItem(`cineflex_v5_${cacheKey}`, JSON.stringify(formatted));
         } catch {}
       }
       return formatted;
@@ -896,7 +1039,7 @@ export const MovieAPI = {
         KNOWN_IMDB_IDS[numId] = data.imdb_id;
         try {
           if (typeof window !== 'undefined') {
-            localStorage.setItem('cinestream_imdb_map_v2', JSON.stringify(KNOWN_IMDB_IDS));
+            localStorage.setItem('cinestream_imdb_map_v4', JSON.stringify(KNOWN_IMDB_IDS));
           }
         } catch {}
         return data.imdb_id;

@@ -101,7 +101,7 @@ export default function Top10Row({
                 </div>
 
                 {/* Clean Poster Card */}
-                <div className="specular-card relative w-32 sm:w-40 md:w-48 aspect-[2/3] rounded-2xl overflow-hidden bg-[#0b0b12] border border-white/[0.12] z-10 transition-all duration-300 group-hover/card:border-white/40">
+                <div className="specular-card cinema-card-glow relative w-32 sm:w-40 md:w-48 aspect-[2/3] rounded-2xl overflow-hidden bg-[#0b0b12] border border-white/[0.12] z-10 transition-all duration-300 group-hover/card:border-netflix-red/60">
                   <img 
                     src={movie.poster_path} 
                     alt={movie.title}
@@ -109,8 +109,9 @@ export default function Top10Row({
                     className="w-full h-full object-cover filter brightness-[0.96] group-hover/card:brightness-105 transition-transform duration-500 group-hover/card:scale-105"
                   />
                   <div className="absolute top-2 left-2 z-10 pointer-events-none">
-                    <span className="bg-black/65 backdrop-blur-xl text-emerald-300 text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border border-emerald-500/25">
-                      LATINO 4K
+                    <span className="cinema-badge-emerald text-emerald-300 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full flex items-center space-x-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>LATINO 4K</span>
                     </span>
                   </div>
 
@@ -124,10 +125,10 @@ export default function Top10Row({
                           e.stopPropagation();
                           onPlay(movie, 1, 1);
                         }}
-                        className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center hover:bg-neutral-200 shadow-md cursor-pointer"
+                        className="btn-primary-cinema w-8 h-8 rounded-full text-white flex items-center justify-center cursor-pointer shadow-md"
                         title="Reproducir ahora"
                       >
-                        <Play className="w-3.5 h-3.5 fill-black ml-0.5" />
+                        <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
                       </motion.button>
 
                       <motion.button 

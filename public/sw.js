@@ -2,7 +2,7 @@
 // Almacena en caché la interfaz adaptativa y bloquea redes publicitarias a nivel de red,
 // sin interceptar flujos de video .m3u8/.ts ni llamadas dinámicas de streaming.
 
-const CACHE_NAME = 'cineflex-max-4k-v12';
+const CACHE_NAME = 'cineflex-max-4k-v13';
 const APP_SHELL = [
   './manifest.webmanifest',
   './hls.min.js',
@@ -42,6 +42,17 @@ const AD_PATTERNS = [
   'waptap',
   'tsyndicate',
   'exdynsrv',
+  'alwingulla',
+  'bidgear',
+  'gloaphoo',
+  'deloton',
+  'cootlogu',
+  'onclickalgo',
+  'cpmgate',
+  'onclas',
+  'yllix',
+  'adbuffs',
+  'trafficstars',
   'llvpn.com',
   'ancillammmm',
   'hubeamily',

@@ -2,6 +2,8 @@
 // Extrae streams .m3u8 directos en Español Latino (LAT) y Castellano (ESP) sin anuncios ni iframes,
 // 100% compatibles con Chromecast, AirPlay 2 y Reproductor HTML5 Nativo en Celular, Tablet y PC.
 
+import { resolveMediaAlias } from './movieService';
+
 const VIDRACK_API = 'https://vidrack.created.app/api/sources';
 const VIDRACK_PROXY = 'https://colourful-orange-pl68dlfc.edgeone.dev/px.php';
 const SUB_HOSTS = {
@@ -34,6 +36,7 @@ export function wrapWithStreamProxy(rawUrl, headers) {
     rawUrl.indexOf('api.php?action=proxy') !== -1 ||
     rawUrl.indexOf(VIDRACK_PROXY) === 0 ||
     rawUrl.indexOf('vidrack.created.app/proxy') !== -1 ||
+    rawUrl.indexOf('dropcdn.io') !== -1 ||
     rawUrl.indexOf('acek-cdn.com') !== -1 ||
     rawUrl.indexOf('dramiyos-cdn.com') !== -1
   ) {
@@ -200,10 +203,12 @@ async function extractClientSideEmbed69Latino(imdbId, isTv = false, season = 1, 
       const eHtml = await er.text();
       const unpacked = unpackPackerClient(eHtml);
       const hls2 = (unpacked.match(/"hls2"\s*:\s*"([^"]+)"/) || [])[1];
+      const fileM3u8 = (unpacked.match(/file\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/) || [])[1];
       const hls4 = (unpacked.match(/"hls4"\s*:\s*"([^"]+)"/) || [])[1];
-      const m3u8Url = hls2 || hls4;
+      const hls3 = (unpacked.match(/"hls3"\s*:\s*"([^"]+)"/) || [])[1];
+      const m3u8Url = [hls2, fileM3u8, hls4, hls3].find((u) => u && u.startsWith('http') && u.includes('.m3u8'));
 
-      if (m3u8Url && m3u8Url.includes('.m3u8') && m3u8Url.startsWith('http')) {
+      if (m3u8Url && m3u8Url.startsWith('http')) {
         streams.push({
           id: `latino_hls_client_${langKey}_${groupIdx}`,
           name: `${langBadge} 4K/FHD`,
@@ -247,18 +252,20 @@ export const StreamScannerService = {
    */
   getCachedScan(movie, season = 1, episode = 1) {
     if (!movie?.id) return null;
-    const isTv = Boolean(movie.isTv);
-    const cacheKey = `${movie.id}_${isTv ? `tv_${season}_${episode}` : 'movie'}`;
-    return scanCache.get(cacheKey) || null;
+    const resolved = resolveMediaAlias(movie.id, movie.isTv, season, episode, movie.imdb_id);
+    const cacheKey = `${movie.id}_${resolved.id}_${resolved.isTv ? `tv_${resolved.season}_${resolved.episode}` : 'movie'}`;
+    const legacyKey = `${movie.id}_${movie.isTv ? `tv_${season}_${episode}` : 'movie'}`;
+    return scanCache.get(cacheKey) || scanCache.get(legacyKey) || null;
   },
 
   /**
    * Extrae streams HLS (.m3u8) internacionales de respaldo (solo para modo Inglés Original + Subtítulos)
    */
   async fetchDirectHlsStreams(tmdbId, isTv = false, season = 1, episode = 1) {
-    const query = isTv
-      ? `id=${tmdbId}&type=tv&season=${season}&episode=${episode}`
-      : `id=${tmdbId}&type=movie`;
+    const resolved = resolveMediaAlias(tmdbId, isTv, season, episode);
+    const query = resolved.isTv
+      ? `id=${resolved.id}&type=tv&season=${resolved.season}&episode=${resolved.episode}`
+      : `id=${resolved.id}&type=movie`;
 
     const startTime = performance.now();
 
@@ -339,8 +346,9 @@ export const StreamScannerService = {
    * Obtiene subtítulos verificados priorizando Español Latino y Español España
    */
   async fetchSubtitles(tmdbId, isTv = false, season = 1, episode = 1) {
-    const type = isTv ? 'tv' : 'movie';
-    const path = isTv ? `/tv/${tmdbId}/${season}/${episode}` : `/movie/${tmdbId}`;
+    const resolved = resolveMediaAlias(tmdbId, isTv, season, episode);
+    const type = resolved.isTv ? 'tv' : 'movie';
+    const path = resolved.isTv ? `/tv/${resolved.id}/${resolved.season}/${resolved.episode}` : `/movie/${resolved.id}`;
     const host = SUB_HOSTS[type];
 
     const fetchList = async (url) => {
@@ -426,8 +434,14 @@ export const StreamScannerService = {
    */
   async scanAllWorkingLinks(movie, season = 1, episode = 1, imdbId = null, onFastStream = null) {
     if (!movie?.id) return null;
-    const isTv = Boolean(movie.isTv);
-    const cacheKey = `${movie.id}_${isTv ? `tv_${season}_${episode}` : 'movie'}`;
+    const resolved = resolveMediaAlias(movie.id, movie.isTv, season, episode, imdbId || movie.imdb_id);
+    const targetId = resolved.id;
+    const targetIsTv = resolved.isTv;
+    const targetSeason = resolved.season;
+    const targetEpisode = resolved.episode;
+    const targetImdb = resolved.imdbId || imdbId || movie.imdb_id || null;
+
+    const cacheKey = `${movie.id}_${targetId}_${targetIsTv ? `tv_${targetSeason}_${targetEpisode}` : 'movie'}`;
 
     if (scanCache.has(cacheKey)) {
       const cached = scanCache.get(cacheKey);
@@ -452,14 +466,13 @@ export const StreamScannerService = {
     const scanPromise = (async () => {
       try {
         let fastNotified = false;
-        const resolvedImdb = imdbId || movie.imdb_id || null;
 
         const backendPromise = this.fetchBackendVerification(
-          movie.id,
-          isTv,
-          season,
-          episode,
-          resolvedImdb
+          targetId,
+          targetIsTv,
+          targetSeason,
+          targetEpisode,
+          targetImdb
         ).then((backendScan) => {
           if (backendScan?.lanIp && typeof window !== 'undefined') {
             window.__CINEFLEX_LAN_IP__ = backendScan.lanIp;
@@ -471,7 +484,8 @@ export const StreamScannerService = {
             fastNotified = true;
             onFastStream({
               tmdbId: movie.id,
-              imdbId: backendScan?.imdbId || resolvedImdb,
+              aliasTmdbId: targetId,
+              imdbId: backendScan?.imdbId || targetImdb,
               directHlsStreams: latinoDirect,
               latinoDirectStreams: latinoDirect,
               englishMasterStreams: [],
@@ -484,8 +498,8 @@ export const StreamScannerService = {
           return backendScan;
         });
 
-        const hlsPromise = this.fetchDirectHlsStreams(movie.id, isTv, season, episode);
-        const subsPromise = this.fetchSubtitles(movie.id, isTv, season, episode);
+        const hlsPromise = this.fetchDirectHlsStreams(targetId, targetIsTv, targetSeason, targetEpisode);
+        const subsPromise = this.fetchSubtitles(targetId, targetIsTv, targetSeason, targetEpisode);
 
         const [backendScan, hlsResult, subtitles] = await Promise.all([
           backendPromise,
@@ -512,11 +526,12 @@ export const StreamScannerService = {
 
         const result = {
           tmdbId: movie.id,
-          imdbId: backendScan?.imdbId || resolvedImdb,
+          aliasTmdbId: targetId,
+          imdbId: backendScan?.imdbId || targetImdb,
           lanIp: backendScan?.lanIp || null,
-          isTv,
-          season,
-          episode,
+          isTv: targetIsTv,
+          season: targetSeason,
+          episode: targetEpisode,
           directHlsStreams: combinedDirectStreams,
           latinoDirectStreams: spanishDirect.filter((s) => s.isLatinoDub),
           castellanoDirectStreams: spanishDirect.filter((s) => s.isCastellanoDub),
@@ -541,12 +556,19 @@ export const StreamScannerService = {
   },
 
   async fetchBackendVerification(tmdbId, isTv, season, episode, imdbId) {
+    const resolved = resolveMediaAlias(tmdbId, isTv, season, episode, imdbId);
+    const targetId = resolved.id;
+    const targetIsTv = resolved.isTv;
+    const targetSeason = resolved.season;
+    const targetEpisode = resolved.episode;
+    const targetImdb = resolved.imdbId || imdbId;
+
     const params = new URLSearchParams({
-      tmdbId: String(tmdbId),
-      isTv: isTv ? '1' : '0',
-      season: String(season),
-      episode: String(episode),
-      ...(imdbId ? { imdbId } : {})
+      tmdbId: String(targetId),
+      isTv: targetIsTv ? '1' : '0',
+      season: String(targetSeason),
+      episode: String(targetEpisode),
+      ...(targetImdb ? { imdbId: targetImdb } : {})
     });
 
     const endpoints = [
@@ -555,7 +577,7 @@ export const StreamScannerService = {
     ];
 
     const tasks = endpoints.map(async (ep) => {
-      const res = await fetchWithTimeout(ep, { headers: { Accept: 'application/json' } }, 4200);
+      const res = await fetchWithTimeout(ep, { headers: { Accept: 'application/json' } }, 7800);
       if (!res.ok) throw new Error('HTTP error');
       const ct = res.headers.get('content-type') || '';
       if (!ct.includes('json')) throw new Error('Not JSON');

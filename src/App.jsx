@@ -19,7 +19,8 @@ import {
   MovieAPI, 
   StorageService,
   CURATED_FALLBACK_MOVIES,
-  CURATED_FALLBACK_TV
+  CURATED_FALLBACK_TV,
+  SPECIAL_MEDIA_ALIASES
 } from './services/movieService';
 import { 
   Film, 
@@ -128,11 +129,12 @@ export default function App() {
         }
 
         if (found) {
+          const alias = SPECIAL_MEDIA_ALIASES[idNum] || (found.imdb_id ? SPECIAL_MEDIA_ALIASES[found.imdb_id] : null);
           setPlayingMedia({
-            movie: found,
-            season: season,
-            episode: episode,
-            episodeTitle: `Capítulo ${episode}`
+            movie: alias ? { ...found, isTv: true, specialAlias: alias } : found,
+            season: alias ? alias.season : season,
+            episode: alias ? alias.episode : episode,
+            episodeTitle: alias ? alias.title : `Capítulo ${episode}`
           });
         }
       }
@@ -184,6 +186,7 @@ export default function App() {
 
   const handleClosePlayer = () => {
     setPlayingMedia(null);
+    setHistory(StorageService.getHistory());
     try {
       const url = new URL(window.location.href);
       url.searchParams.delete('watch');
@@ -827,22 +830,23 @@ export default function App() {
             const IconComp = nav.icon;
             const isActive = activeTab === nav.id && !searchQuery;
             return (
-              <button
+              <motion.button
                 key={nav.id}
+                whileTap={{ scale: 0.92 }}
                 onClick={() => handleTabChange(nav.id)}
                 className={`relative flex flex-col items-center justify-center py-1.5 px-3.5 rounded-full transition-all cursor-pointer ${
-                  isActive ? 'text-black font-bold' : 'text-white/65 hover:text-white'
+                  isActive ? 'text-black font-bold' : 'text-white/70 hover:text-white'
                 }`}
               >
                 {isActive && (
                   <motion.div
                     layoutId="mobileBottomNavPill"
-                    className="absolute inset-0 bg-white rounded-full shadow-md"
+                    className="absolute inset-0 bg-white rounded-full shadow-[0_4px_20px_rgba(255,255,255,0.35)] glow-active-server"
                     transition={{ type: 'spring', stiffness: 450, damping: 32 }}
                   />
                 )}
                 <div className="relative z-10">
-                  <IconComp className={`w-4 h-4 ${isActive ? 'text-black' : ''}`} />
+                  <IconComp className={`w-4 h-4 ${isActive ? 'text-black stroke-[2.5]' : ''}`} />
                   {nav.badgeCount > 0 && (
                     <span className="absolute -top-1.5 -right-2.5 bg-netflix-red text-white text-[9px] font-bold px-1.5 rounded-full">
                       {nav.badgeCount}
@@ -850,7 +854,7 @@ export default function App() {
                   )}
                 </div>
                 <span className="relative z-10 mt-0.5 text-[10px] tracking-tight">{nav.label}</span>
-              </button>
+              </motion.button>
             );
           })}
         </div>
