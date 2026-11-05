@@ -408,22 +408,35 @@ input[type="range"].touch-scrubber:active::-webkit-slider-thumb {
 
 /* Optimización táctil, aceleración GPU y alto rendimiento para móviles y tablets */
 @media (max-width: 768px) {
-  /* Detener repintados continuos del fondo en celulares para 60 FPS estables */
+  /* Detener repintados y mallas en celulares para 60/120 FPS nativos */
   .ambient-mesh {
-    animation: none !important;
-    background-size: 100% 100% !important;
+    display: none !important;
   }
 
-  /* Reducir carga del compositor de la GPU en filtros de desenfoque */
+  /* Desactivar composición de filtros de desenfoque múltiple en móviles */
   .glass-panel,
   .glass-card,
-  .glass-chrome {
-    backdrop-filter: blur(12px) saturate(160%) !important;
-    -webkit-backdrop-filter: blur(12px) saturate(160%) !important;
+  .glass-chrome,
+  .glass-pill,
+  .btn-glass-cinema {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(10, 10, 16, 0.94) !important;
+  }
+
+  .cinema-metallic-title {
+    filter: none !important;
+  }
+
+  .cinema-badge-red,
+  .cinema-badge-emerald,
+  .cinema-badge-amber {
+    box-shadow: none !important;
   }
 
   .btn-shimmer::after {
     animation: none !important;
+    display: none !important;
   }
 }
 
@@ -431,6 +444,9 @@ input[type="range"].touch-scrubber:active::-webkit-slider-thumb {
 @media (hover: none) {
   .card-glare {
     display: none !important;
+  }
+  .group:hover .cinema-card-glow {
+    box-shadow: none !important;
   }
 }
 

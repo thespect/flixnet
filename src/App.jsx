@@ -278,11 +278,11 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#040407] text-white flex flex-col font-sans selection:bg-netflix-red selection:text-white relative overflow-x-hidden">
-      {/* Luz ambiental cinemática + Ambilight dinámico sincronizado con la obra destacada */}
-      <div className="ambient-mesh fixed inset-0 pointer-events-none z-0" />
+      {/* Luz ambiental cinemática + Ambilight dinámico sincronizado (Oculto en móvil para fluidez 60 FPS) */}
+      <div className="ambient-mesh fixed inset-0 pointer-events-none z-0 hidden md:block" />
       {featuredItem?.backdrop_path && (
         <div
-          className="fixed inset-x-0 top-0 h-[75vh] pointer-events-none z-0 opacity-25 blur-[130px] saturate-200 transition-all duration-1000"
+          className="hidden md:block fixed inset-x-0 top-0 h-[65vh] pointer-events-none z-0 opacity-20 blur-[80px] saturate-150 transition-all duration-1000"
           style={{
             backgroundImage: `url(${featuredItem.backdrop_path})`,
             backgroundSize: 'cover',

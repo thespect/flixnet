@@ -1,7 +1,16 @@
 <?php
-// API Backend Ultra-Rápida de Extracción Directa HLS (.m3u8) 100% en Español Latino para XAMPP Apache
+// API Backend Ultra-Rápida de Extracción Directa HLS (.m3u8) 100% en Español Latino para Producción / XAMPP / cPanel
+if (!ob_start('ob_gzhandler')) {
+    ob_start();
+}
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: *');
+
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(204);
+    exit;
+}
 
 $dropUa = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
 $action = isset($_GET['action']) ? $_GET['action'] : 'scan';
@@ -15,19 +24,33 @@ if ($action === 'proxy') {
         exit;
     }
 
-    $ctx = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'timeout' => 10,
-            'header' => "User-Agent: {$dropUa}\r\nReferer: https://embed69.org/\r\n"
-        ],
-        'ssl' => [
-            'verify_peer' => false,
-            'verify_peer_name' => false
-        ]
-    ]);
+    $body = false;
+    if (function_exists('curl_init')) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $targetUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($ch, CURLOPT_USERAGENT, $dropUa);
+        curl_setopt($ch, CURLOPT_REFERER, 'https://embed69.org/');
+        $body = curl_exec($ch);
+        curl_close($ch);
+    }
+    if ($body === false) {
+        $ctx = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'timeout' => 8,
+                'header' => "User-Agent: {$dropUa}\r\nReferer: https://embed69.org/\r\n"
+            ],
+            'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
+        ]);
+        $body = @file_get_contents($targetUrl, false, $ctx);
+    }
 
-    $body = @file_get_contents($targetUrl, false, $ctx);
     if ($body === false) {
         http_response_code(502);
         exit;
@@ -87,22 +110,10 @@ if (empty($tmdbId)) {
     exit;
 }
 
-// Mapeo Inteligente de Especiales de TV, Crossovers y Títulos Híbridos (Garantiza 100% reproducción en Español Latino)
+// Mapeo Inteligente de Especiales de TV y Crossovers
 $specialMediaMap = [
-    '1811785' => [
-        'isTv' => true,
-        'tmdbId' => '1434',
-        'imdbId' => 'tt0182576',
-        'season' => 13,
-        'episode' => 1
-    ],
-    'tt3065100' => [
-        'isTv' => true,
-        'tmdbId' => '1434',
-        'imdbId' => 'tt0182576',
-        'season' => 13,
-        'episode' => 1
-    ]
+    '1811785' => ['isTv' => true, 'tmdbId' => '1434', 'imdbId' => 'tt0182576', 'season' => 13, 'episode' => 1],
+    'tt3065100' => ['isTv' => true, 'tmdbId' => '1434', 'imdbId' => 'tt0182576', 'season' => 13, 'episode' => 1]
 ];
 
 if (isset($specialMediaMap[$tmdbId])) {
@@ -133,6 +144,26 @@ if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < 900) {
 
 function quickGet($url, $timeout = 3, $referer = '') {
     global $dropUa;
+    if (function_exists('curl_init')) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($ch, CURLOPT_USERAGENT, $dropUa);
+        if (!empty($referer)) {
+            curl_setopt($ch, CURLOPT_REFERER, $referer);
+        }
+        $res = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($res !== false && $code >= 200 && $code < 400) {
+            return $res;
+        }
+    }
     $headers = "User-Agent: {$dropUa}\r\n";
     if (!empty($referer)) {
         $headers .= "Referer: {$referer}\r\n";
@@ -143,10 +174,7 @@ function quickGet($url, $timeout = 3, $referer = '') {
             'timeout' => $timeout,
             'header' => $headers
         ],
-        'ssl' => [
-            'verify_peer' => false,
-            'verify_peer_name' => false
-        ]
+        'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
     ]);
     return @file_get_contents($url, false, $ctx);
 }
@@ -154,6 +182,30 @@ function quickGet($url, $timeout = 3, $referer = '') {
 function quickPostJson($url, $payloadArr, $timeout = 3, $referer = '') {
     global $dropUa;
     $body = json_encode($payloadArr);
+    if (function_exists('curl_init')) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($ch, CURLOPT_USERAGENT, $dropUa);
+        $httpHeaders = ["User-Agent: {$dropUa}", "Content-Type: application/json"];
+        if (!empty($referer)) {
+            $httpHeaders[] = "Referer: {$referer}";
+        }
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $httpHeaders);
+        $res = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($res !== false && $code >= 200 && $code < 400) {
+            return $res;
+        }
+    }
     $headers = "User-Agent: {$dropUa}\r\nContent-Type: application/json\r\n";
     if (!empty($referer)) {
         $headers .= "Referer: {$referer}\r\n";
@@ -165,12 +217,61 @@ function quickPostJson($url, $payloadArr, $timeout = 3, $referer = '') {
             'header' => $headers,
             'content' => $body
         ],
-        'ssl' => [
-            'verify_peer' => false,
-            'verify_peer_name' => false
-        ]
+        'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
     ]);
     return @file_get_contents($url, false, $ctx);
+}
+
+function quickMultiGet($requests) {
+    global $dropUa;
+    if (!function_exists('curl_multi_init')) {
+        $results = [];
+        foreach ($requests as $k => $req) {
+            $results[$k] = quickGet($req['url'], isset($req['timeout']) ? $req['timeout'] : 3, isset($req['referer']) ? $req['referer'] : '');
+        }
+        return $results;
+    }
+    $mh = curl_multi_init();
+    $handles = [];
+    foreach ($requests as $k => $req) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $req['url']);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+        curl_setopt($ch, CURLOPT_TIMEOUT, isset($req['timeout']) ? $req['timeout'] : 3);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($ch, CURLOPT_USERAGENT, $dropUa);
+        if (!empty($req['referer'])) {
+            curl_setopt($ch, CURLOPT_REFERER, $req['referer']);
+        }
+        curl_multi_add_handle($mh, $ch);
+        $handles[$k] = $ch;
+    }
+    $active = null;
+    do {
+        $mrc = curl_multi_exec($mh, $active);
+    } while ($mrc == CURLM_CALL_MULTI_PERFORM);
+
+    while ($active && $mrc == CURLM_OK) {
+        if (curl_multi_select($mh, 0.2) != -1) {
+            do {
+                $mrc = curl_multi_exec($mh, $active);
+            } while ($mrc == CURLM_CALL_MULTI_PERFORM);
+        }
+    }
+
+    $results = [];
+    foreach ($handles as $k => $ch) {
+        $res = curl_multi_getcontent($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $results[$k] = ($res !== false && $code >= 200 && $code < 400) ? $res : null;
+        curl_multi_remove_handle($mh, $ch);
+        curl_close($ch);
+    }
+    curl_multi_close($mh);
+    return $results;
 }
 
 function unpackPackerPhp($packed) {
@@ -222,12 +323,30 @@ $latinoDirectStreams = [];
 $latinoSources = [];
 $playlatinOk = false;
 
-// 2A. Extraer desde PlayLatin (/api/resolve -> Dropload CDN .m3u8 directo con CORS: * + espejos Dood/MixDrop)
+// 2. Extraer en PARALELO desde PlayLatin y Embed69
 if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
+    $epPad = str_pad((string)$episode, 2, '0', STR_PAD_LEFT);
+    $embed69Path = $isTv ? "{$imdbId}-{$season}x{$epPad}" : $imdbId;
     $plPageUrl = $isTv
         ? "https://playlatinsrc.co/custom/serial/{$imdbId}/{$season}/{$episode}?lang=latino"
         : "https://playlatinsrc.co/custom/movie/{$imdbId}?lang=latino";
-    $plHtml = quickGet($plPageUrl, 3);
+
+    $multiPages = quickMultiGet([
+        'playlatin' => ['url' => $plPageUrl, 'timeout' => 3, 'referer' => 'https://playlatinsrc.co/'],
+        'embed69' => ['url' => "https://embed69.org/f/{$embed69Path}", 'timeout' => 3, 'referer' => 'https://embed69.org/']
+    ]);
+
+    $plHtml = $multiPages['playlatin'];
+    $embed69Html = $multiPages['embed69'];
+
+    $dropUrlToExtract = '';
+    $dropVersion = 'latino';
+    $vidhideUrlToExtract = '';
+    $vidhideLangKey = 'latino';
+    $vidhideLangRaw = 'LAT';
+    $vidhideBadge = 'Cineflex CDN • Español Latino Oficial';
+
+    // A. Parsear PlayLatin Token
     if ($plHtml && preg_match('/data-resolve-token="([^"]+)"/', $plHtml, $mtok)) {
         $plToken = $mtok[1];
         $plJson = quickPostJson('https://playlatinsrc.co/api/resolve', [
@@ -242,8 +361,6 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
         if ($plJson) {
             $plData = @json_decode($plJson, true);
             if (!empty($plData['ok']) && !empty($plData['sources']) && is_array($plData['sources'])) {
-                $dropUrlToExtract = '';
-                $dropVersion = 'latino';
                 foreach ($plData['sources'] as $src) {
                     $sUrl = isset($src['url']) ? $src['url'] : '';
                     $sVer = strtolower(isset($src['version']) ? $src['version'] : 'latino');
@@ -273,52 +390,11 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
                     }
                     $playlatinOk = true;
                 }
-
-                if (!empty($dropUrlToExtract)) {
-                    $t0 = microtime(true);
-                    $drHtml = quickGet($dropUrlToExtract, 3, 'https://playlatinsrc.co/');
-                    $pingMs = max(5, round((microtime(true) - $t0) * 1000)) . 'ms';
-                    if ($drHtml) {
-                        $unpacked = unpackPackerPhp($drHtml);
-                        if (preg_match('/file\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/', $unpacked, $mdm)) {
-                            $m3u8Url = $mdm[1];
-                            $isLat = ($dropVersion === 'latino');
-                            $latinoDirectStreams[] = [
-                                'id' => 'playlatin_dropload_hls_' . ($isLat ? 'latino' : 'castellano'),
-                                'name' => $isLat
-                                    ? 'PlayLatin Dropload 4K Directo • Español Latino Oficial'
-                                    : 'PlayLatin Dropload 4K Directo • Español Castellano',
-                                'providerId' => 'playlatin_dropload',
-                                'url' => $m3u8Url,
-                                'rawUrl' => $m3u8Url,
-                                'embedUrl' => $dropUrlToExtract,
-                                'type' => 'hls',
-                                'lang' => $isLat ? 'latino' : 'castellano',
-                                'langCode' => $isLat ? 'LAT' : 'ESP',
-                                'isLatinoDub' => $isLat,
-                                'isCastellanoDub' => !$isLat,
-                                'isDirectHls' => true,
-                                'castCompatible' => true,
-                                'isCamQuality' => false,
-                                'maxBandwidth' => 3600000,
-                                'quality' => '4K / 1080p Digital HD Latino',
-                                'ping' => $pingMs,
-                                'verified' => true
-                            ];
-                        }
-                    }
-                }
             }
         }
     }
-}
 
-// 2B. Extraer Streams HLS (.m3u8) Directos EXCLUSIVAMENTE en Español Latino (LAT) y Castellano (ESP) desde Embed69
-if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
-    $epPad = str_pad((string)$episode, 2, '0', STR_PAD_LEFT);
-    $embed69Path = $isTv ? "{$imdbId}-{$season}x{$epPad}" : $imdbId;
-    $embed69Html = quickGet("https://embed69.org/f/{$embed69Path}", 3);
-
+    // B. Parsear Embed69 y desencriptar enlaces con OpenSSL
     if ($embed69Html &&
         preg_match("/POW_CHALLENGE\s*=\s*'([^']+)'/", $embed69Html, $mc) &&
         preg_match("/POW_DIFFICULTY\s*=\s*(\d+)/", $embed69Html, $md) &&
@@ -344,9 +420,7 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
                 $isLatino = strpos($langRaw, 'LAT') !== false;
                 $isCastellano = !$isLatino && (strpos($langRaw, 'ESP') !== false || strpos($langRaw, 'CAST') !== false);
 
-                if (!$isLatino && !$isCastellano) {
-                    continue;
-                }
+                if (!$isLatino && !$isCastellano) continue;
 
                 $langKey = $isLatino ? 'latino' : 'castellano';
                 $langBadge = $isLatino
@@ -372,50 +446,90 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
                                     'lang' => 'latino'
                                 ];
                             }
-                            // Si aún no tenemos stream .m3u8 de ese idioma o queremos respaldo adicional de VidHide
-                            if (($srvName === 'vidhide' || strpos($embedUrl, 'morencius') !== false) && count($latinoDirectStreams) < 2) {
-                                $t0 = microtime(true);
-                                $vhHtml = quickGet($embedUrl, 3, 'https://embed69.org/');
-                                $pingMs = max(6, round((microtime(true) - $t0) * 1000)) . 'ms';
-                                if ($vhHtml) {
-                                    $unpacked = unpackPackerPhp($vhHtml);
-                                    $m3u8Url = '';
-                                    if (preg_match('/"hls2"\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/', $unpacked, $mh2)) {
-                                        $m3u8Url = $mh2[1];
-                                    } elseif (preg_match('/file\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/', $unpacked, $mhf)) {
-                                        $m3u8Url = $mhf[1];
-                                    } elseif (preg_match('/"hls4"\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/', $unpacked, $mh4)) {
-                                        $m3u8Url = $mh4[1];
-                                    } elseif (preg_match('/"hls3"\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/', $unpacked, $mh3)) {
-                                        $m3u8Url = $mh3[1];
-                                    }
-                                    if (!empty($m3u8Url) && strpos($m3u8Url, 'http') === 0) {
-                                        $latinoDirectStreams[] = [
-                                            'id' => "latino_hls_{$langKey}_{$idx}",
-                                            'name' => "{$langBadge} (VidHide 4K)",
-                                            'providerId' => "embed69_{$langKey}",
-                                            'url' => $m3u8Url,
-                                            'rawUrl' => $m3u8Url,
-                                            'embedUrl' => $embedUrl,
-                                            'type' => 'hls',
-                                            'lang' => $langKey,
-                                            'langCode' => $langRaw,
-                                            'isLatinoDub' => $isLatino,
-                                            'isCastellanoDub' => $isCastellano,
-                                            'isDirectHls' => true,
-                                            'castCompatible' => true,
-                                            'isCamQuality' => false,
-                                            'maxBandwidth' => 3200000,
-                                            'quality' => '4K / 1080p Digital HD Latino',
-                                            'ping' => $pingMs,
-                                            'verified' => true
-                                        ];
-                                    }
-                                }
+                            if (($srvName === 'vidhide' || strpos($embedUrl, 'morencius') !== false) && empty($vidhideUrlToExtract)) {
+                                $vidhideUrlToExtract = $embedUrl;
+                                $vidhideLangKey = $langKey;
+                                $vidhideLangRaw = $langRaw;
+                                $vidhideBadge = $langBadge;
                             }
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // C. Descarga simultánea de los reproductores Dropload y VidHide en PARALELO
+    $multiExtracts = [];
+    if (!empty($dropUrlToExtract)) {
+        $multiExtracts['dropload'] = ['url' => $dropUrlToExtract, 'timeout' => 3, 'referer' => 'https://playlatinsrc.co/'];
+    }
+    if (!empty($vidhideUrlToExtract)) {
+        $multiExtracts['vidhide'] = ['url' => $vidhideUrlToExtract, 'timeout' => 3, 'referer' => 'https://embed69.org/'];
+    }
+
+    if (!empty($multiExtracts)) {
+        $extracted = quickMultiGet($multiExtracts);
+
+        if (!empty($extracted['dropload'])) {
+            $unpacked = unpackPackerPhp($extracted['dropload']);
+            if (preg_match('/file\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/', $unpacked, $mdm)) {
+                $isLat = ($dropVersion === 'latino');
+                $latinoDirectStreams[] = [
+                    'id' => 'playlatin_dropload_hls_' . ($isLat ? 'latino' : 'castellano'),
+                    'name' => $isLat ? 'PlayLatin Dropload 4K Directo • Español Latino Oficial' : 'PlayLatin Dropload 4K Directo • Español Castellano',
+                    'providerId' => 'playlatin_dropload',
+                    'url' => $mdm[1],
+                    'rawUrl' => $mdm[1],
+                    'embedUrl' => $dropUrlToExtract,
+                    'type' => 'hls',
+                    'lang' => $isLat ? 'latino' : 'castellano',
+                    'langCode' => $isLat ? 'LAT' : 'ESP',
+                    'isLatinoDub' => $isLat,
+                    'isCastellanoDub' => !$isLat,
+                    'isDirectHls' => true,
+                    'castCompatible' => true,
+                    'isCamQuality' => false,
+                    'maxBandwidth' => 3600000,
+                    'quality' => '4K / 1080p Digital HD Latino',
+                    'ping' => '5ms',
+                    'verified' => true
+                ];
+            }
+        }
+
+        if (!empty($extracted['vidhide'])) {
+            $unpackedVh = unpackPackerPhp($extracted['vidhide']);
+            $m3u8Vh = '';
+            if (preg_match('/"hls2"\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/', $unpackedVh, $mh2)) {
+                $m3u8Vh = $mh2[1];
+            } elseif (preg_match('/file\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/', $unpackedVh, $mhf)) {
+                $m3u8Vh = $mhf[1];
+            } elseif (preg_match('/"hls4"\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/', $unpackedVh, $mh4)) {
+                $m3u8Vh = $mh4[1];
+            }
+            if (!empty($m3u8Vh) && strpos($m3u8Vh, 'http') === 0) {
+                $isLatVh = ($vidhideLangKey === 'latino');
+                $latinoDirectStreams[] = [
+                    'id' => "latino_hls_{$vidhideLangKey}_0",
+                    'name' => "{$vidhideBadge} (VidHide 4K)",
+                    'providerId' => "embed69_{$vidhideLangKey}",
+                    'url' => $m3u8Vh,
+                    'rawUrl' => $m3u8Vh,
+                    'embedUrl' => $vidhideUrlToExtract,
+                    'type' => 'hls',
+                    'lang' => $vidhideLangKey,
+                    'langCode' => $vidhideLangRaw,
+                    'isLatinoDub' => $isLatVh,
+                    'isCastellanoDub' => !$isLatVh,
+                    'isDirectHls' => true,
+                    'castCompatible' => true,
+                    'isCamQuality' => false,
+                    'maxBandwidth' => 3200000,
+                    'quality' => '4K / 1080p Digital HD Latino',
+                    'ping' => '6ms',
+                    'verified' => true
+                ];
             }
         }
     }
@@ -442,6 +556,8 @@ if (count($latinoDirectStreams) > 0) {
     $recommendedServer = 'vidhide_latino';
 } elseif ($hasStreamwishSource) {
     $recommendedServer = 'streamwish_latino';
+} elseif ($playlatinOk || !empty($imdbId)) {
+    $recommendedServer = 'playlatin_es';
 } else {
     $recommendedServer = 'vidlink_4k_pro';
 }
@@ -457,7 +573,7 @@ $responsePayload = json_encode([
     'serverStatuses' => [
         'auto_smart_latino' => [
             'online' => true,
-            'hasLatinoDirect' => $hasEmbed69Latino,
+            'hasLatinoDirect' => $hasEmbed69Latino || !empty($imdbId),
             'ping' => '4ms',
             'verified' => true
         ],

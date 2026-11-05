@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && cp -f public/api.php dist/api.php && cp -f public/.htaccess dist/.htaccess && cp -f public/sw.js dist/sw.js && cp -f public/sw.js sw.js",
     "preview": "vite preview"
   },
   "dependencies": {

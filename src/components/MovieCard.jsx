@@ -32,7 +32,7 @@ export default function MovieCard({
       {/* Poster Container */}
       <div 
         onClick={() => onOpenDetails(movie)}
-        className="specular-card cinema-card-glow relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-[#0a0a12] border border-white/[0.12] transition-all duration-300 group-hover:border-netflix-red/70"
+        className="specular-card cinema-card-glow relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-[#0a0a12] border border-white/[0.12] transition-all duration-300 group-hover:border-netflix-red/70 will-change-transform"
       >
         {/* Reflejo diagonal dinámico al pasar el cursor */}
         <div className="card-glare" />
@@ -42,7 +42,9 @@ export default function MovieCard({
           alt={movie.title}
           loading="lazy"
           decoding="async"
-          className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 filter brightness-[0.97] group-hover:brightness-105 saturate-[1.06]"
+          width="208"
+          height="312"
+          className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 filter brightness-[0.98] group-hover:brightness-105"
           onError={(e) => {
             e.target.src = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=500&auto=format&fit=crop';
           }}
@@ -70,12 +72,12 @@ export default function MovieCard({
           </div>
         )}
 
-        {/* Hover Quick Action Overlay (Desktop / Tablet) con animación de elevación */}
+        {/* Hover Quick Action Overlay (Desktop / Tablet) — Oculto en móviles para máximo rendimiento de scroll */}
         <motion.div 
           initial={false}
-          animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 10 }}
-          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-          className="absolute inset-0 bg-gradient-to-t from-[#050509] via-[#050509]/75 to-transparent flex flex-col justify-end p-3 z-20 pointer-events-auto"
+          animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 8 }}
+          transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+          className={`hidden sm:flex absolute inset-0 bg-gradient-to-t from-[#050509] via-[#050509]/75 to-transparent flex-col justify-end p-3 z-20 ${isHovered ? 'pointer-events-auto' : 'pointer-events-none'}`}
         >
           <div className="flex items-center space-x-1.5 mb-2">
             <motion.button 

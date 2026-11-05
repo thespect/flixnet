@@ -1,6 +1,13 @@
 DirectoryIndex index.php index.html
-<IfModule mod_headers.c>
-  Header set X-Frame-Options "SAMEORIGIN"
-  Header set Referrer-Policy "origin"
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^api/scan-streams$ api.php?action=scan [QSA,L]
+  RewriteRule ^api/hls-proxy$ api.php?action=proxy [QSA,L]
 </IfModule>
 
+<IfModule mod_headers.c>
+  Header set Access-Control-Allow-Origin "*"
+  Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+  Header set Access-Control-Allow-Headers "*"
+</IfModule>
