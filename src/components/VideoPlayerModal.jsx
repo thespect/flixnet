@@ -499,15 +499,40 @@ export default function VideoPlayerModal({
     }
   }, [isScanningLinks, isNativeServer, activeDirectStream, selectedServer, showTrailer, movie, showToast]);
 
-  // Watchdog Universal de Auto-Failover Inteligente (100% Español Latino)
+  // Iterador Inteligente de Servidores en Español Latino (1 clic o Auto-Failover)
+  const iterateNextLatinoServer = useCallback((reasonLabel = 'Iterando') => {
+    const hasLatinoHls = directHlsStreams.some((s) => s.isLatinoDub);
+    const chain = hasLatinoHls
+      ? ['auto_smart_latino', 'native_hls_4k', 'vidhide_latino', 'embed69_latino', 'nxsha_multilang', 'playlatin_es']
+      : ['auto_smart_latino', 'vidhide_latino', 'embed69_latino', 'nxsha_multilang', 'playlatin_es'];
+
+    const currIdx = chain.indexOf(selectedServer);
+    const nextServer = currIdx >= 0 ? chain[(currIdx + 1) % chain.length] : chain[1];
+
+    stopSpeechSynthesis();
+    setShowTrailer(false);
+    setSelectedServer(nextServer);
+    setSelectedAudioMode('es_latino_dub');
+    setIframeKey((k) => k + 1);
+    setIsLoading(true);
+
+    if (nextServer === 'native_hls_4k') {
+      const latIdx = directHlsStreams.findIndex((s) => s.isLatinoDub);
+      if (latIdx >= 0) setActiveHlsIndex(latIdx);
+    }
+
+    const prov = STREAM_PROVIDERS.find((p) => p.id === nextServer);
+    showToast(`${reasonLabel}: Conectando a ${prov?.name || 'Siguiente Nodo'} (Español Latino 4K)...`);
+  }, [directHlsStreams, selectedServer, stopSpeechSynthesis, showToast]);
+
+  // Watchdog Universal de Auto-Iteración Inteligente (100% Español Latino • 4.2s)
   useEffect(() => {
     if (!isLoading || showTrailer || isResolvingImdb) return;
 
-    const timeoutMs = isNativeServer ? 6500 : 8500;
+    const timeoutMs = isNativeServer ? 4200 : 4500;
     const timer = setTimeout(() => {
       if (isLoading) {
         if (isNativeServer) {
-          // Buscar únicamente otro stream en Español Latino si estamos en modo Latino
           const nextLatinoIdx = directHlsStreams.findIndex(
             (s, idx) => idx > activeHlsIndex && (selectedServer === 'nova_4k_master' ? true : s.isLatinoDub)
           );
@@ -517,33 +542,12 @@ export default function VideoPlayerModal({
             return;
           }
         }
-
-        // Cadena de respaldo 100% en Español Latino (NUNCA conmuta a servidores en inglés)
-        const latinoFallbackChain = ['auto_smart_latino', 'playlatin_es', 'embed69_latino', 'nxsha_multilang'];
-        const currentIdx = latinoFallbackChain.indexOf(selectedServer);
-        let next = 'playlatin_es';
-        if (selectedServer === 'auto_smart_latino' || selectedServer === 'playlatin_es') {
-          next = 'embed69_latino';
-        } else if (currentIdx >= 0 && currentIdx < latinoFallbackChain.length - 1) {
-          next = latinoFallbackChain[currentIdx + 1];
-        } else if (selectedServer === 'native_hls_4k') {
-          next = 'playlatin_es';
-        } else {
-          setIsLoading(false);
-          return;
-        }
-
-        setSelectedServer(next);
-        setSelectedAudioMode('es_latino_dub');
-        setIframeKey((k) => k + 1);
-        setIsLoading(true);
-        const prov = STREAM_PROVIDERS.find((p) => p.id === next);
-        showToast(`Smart Auto-Failover: Conectando a ${prov?.name || 'nodo alternativo'} (Español Latino)...`);
+        iterateNextLatinoServer('Auto-Iterador');
       }
     }, timeoutMs);
 
     return () => clearTimeout(timer);
-  }, [isLoading, selectedServer, showTrailer, isResolvingImdb, isNativeServer, activeHlsIndex, directHlsStreams, showToast]);
+  }, [isLoading, selectedServer, showTrailer, isResolvingImdb, isNativeServer, activeHlsIndex, directHlsStreams, iterateNextLatinoServer, showToast]);
 
   // Doblaje Voz IA en Español sincronizado con subtítulos cuando el usuario elige 'es_ai_voiceover'
   useEffect(() => {
@@ -863,15 +867,27 @@ export default function VideoPlayerModal({
 
   if (!movie) return null;
 
-  // Stream URL con soporte de idioma dinámico (latino / castellano / subtitulado)
-  const streamUrl = currentProvider.getUrl(
-    movie.id,
-    movie.isTv,
-    currentSeason,
-    currentEpisode,
-    resolvedImdbId,
-    playLatinLang
-  );
+  // Stream URL con soporte de idioma dinámico y espejo directo desencriptado para Turbo Latino FHD
+  const directDecryptedMirrorUrl = (() => {
+    const fromStream = directHlsStreams.find((s) => s.isLatinoDub && s.embedUrl)?.embedUrl;
+    if (fromStream) return fromStream;
+    const fromSources = (scanReport?.latinoSources || []).find(
+      (s) => s.url && (String(s.lang || '').toUpperCase().includes('LAT') || s.isLatino)
+    )?.url;
+    return fromSources || null;
+  })();
+
+  const streamUrl =
+    selectedServer === 'vidhide_latino' && directDecryptedMirrorUrl
+      ? directDecryptedMirrorUrl
+      : currentProvider.getUrl(
+          movie.id,
+          movie.isTv,
+          currentSeason,
+          currentEpisode,
+          resolvedImdbId,
+          playLatinLang
+        );
 
   const activeTrailerKey = movie.trailer_id || trailerKey;
   const trailerUrl = activeTrailerKey 
@@ -912,10 +928,13 @@ export default function VideoPlayerModal({
         loadSubtitleTrack(-1);
         showToast('Cineflex 4K Directo activo (Español Latino Oficial • 0% Anuncios)');
       } else {
-        setSelectedServer('playlatin_es');
+        setSelectedServer('vidhide_latino');
         setSelectedAudioMode('es_latino_dub');
-        showToast('Conmutando a PlayLatin 4K Oficial (100% Español Latino)...');
+        showToast('Conmutando a Turbo Latino FHD (100% Español Latino)...');
       }
+    } else if (serverId === 'vidhide_latino') {
+      setSelectedAudioMode('es_latino_dub');
+      showToast('Turbo Latino FHD activado (Espejo Directo Español Latino • 0% Anuncios)');
     } else if (serverId === 'embed69_latino') {
       setSelectedAudioMode('es_latino_dub');
       showToast('Embed69 Multi-Latino 4K activado (100% Español Latino • 0% Anuncios)');
@@ -1667,28 +1686,74 @@ export default function VideoPlayerModal({
           )}
         </AnimatePresence>
 
-        {/* Loading Spinner Minimalista Estilo Apple TV+ */}
+        {/* HUD Interactivo de Carga e Iteración de Nodos en Español Latino 4K */}
         <AnimatePresence>
           {isLoading && (
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#030306]/85 backdrop-blur-xl space-y-3.5 p-4 pointer-events-none"
+              transition={{ duration: 0.25 }}
+              className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#030307]/88 backdrop-blur-2xl p-4"
             >
-              <div className="relative flex items-center justify-center">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 border-2 border-white/15 border-t-white rounded-full animate-spin" />
-              </div>
-              <div className="text-center space-y-1 max-w-sm">
-                <p className="text-white text-xs sm:text-sm font-bold tracking-tight">
-                  {showTrailer
-                    ? 'Cargando Tráiler Oficial 4K...'
-                    : `Iniciando ${currentProvider.name}...`}
-                </p>
-                <p className="text-[11px] text-emerald-400 font-semibold">
-                  {currentAudioObj.shortLabel} · 0% Anuncios
-                </p>
-              </div>
+              <motion.div
+                initial={{ scale: 0.92, y: 12 }}
+                animate={{ scale: 1, y: 0 }}
+                className="relative w-full max-w-md rounded-3xl bg-[#0b0b14]/90 border border-white/[0.14] p-6 shadow-[0_28px_80px_rgba(0,0,0,0.95)] flex flex-col items-center text-center space-y-4 overflow-hidden"
+              >
+                {/* Brillo ambiental superior */}
+                <div className="absolute -top-20 inset-x-0 mx-auto w-56 h-56 bg-netflix-red/25 rounded-full blur-3xl pointer-events-none" />
+
+                {/* Anillo Radar Animado */}
+                <div className="relative flex items-center justify-center w-16 h-16">
+                  <motion.div
+                    animate={{ scale: [1, 1.35, 1], opacity: [0.45, 0, 0.45] }}
+                    transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                    className="absolute inset-0 rounded-full bg-netflix-red/35"
+                  />
+                  <div className="w-14 h-14 border-2 border-white/15 border-t-netflix-red border-r-emerald-400 rounded-full animate-spin" />
+                  <Zap className="w-5 h-5 text-emerald-400 absolute" />
+                </div>
+
+                <div className="space-y-1 relative z-10">
+                  <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-black uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                    <span>Nodo Activo: {currentProvider.name}</span>
+                  </div>
+                  <h3 className="text-white text-sm sm:text-base font-black tracking-tight pt-1">
+                    {showTrailer
+                      ? 'Iniciando Tráiler Oficial 4K...'
+                      : `Conectando flujo en ${currentAudioObj.shortLabel}...`}
+                  </h3>
+                  <p className="text-[11px] text-white/60">
+                    Verificación automática anti-anuncios · Si tarda más de 4s saltará al siguiente servidor
+                  </p>
+                </div>
+
+                {/* Barra de progreso animada */}
+                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ x: '-100%' }}
+                    animate={{ x: '100%' }}
+                    transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                    className="w-1/2 h-full bg-gradient-to-r from-netflix-red via-amber-400 to-emerald-400 rounded-full"
+                  />
+                </div>
+
+                {/* Botón Directo de Iteración Instantánea (Permite saltar sin esperar ni 1 segundo) */}
+                {!showTrailer && (
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.96 }}
+                    onClick={() => iterateNextLatinoServer('Cambio Rápido')}
+                    className="pointer-events-auto w-full py-2.5 px-4 rounded-2xl bg-white hover:bg-neutral-200 text-black font-black text-xs flex items-center justify-center space-x-2 shadow-[0_10px_30px_rgba(255,255,255,0.2)] transition-all cursor-pointer"
+                  >
+                    <RotateCw className="w-3.5 h-3.5 text-netflix-red" />
+                    <span>Saltar al Siguiente Servidor en Español Latino</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </motion.button>
+                )}
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1944,11 +2009,18 @@ export default function VideoPlayerModal({
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
           
-          {/* Carrusel Horizontal Deslizable de Servidores */}
+          {/* Carrusel Horizontal Deslizable de Servidores + Botón de Iteración Rápida */}
           <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar py-0.5 flex-1 min-w-0">
-            <span className="text-[10px] sm:text-[11px] font-semibold text-white/50 uppercase tracking-widest flex items-center shrink-0 mr-1">
-              <Radio className="w-3 h-3 mr-1.5 text-emerald-400" /> Fuente:
-            </span>
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.94 }}
+              onClick={() => iterateNextLatinoServer('Iterador Rápido')}
+              className="px-3 py-1.5 rounded-full bg-gradient-to-r from-netflix-red to-rose-600 hover:from-red-600 hover:to-rose-500 text-white text-[11px] sm:text-xs font-black flex items-center space-x-1.5 shrink-0 shadow-[0_4px_20px_rgba(229,9,20,0.45)] cursor-pointer border border-white/20"
+              title="Iterar instantáneamente al siguiente servidor en Español Latino"
+            >
+              <RotateCw className="w-3 h-3 animate-spin" style={{ animationDuration: '4s' }} />
+              <span>Iterar Servidor</span>
+            </motion.button>
 
             {STREAM_PROVIDERS.map((provider) => {
               const isActive = !showTrailer && selectedServer === provider.id;

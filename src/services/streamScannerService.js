@@ -162,6 +162,7 @@ async function extractClientSideEmbed69Latino(imdbId, isTv = false, season = 1, 
     });
 
     const streams = [];
+    const latinoSources = [];
     for (let groupIdx = 0; groupIdx < spanishGroups.length; groupIdx++) {
       const langGroup = spanishGroups[groupIdx];
       const langRaw = String(langGroup.video_language || 'LAT').toUpperCase();
@@ -173,14 +174,28 @@ async function extractClientSideEmbed69Latino(imdbId, isTv = false, season = 1, 
         : 'Cineflex CDN • Español Castellano';
 
       const embeds = Array.isArray(langGroup.sortedEmbeds) ? langGroup.sortedEmbeds : [];
-      const vhEmb = embeds.find((e) => String(e.servername || '').toLowerCase() === 'vidhide');
-      if (!vhEmb?.link) continue;
+      const decryptedEmbeds = [];
+      for (const emb of embeds) {
+        if (!emb?.link) continue;
+        const decUrl = await decryptLink(emb.link);
+        if (decUrl && decUrl.startsWith('http')) {
+          const item = {
+            server: String(emb.servername || '').toLowerCase(),
+            url: decUrl,
+            lang: langRaw,
+            isLatino
+          };
+          decryptedEmbeds.push(item);
+          latinoSources.push(item);
+        }
+      }
 
-      const vhUrl = await decryptLink(vhEmb.link);
-      if (!vhUrl || !vhUrl.startsWith('http')) continue;
+      const vhEmb = decryptedEmbeds.find((e) => e.server === 'vidhide');
+      if (!vhEmb?.url) continue;
 
+      const vhUrl = vhEmb.url;
       const t0 = performance.now();
-      const er = await fetchWithTimeout(`${SUB_CORS_PROXY}${encodeURIComponent(vhUrl)}`, {}, 3200);
+      const er = await fetchWithTimeout(`${SUB_CORS_PROXY}${encodeURIComponent(vhUrl)}`, {}, 3000);
       if (!er.ok) continue;
       const eHtml = await er.text();
       const unpacked = unpackPackerClient(eHtml);
@@ -213,12 +228,12 @@ async function extractClientSideEmbed69Latino(imdbId, isTv = false, season = 1, 
       }
     }
 
-    if (streams.length === 0) return null;
+    if (streams.length === 0 && latinoSources.length === 0) return null;
     return {
       ok: true,
       imdbId,
       latinoDirectStreams: streams,
-      latinoSources: [],
+      latinoSources,
       serverStatuses: {}
     };
   } catch {

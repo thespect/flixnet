@@ -242,6 +242,37 @@ export const STREAM_PROVIDERS = [
     getUrl: () => ''
   },
   {
+    id: 'vidhide_latino',
+    name: 'Turbo Latino FHD',
+    subtitle: 'Nodo Directo Desencriptado • Español Latino Alta Velocidad (VidHide / StreamWish LAT)',
+    badge: 'TURBO LATINO',
+    tag: 'Directo LAT',
+    quality: '1080p / 4K Español Latino',
+    ping: '6ms',
+    isNative: false,
+    isDirectHls: false,
+    sandboxSafe: true,
+    language: 'Español Latino Oficial (Nodo Directo)',
+    description: 'Conecta directamente al reproductor desencriptado en Español Latino sin páginas intermedias y con escudo Sandbox 0% anuncios.',
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
+      const validImdb = (imdbId && String(imdbId).startsWith('tt'))
+        ? imdbId
+        : (KNOWN_IMDB_IDS[id] && String(KNOWN_IMDB_IDS[id]).startsWith('tt'))
+          ? KNOWN_IMDB_IDS[id]
+          : null;
+
+      if (!validImdb) {
+        return isTv
+          ? `https://web.nxsha.app/embed/tv/${id}/${season}/${episode}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`
+          : `https://web.nxsha.app/embed/movie/${id}?lang=esla&server=mbply&autoplay=true&disable_app_ad=true&disable_dl_button=true`;
+      }
+
+      const epPad = String(episode).padStart(2, '0');
+      const path = isTv ? `${validImdb}-${season}x${epPad}` : validImdb;
+      return `https://embed69.org/f/${path}`;
+    }
+  },
+  {
     id: 'embed69_latino',
     name: 'Embed69 Latino 4K',
     subtitle: 'Clúster Multi-Servidor Oficial en Español Latino (LAT / ESP)',

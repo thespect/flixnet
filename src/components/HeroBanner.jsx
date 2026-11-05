@@ -64,14 +64,17 @@ export default function HeroBanner({
           <AnimatePresence mode="wait">
             <motion.img 
               key={movie.id}
-              initial={{ scale: 1.08, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
+              initial={{ scale: 1.12, opacity: 0 }}
+              animate={{ scale: 1.01, opacity: 1 }}
+              exit={{ opacity: 0, scale: 1.04 }}
+              transition={{
+                opacity: { duration: 0.85, ease: [0.16, 1, 0.3, 1] },
+                scale: { duration: 11, ease: "linear" }
+              }}
               src={movie.backdrop_path || movie.poster_path} 
               alt={movie.title}
               fetchPriority="high"
-              className="w-full h-full object-cover object-center filter brightness-[0.84] contrast-[1.08] saturate-[1.1]"
+              className="w-full h-full object-cover object-center filter brightness-[0.86] contrast-[1.09] saturate-[1.15]"
             />
           </AnimatePresence>
         )}
@@ -144,15 +147,15 @@ export default function HeroBanner({
             {/* Botones de Acción Estilo Apple TV+ / HBO Max */}
             <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 pt-1.5">
               
-              {/* Botón Principal Reproducir: Blanco Puro con Sombra Suave */}
+              {/* Botón Principal Reproducir con Brillo Dinámico Shimmer */}
               <motion.button 
-                whileHover={{ scale: 1.03 }}
+                whileHover={{ scale: 1.04, y: -2 }}
                 whileTap={{ scale: 0.96 }}
                 onClick={() => onPlay(movie, 1, 1)}
-                className="flex items-center justify-center space-x-2.5 px-6 sm:px-8 py-3 sm:py-3.5 rounded-full bg-white hover:bg-neutral-200 text-black font-bold text-xs sm:text-sm md:text-base shadow-[0_12px_35px_rgba(255,255,255,0.22)] transition-all cursor-pointer"
+                className="btn-shimmer flex items-center justify-center space-x-2.5 px-6 sm:px-8 py-3 sm:py-3.5 rounded-full bg-gradient-to-r from-netflix-red via-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-black text-xs sm:text-sm md:text-base shadow-[0_12px_38px_rgba(229,9,20,0.55)] border border-white/25 transition-all cursor-pointer"
               >
-                <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-black text-black shrink-0" />
-                <span>{movie.isTv ? 'Ver Episodio 1' : 'Ver Ahora'}</span>
+                <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-white text-white shrink-0" />
+                <span>{movie.isTv ? 'Ver Episodio 1 (Latino 4K)' : 'Ver Ahora en Latino 4K'}</span>
               </motion.button>
 
               {/* Botón Secundario: Más Información / Temporadas en Liquid Glass */}
@@ -270,10 +273,15 @@ export default function HeroBanner({
                       {item.title}
                     </span>
                     {isCurr && (
-                      <motion.div
-                        layoutId="heroActiveThumbBar"
-                        className="absolute bottom-0 inset-x-0 h-0.5 bg-netflix-red"
-                      />
+                      <div className="absolute bottom-0 inset-x-0 h-1 bg-white/20 overflow-hidden">
+                        <motion.div
+                          key={`progress_${movie.id}`}
+                          initial={{ width: '0%' }}
+                          animate={{ width: '100%' }}
+                          transition={{ duration: 9.5, ease: 'linear' }}
+                          className="h-full bg-gradient-to-r from-netflix-red via-rose-500 to-amber-400"
+                        />
+                      </div>
                     )}
                   </button>
                 );

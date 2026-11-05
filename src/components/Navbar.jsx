@@ -135,21 +135,27 @@ export default function Navbar({
           {/* Left: Brand Identity & Desktop Navigation */}
           <div className="flex items-center space-x-5 lg:space-x-8 min-w-0">
             <motion.div 
-              whileHover={{ scale: 1.02 }}
+              whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.96 }}
               onClick={() => { setActiveTab('home'); clearSearch(); }}
               className="flex items-center space-x-2.5 cursor-pointer select-none group shrink-0"
             >
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-netflix-red flex items-center justify-center shadow-[0_4px_20px_rgba(229,9,20,0.5)] transition-all">
+              <div className="btn-shimmer w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-netflix-red via-red-600 to-rose-700 flex items-center justify-center shadow-[0_4px_24px_rgba(229,9,20,0.65)] border border-white/25 transition-all">
                 <Film className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
-              <span className="logo-font text-2xl sm:text-3xl font-black text-white tracking-wider leading-none drop-shadow-md">
-                CINE<span className="text-netflix-red">FLEX</span>
-              </span>
+              <div className="flex items-center space-x-2">
+                <span className="logo-font text-2xl sm:text-3xl font-black text-white tracking-wider leading-none drop-shadow-md">
+                  CINE<span className="text-netflix-red">FLEX</span>
+                </span>
+                <span className="hidden xl:inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[9px] font-black text-emerald-300 tracking-wider uppercase">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>LATINO 4K</span>
+                </span>
+              </div>
             </motion.div>
 
             {/* Desktop Navigation Links — Apple TV+ Liquid Glass Pill Dock */}
-            <div className="hidden lg:flex items-center space-x-1 bg-white/[0.04] backdrop-blur-2xl border border-white/[0.08] rounded-full p-1 text-xs font-semibold">
+            <div className="hidden lg:flex items-center space-x-1 bg-[#0b0b14]/80 backdrop-blur-2xl border border-white/[0.12] rounded-full p-1 text-xs font-semibold shadow-[0_8px_30px_rgba(0,0,0,0.6)]">
               {navItems.map((item) => {
                 const isActive = activeTab === item.id && !searchQuery;
                 return (
@@ -157,13 +163,13 @@ export default function Navbar({
                     key={item.id}
                     onClick={() => { setActiveTab(item.id); clearSearch(); }}
                     className={`relative px-4 py-1.5 rounded-full transition-colors flex items-center space-x-1.5 cursor-pointer ${
-                      isActive ? 'text-black font-bold' : 'text-white/75 hover:text-white'
+                      isActive ? 'text-white font-bold' : 'text-white/75 hover:text-white'
                     }`}
                   >
                     {isActive && (
                       <motion.div 
                         layoutId="activeNavIndicator"
-                        className="absolute inset-0 bg-white rounded-full shadow-[0_2px_12px_rgba(255,255,255,0.25)]"
+                        className="absolute inset-0 bg-gradient-to-r from-netflix-red to-rose-600 rounded-full shadow-[0_4px_18px_rgba(229,9,20,0.5)] border border-white/20"
                         transition={{ type: "spring", stiffness: 420, damping: 32 }}
                       />
                     )}

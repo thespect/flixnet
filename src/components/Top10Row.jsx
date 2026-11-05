@@ -40,13 +40,17 @@ export default function Top10Row({
       className="relative py-4 sm:py-5 space-y-2 select-none group/top10"
     >
       {/* Editorial Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-baseline justify-between">
-        <div className="flex items-baseline space-x-3">
-          <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white tracking-tight">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <span className="w-1.5 h-7 rounded-full bg-gradient-to-b from-netflix-red via-rose-500 to-amber-400 shadow-[0_0_18px_rgba(229,9,20,0.9)]" />
+          <span className="px-2.5 py-0.5 rounded-md bg-gradient-to-r from-netflix-red to-rose-600 text-white text-[10px] font-black tracking-widest uppercase shadow-lg">
+            TOP 10
+          </span>
+          <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white tracking-tight">
             {title}
           </h3>
-          <span className="text-[11px] font-semibold text-white/45 uppercase tracking-widest hidden sm:inline">
-            Tendencias en Español Latino
+          <span className="text-[11px] font-bold text-emerald-400/90 uppercase tracking-widest hidden sm:inline">
+            • Español Latino 4K
           </span>
         </div>
       </div>

@@ -105,17 +105,95 @@ input[type="range"].touch-scrubber:active::-webkit-slider-thumb {
   -webkit-text-fill-color: transparent;
 }
 
-/* Brillo ambiental cinemático */
+/* Brillo ambiental cinemático con movimiento Aurora en vivo */
+@keyframes auroraFlow {
+  0% {
+    background-position: 0% 50%;
+    transform: scale(1);
+  }
+  50% {
+    background-position: 100% 50%;
+    transform: scale(1.04);
+  }
+  100% {
+    background-position: 0% 50%;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmerSweep {
+  0% {
+    transform: translateX(-120%) skewX(-18deg);
+  }
+  100% {
+    transform: translateX(220%) skewX(-18deg);
+  }
+}
+
+@keyframes pulseAura {
+  0%, 100% {
+    opacity: 0.32;
+  }
+  50% {
+    opacity: 0.52;
+  }
+}
+
 .ambient-glow {
-  background: radial-gradient(circle at 50% -20%, rgba(229, 9, 20, 0.22), transparent 75%);
+  background: radial-gradient(circle at 50% -20%, rgba(229, 9, 20, 0.28), transparent 75%);
 }
 
 .ambient-mesh {
   background-image: 
-    radial-gradient(at 0% 0%, rgba(229, 9, 20, 0.14) 0px, transparent 55%),
-    radial-gradient(at 100% 0%, rgba(245, 158, 11, 0.09) 0px, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(16, 185, 129, 0.04) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(229, 9, 20, 0.08) 0px, transparent 60%);
+    radial-gradient(at 0% 0%, rgba(229, 9, 20, 0.20) 0px, transparent 52%),
+    radial-gradient(at 100% 0%, rgba(245, 158, 11, 0.13) 0px, transparent 48%),
+    radial-gradient(at 50% 45%, rgba(139, 92, 246, 0.09) 0px, transparent 55%),
+    radial-gradient(at 85% 90%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+    radial-gradient(at 15% 100%, rgba(229, 9, 20, 0.14) 0px, transparent 58%);
+  background-size: 160% 160%;
+  animation: auroraFlow 18s ease-in-out infinite;
+}
+
+.btn-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.45),
+    transparent
+  );
+  animation: shimmerSweep 3.2s infinite ease-in-out;
+  pointer-events: none;
+}
+
+.card-glare {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.16) 48%,
+    rgba(255, 255, 255, 0.04) 54%,
+    transparent 80%
+  );
+  transform: translateX(-130%);
+  transition: transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  z-index: 15;
+}
+
+.group:hover .card-glare {
+  transform: translateX(130%);
 }
 
 /* Efectos de Iluminación Neón Sutil */

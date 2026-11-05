@@ -377,14 +377,29 @@ function cineflexStreamScannerPlugin() {
 export default defineConfig({
   base: './',
   plugins: [react(), cineflexStreamScannerPlugin()],
+  build: {
+    cssCodeSplit: false,
+    rollupOptions: {
+      output: {
+        entryFileNames: 'assets/cineflex.js',
+        chunkFileNames: 'assets/cineflex-[name].js',
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name && assetInfo.name.endsWith('.css')) {
+            return 'assets/cineflex.css';
+          }
+          return 'assets/[name]-[hash][extname]';
+        }
+      }
+    }
+  },
   server: {
     host: true,
-    port: 3000,
+    port: 5173,
     allowedHosts: true,
   },
   preview: {
     host: true,
-    port: 3000,
+    port: 5173,
     allowedHosts: true,
   }
 })

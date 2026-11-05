@@ -5,9 +5,21 @@ import ErrorBoundary from './components/ErrorBoundary.jsx'
 import './services/adBlockerService'
 import './index.css'
 
+if ('caches' in window) {
+  caches.keys().then((keys) => {
+    keys.forEach((k) => {
+      if (k !== 'cineflex-max-4k-v12') {
+        caches.delete(k).catch(() => {});
+      }
+    });
+  }).catch(() => {});
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.register('./sw.js').then((reg) => {
+      reg.update().catch(() => {});
+    }).catch(() => {});
   });
 }
 
