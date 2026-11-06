@@ -109,9 +109,8 @@ export default function Top10Row({
                     className="w-full h-full object-cover filter brightness-[0.96] group-hover/card:brightness-105 transition-transform duration-500 group-hover/card:scale-105"
                   />
                   <div className="absolute top-2 left-2 z-10 pointer-events-none">
-                    <span className="cinema-badge-emerald text-emerald-300 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full flex items-center space-x-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>LATINO 4K</span>
+                    <span className="bg-black/60 backdrop-blur-md text-white/90 border border-white/15 text-[9px] font-black tracking-wider px-1.5 py-0.5 rounded-md shadow-sm">
+                      4K UHD
                     </span>
                   </div>
 

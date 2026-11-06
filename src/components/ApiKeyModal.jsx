@@ -2,11 +2,18 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { X, Key, Check, AlertCircle, ExternalLink, Sparkles, Trash2 } from 'lucide-react';
 import { StorageService } from '../services/movieService';
+import { lockBodyScroll } from '../utils/scrollLock';
 
 export default function ApiKeyModal({ isOpen, onClose, onKeySaved }) {
   const [apiKey, setApiKey] = useState(StorageService.getApiKey());
   const [status, setStatus] = useState(null);
   const [isVerifying, setIsVerifying] = useState(false);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const unlock = lockBodyScroll();
+    return () => unlock();
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

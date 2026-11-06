@@ -527,7 +527,7 @@ foreach ($latinoSources as $ls) {
     }
 }
 
-$recommendedServer = count($latinoDirectStreams) > 0 ? 'native_hls_4k' : (!empty($imdbId) ? 'playlatin_es' : 'vidsrc_pm');
+$recommendedServer = count($latinoDirectStreams) > 0 ? 'native_hls_4k' : 'auto_smart_latino';
 
 $responsePayload = json_encode([
     'ok' => true,
@@ -538,6 +538,12 @@ $responsePayload = json_encode([
     'latinoDirectStreams' => $latinoDirectStreams,
     'latinoSources' => $latinoSources,
     'serverStatuses' => [
+        'auto_smart_latino' => [
+            'online' => true,
+            'hasLatinoDirect' => true,
+            'ping' => '3ms',
+            'verified' => true
+        ],
         'native_hls_4k' => [
             'online' => count($latinoDirectStreams) > 0,
             'hasLatinoDirect' => count($latinoDirectStreams) > 0,
@@ -549,6 +555,12 @@ $responsePayload = json_encode([
             'hasDirectDub' => !empty($imdbId),
             'ping' => '5ms',
             'verified' => !empty($imdbId)
+        ],
+        'vidlink_4k_pro' => [
+            'online' => true,
+            'hasLatinoDirect' => true,
+            'ping' => '5ms',
+            'verified' => true
         ],
         'vidsrc_pm' => [
             'online' => true,

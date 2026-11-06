@@ -2,12 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShieldCheck, ShieldAlert, X, Zap, CheckCircle2, Lock, Radio, Sparkles, RefreshCw } from 'lucide-react';
 import { AdBlockerService } from '../services/adBlockerService';
+import { lockBodyScroll } from '../utils/scrollLock';
 
 export default function AdBlockModal({ isOpen, onClose }) {
   const [blockedCount, setBlockedCount] = useState(AdBlockerService.getBlockedCount());
   const [isShieldActive, setIsShieldActive] = useState(AdBlockerService.isShieldActive);
   const [shieldMode, setShieldMode] = useState(AdBlockerService.shieldMode);
   const [recentEvents, setRecentEvents] = useState(AdBlockerService.getRecentBlockedEvents());
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const unlock = lockBodyScroll();
+    return () => unlock();
+  }, [isOpen]);
 
   useEffect(() => {
     const unsubscribe = AdBlockerService.subscribe((count, newEvent) => {

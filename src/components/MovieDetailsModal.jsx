@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { STREAM_PROVIDERS, MovieAPI } from '../services/movieService';
 import { StreamScannerService } from '../services/streamScannerService';
+import { lockBodyScroll } from '../utils/scrollLock';
 
 export default function MovieDetailsModal({ 
   movie, 
@@ -37,30 +38,8 @@ export default function MovieDetailsModal({
 
   // Bloqueo estricto del scroll de la página de fondo al abrir detalles
   useEffect(() => {
-    const scrollY = window.scrollY || window.pageYOffset || 0;
-    const origBodyOverflow = document.body.style.overflow;
-    const origHtmlOverflow = document.documentElement.style.overflow;
-    const origPosition = document.body.style.position;
-    const origTop = document.body.style.top;
-    const origWidth = document.body.style.width;
-    const origTouchAction = document.body.style.touchAction;
-
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = '100%';
-    document.body.style.touchAction = 'none';
-
-    return () => {
-      document.documentElement.style.overflow = origHtmlOverflow;
-      document.body.style.overflow = origBodyOverflow;
-      document.body.style.position = origPosition;
-      document.body.style.top = origTop;
-      document.body.style.width = origWidth;
-      document.body.style.touchAction = origTouchAction;
-      window.scrollTo(0, scrollY);
-    };
+    const unlock = lockBodyScroll();
+    return () => unlock();
   }, []);
 
   // Pre-calentar en segundo plano el Smart Auto-Node para que al pulsar "Ver Ahora" inicie en 0ms

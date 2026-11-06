@@ -20,6 +20,7 @@ import {
 import { CastService } from '../services/castService';
 import { StreamScannerService } from '../services/streamScannerService';
 import { REAL_4K_SOURCES } from '../services/movieService';
+import { lockBodyScroll } from '../utils/scrollLock';
 
 export default function CastModal({ 
   isOpen, 
@@ -39,6 +40,13 @@ export default function CastModal({
   const [resolvedLatinoM3u8, setResolvedLatinoM3u8] = useState(directStreamUrl || '');
   const [isScanningStream, setIsScanningStream] = useState(false);
   const [showQr, setShowQr] = useState(false);
+
+  // Bloqueo estricto del scroll de la página de fondo al abrir CastModal
+  useEffect(() => {
+    if (!isOpen) return;
+    const unlock = lockBodyScroll();
+    return () => unlock();
+  }, [isOpen]);
 
   // Si se abrió el modal sin un stream .m3u8 directo aún, buscar automáticamente el stream en Español Latino 4K
   useEffect(() => {

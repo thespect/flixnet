@@ -33,6 +33,7 @@ import { CastService } from '../services/castService';
 import { AdBlockerService } from '../services/adBlockerService';
 import CastModal from './CastModal';
 import AdBlockModal from './AdBlockModal';
+import { lockBodyScroll } from '../utils/scrollLock';
 
 // Opciones de Resolución y Escalado 4K Real
 const RESOLUTION_OPTIONS = [
@@ -107,7 +108,7 @@ export default function VideoPlayerModal({
       ? initialServer
       : hasCachedLatinoHls
         ? 'native_hls_4k'
-        : (effectiveImdbId ? 'playlatin_es' : 'vidsrc_pm')
+        : 'auto_smart_latino'
   );
   const [selectedAudioMode, setSelectedAudioMode] = useState('es_latino_dub');
   const [playLatinLang, setPlayLatinLang] = useState('latino');
@@ -186,43 +187,8 @@ export default function VideoPlayerModal({
 
   // BLOQUEO ESTRICTO DEL SCROLL DE LA PÁGINA DE FONDO (iOS Safari, Android Chrome y Desktop)
   useEffect(() => {
-    const scrollY = window.scrollY || window.pageYOffset || 0;
-    const origBodyOverflow = document.body.style.overflow;
-    const origHtmlOverflow = document.documentElement.style.overflow;
-    const origPosition = document.body.style.position;
-    const origTop = document.body.style.top;
-    const origWidth = document.body.style.width;
-    const origTouchAction = document.body.style.touchAction;
-
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = '100%';
-    document.body.style.touchAction = 'none';
-
-    const preventBackgroundTouch = (e) => {
-      const target = e.target;
-      if (target && target.closest && target.closest('.overflow-y-auto, .overflow-x-auto, input[type="range"]')) {
-        return;
-      }
-      if (e.cancelable) {
-        e.preventDefault();
-      }
-    };
-
-    document.addEventListener('touchmove', preventBackgroundTouch, { passive: false });
-
-    return () => {
-      document.removeEventListener('touchmove', preventBackgroundTouch);
-      document.documentElement.style.overflow = origHtmlOverflow;
-      document.body.style.overflow = origBodyOverflow;
-      document.body.style.position = origPosition;
-      document.body.style.top = origTop;
-      document.body.style.width = origWidth;
-      document.body.style.touchAction = origTouchAction;
-      window.scrollTo(0, scrollY);
-    };
+    const unlock = lockBodyScroll();
+    return () => unlock();
   }, []);
 
   useEffect(() => {
@@ -398,11 +364,11 @@ export default function VideoPlayerModal({
           loadSubtitleTrack(-1);
         } else {
           // Si este título no tiene .m3u8 directo, conmutar al servidor rápido
-          const fallbackServer = report.imdbId ? 'playlatin_es' : 'vidsrc_pm';
+          const fallbackServer = 'auto_smart_latino';
           setSelectedServer(fallbackServer);
           setSelectedAudioMode('es_latino_dub');
         }
-      } else if (anyLatinoIdx >= 0 && (selectedServer === 'playlatin_es' || selectedServer === 'vidsrc_pm')) {
+      } else if (anyLatinoIdx >= 0 && (selectedServer === 'playlatin_es' || selectedServer === 'auto_smart_latino')) {
         // Notificar que hay flujo 4K Nativo disponible
         setActiveHlsIndex(anyLatinoIdx);
       }
@@ -424,8 +390,8 @@ export default function VideoPlayerModal({
 
     const hasLatinoHls = directHlsStreams.some((s) => s.isLatinoDub || s.isCastellanoDub);
     const priorityChain = hasLatinoHls
-      ? ['native_hls_4k', 'playlatin_es', 'vidsrc_pm', 'multiembed_global', 'embed69_latino']
-      : ['playlatin_es', 'vidsrc_pm', 'multiembed_global', 'embed69_latino'];
+      ? ['auto_smart_latino', 'native_hls_4k', 'playlatin_es', 'vidlink_4k_pro', 'embed69_latino', 'multiembed_global', 'vidsrc_pm']
+      : ['auto_smart_latino', 'playlatin_es', 'vidlink_4k_pro', 'embed69_latino', 'multiembed_global', 'vidsrc_pm'];
 
     let nextServer = priorityChain.find((id) => id !== selectedServer && !failedServersRef.current.has(id));
     if (!nextServer) {
@@ -565,14 +531,14 @@ export default function VideoPlayerModal({
 
   const isNativeServer =
     Boolean(movie?.customUrl) ||
-    Boolean(currentProvider?.isNative) ||
+    (Boolean(currentProvider?.isNative) && Boolean(resolvedNativeUrl)) ||
     (Boolean(currentProvider?.prefersNativeHls) && hasMatchingDirectDub && Boolean(activeDirectStream?.url));
 
   // Si un servidor nativo termina de escanear y no tiene stream directo en el idioma elegido, conmutar al servidor iframe latino
   useEffect(() => {
     if (isScanningLinks || showTrailer || movie?.customUrl || hasStartedPlayingRef.current) return;
     if (isNativeServer && (!activeDirectStream?.url || (selectedServer === 'native_hls_4k' && !activeDirectStream?.isLatinoDub && !activeDirectStream?.isCastellanoDub))) {
-      const fallbackServer = resolvedImdbId ? 'playlatin_es' : 'vidsrc_pm';
+      const fallbackServer = 'auto_smart_latino';
       setSelectedServer(fallbackServer);
     }
   }, [isScanningLinks, isNativeServer, activeDirectStream, selectedServer, showTrailer, movie, resolvedImdbId]);
@@ -2337,7 +2303,11 @@ export default function VideoPlayerModal({
                 allowFullScreen
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                 referrerPolicy="no-referrer"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+                sandbox={
+                  currentProvider?.sandboxSafe === false
+                    ? undefined
+                    : "allow-scripts allow-same-origin allow-forms allow-presentation allow-popups-to-escape-sandbox"
+                }
                 onLoad={() => {
                   setIsLoading(false);
                 }}

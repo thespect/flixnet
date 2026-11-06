@@ -368,13 +368,15 @@ export const StreamScannerService = {
           latinoSources: [],
           hasConfirmedLatinoDub: Boolean(targetImdb),
           serverStatuses: {
+            auto_smart_latino: { online: true, verified: true, ping: '3ms' },
             native_hls_4k: { online: true, verified: true, ping: '3ms' },
             playlatin_es: { online: true, verified: true, ping: '5ms' },
-            vidsrc_pm: { online: true, verified: true, ping: '6ms' },
-            multiembed_global: { online: true, verified: true, ping: '7ms' },
-            embed69_latino: { online: true, verified: true, ping: '8ms' }
+            vidlink_4k_pro: { online: true, verified: true, ping: '5ms' },
+            embed69_latino: { online: true, verified: true, ping: '7ms' },
+            multiembed_global: { online: true, verified: true, ping: '8ms' },
+            vidsrc_pm: { online: true, verified: true, ping: '8ms' }
           },
-          recommendedServer: targetImdb ? 'playlatin_es' : 'vidsrc_pm',
+          recommendedServer: 'auto_smart_latino',
           scanDurationMs: 0,
           timestamp: Date.now()
         };
@@ -409,13 +411,15 @@ export const StreamScannerService = {
           latinoSources: backendScan?.latinoSources || [],
           hasConfirmedLatinoDub: spanishDirect.some((s) => s.isLatinoDub),
           serverStatuses: backendScan?.serverStatuses || {
+            auto_smart_latino: { online: true, verified: true, ping: '3ms' },
             native_hls_4k: { online: spanishDirect.length > 0, verified: true, ping: '3ms' },
             playlatin_es: { online: true, verified: true, ping: '5ms' },
-            vidsrc_pm: { online: true, verified: true, ping: '6ms' },
-            multiembed_global: { online: true, verified: true, ping: '7ms' },
-            embed69_latino: { online: true, verified: true, ping: '8ms' }
+            vidlink_4k_pro: { online: true, verified: true, ping: '5ms' },
+            embed69_latino: { online: true, verified: true, ping: '7ms' },
+            multiembed_global: { online: true, verified: true, ping: '8ms' },
+            vidsrc_pm: { online: true, verified: true, ping: '8ms' }
           },
-          recommendedServer: backendScan?.recommendedServer || (spanishDirect.length > 0 ? 'native_hls_4k' : (targetImdb ? 'playlatin_es' : 'vidsrc_pm')),
+          recommendedServer: backendScan?.recommendedServer || (spanishDirect.length > 0 ? 'native_hls_4k' : 'auto_smart_latino'),
           scanDurationMs: Math.round(performance.now() - startTime),
           timestamp: Date.now()
         };
@@ -506,15 +510,17 @@ export const StreamScannerService = {
           tmdbId: targetId,
           imdbId: targetImdb || null,
           lanIp: null,
-          recommendedServer: targetImdb ? 'playlatin_es' : 'vidsrc_pm',
+          recommendedServer: 'auto_smart_latino',
           latinoDirectStreams: [],
           latinoSources: [],
           serverStatuses: {
+            auto_smart_latino: { online: true, verified: true, ping: '3ms' },
             native_hls_4k: { online: false, verified: true, ping: '3ms' },
             playlatin_es: { online: true, verified: true, ping: '5ms' },
-            vidsrc_pm: { online: true, verified: true, ping: '6ms' },
-            multiembed_global: { online: true, verified: true, ping: '7ms' },
-            embed69_latino: { online: true, verified: true, ping: '8ms' }
+            vidlink_4k_pro: { online: true, verified: true, ping: '5ms' },
+            embed69_latino: { online: true, verified: true, ping: '7ms' },
+            multiembed_global: { online: true, verified: true, ping: '8ms' },
+            vidsrc_pm: { online: true, verified: true, ping: '8ms' }
           }
         };
       }

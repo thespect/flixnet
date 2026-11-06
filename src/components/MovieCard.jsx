@@ -48,13 +48,12 @@ export default function MovieCard({
           }}
         />
 
-        {/* Top Badges: Español Latino 4K + Rating */}
-        <div className="absolute top-2.5 inset-x-2.5 z-10 flex items-center justify-between pointer-events-none">
-          <span className="bg-black/75 backdrop-blur-md text-emerald-400 border border-emerald-400/30 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full flex items-center space-x-1 shadow-md">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>LATINO 4K</span>
+        {/* Top Badges: 4K UHD + Rating */}
+        <div className="absolute top-2 inset-x-2 z-10 flex items-center justify-between pointer-events-none">
+          <span className="bg-black/60 backdrop-blur-md text-white/90 border border-white/15 text-[9px] font-black tracking-wider px-1.5 py-0.5 rounded-md shadow-sm">
+            4K UHD
           </span>
-          <span className="bg-black/75 backdrop-blur-md text-amber-300 border border-amber-400/30 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center shadow-md">
+          <span className="bg-black/60 backdrop-blur-md text-amber-300 border border-white/15 text-[10px] font-bold px-1.5 py-0.5 rounded-md flex items-center shadow-sm">
             <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400 inline mr-1" />
             {Number(movie.vote_average || 8.4).toFixed(1)}
           </span>
