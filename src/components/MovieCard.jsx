@@ -7,7 +7,8 @@ export default function MovieCard({
   onPlay, 
   onOpenDetails, 
   onToggleMyList, 
-  isInMyList 
+  isInMyList,
+  isGrid = false
 }) {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -17,17 +18,19 @@ export default function MovieCard({
 
   return (
     <motion.div 
-      className="relative shrink-0 w-32 sm:w-40 md:w-48 lg:w-52 select-none cursor-pointer group"
+      className={`relative select-none cursor-pointer group ${
+        isGrid ? 'w-full' : 'shrink-0 w-32 sm:w-40 md:w-48 lg:w-52'
+      }`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setIsHovered(false)}
-      whileHover={{ y: -10, scale: 1.04 }}
+      whileHover={{ y: -8, scale: 1.03 }}
       whileTap={{ scale: 0.97 }}
       transition={{ type: "spring", stiffness: 380, damping: 24 }}
     >
       {/* Poster Container */}
       <div 
         onClick={() => onOpenDetails(movie)}
-        className="specular-card cinema-card-glow relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-[#0a0a12] border border-white/[0.12] transition-all duration-300 group-hover:border-netflix-red/70 will-change-transform"
+        className="specular-card cinema-card-glow relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-[#0a0a12] border border-white/[0.12] transition-all duration-300 group-hover:border-netflix-red/70 will-change-transform shadow-[0_8px_24px_rgba(0,0,0,0.65)]"
       >
         {/* Reflejo diagonal dinámico al pasar el cursor */}
         <div className="card-glare" />
@@ -47,11 +50,11 @@ export default function MovieCard({
 
         {/* Top Badges: Español Latino 4K + Rating */}
         <div className="absolute top-2.5 inset-x-2.5 z-10 flex items-center justify-between pointer-events-none">
-          <span className="cinema-badge-emerald text-emerald-300 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full flex items-center space-x-1">
+          <span className="bg-black/75 backdrop-blur-md text-emerald-400 border border-emerald-400/30 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full flex items-center space-x-1 shadow-md">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span>LATINO 4K</span>
           </span>
-          <span className="cinema-badge-amber text-amber-300 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center">
+          <span className="bg-black/75 backdrop-blur-md text-amber-300 border border-amber-400/30 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center shadow-md">
             <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400 inline mr-1" />
             {Number(movie.vote_average || 8.4).toFixed(1)}
           </span>

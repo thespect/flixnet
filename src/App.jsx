@@ -334,12 +334,13 @@ export default function App() {
             ) : searchResults.length > 0 ? (
               <motion.div 
                 layout
-                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6"
+                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-6"
               >
                 {searchResults.map((item) => (
                   <MovieCard 
                     key={item.id}
                     movie={item}
+                    isGrid={true}
                     onPlay={(m) => handleStartPlay(m, 1, 1)}
                     onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                     onToggleMyList={handleToggleMyList}
@@ -375,12 +376,13 @@ export default function App() {
             {myList.length > 0 ? (
               <motion.div 
                 layout
-                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6"
+                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-6"
               >
                 {myList.map((item) => (
                   <MovieCard 
                     key={item.id}
                     movie={item}
+                    isGrid={true}
                     onPlay={(m) => handleStartPlay(m, 1, 1)}
                     onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                     onToggleMyList={handleToggleMyList}

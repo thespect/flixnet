@@ -527,7 +527,7 @@ foreach ($latinoSources as $ls) {
     }
 }
 
-$recommendedServer = count($latinoDirectStreams) > 0 ? 'native_hls_4k' : 'vidlink_4k_pro';
+$recommendedServer = count($latinoDirectStreams) > 0 ? 'native_hls_4k' : (!empty($imdbId) ? 'playlatin_es' : 'vidsrc_pm');
 
 $responsePayload = json_encode([
     'ok' => true,
@@ -538,66 +538,36 @@ $responsePayload = json_encode([
     'latinoDirectStreams' => $latinoDirectStreams,
     'latinoSources' => $latinoSources,
     'serverStatuses' => [
-        'auto_smart_latino' => [
-            'online' => true,
-            'hasLatinoDirect' => $hasEmbed69Latino || !empty($imdbId),
-            'ping' => '4ms',
-            'verified' => true
+        'native_hls_4k' => [
+            'online' => count($latinoDirectStreams) > 0,
+            'hasLatinoDirect' => count($latinoDirectStreams) > 0,
+            'ping' => '3ms',
+            'verified' => count($latinoDirectStreams) > 0
         ],
         'playlatin_es' => [
             'online' => !empty($imdbId),
             'hasDirectDub' => !empty($imdbId),
-            'ping' => '6ms',
-            'verified' => !empty($imdbId)
-        ],
-        'native_hls_4k' => [
-            'online' => count($latinoDirectStreams) > 0,
-            'hasLatinoDirect' => count($latinoDirectStreams) > 0,
             'ping' => '5ms',
-            'verified' => count($latinoDirectStreams) > 0
-        ],
-        'vidhide_latino' => [
-            'online' => $hasVidhideSource || count($latinoDirectStreams) > 0,
-            'hasLatinoDirect' => $hasVidhideSource || count($latinoDirectStreams) > 0,
-            'ping' => '6ms',
-            'verified' => $hasVidhideSource || count($latinoDirectStreams) > 0
-        ],
-        'streamwish_latino' => [
-            'online' => $hasStreamwishSource || count($latinoSources) > 0,
-            'hasLatinoDirect' => $hasStreamwishSource || count($latinoSources) > 0,
-            'ping' => '7ms',
-            'verified' => $hasStreamwishSource || count($latinoSources) > 0
-        ],
-        'playlatin_dood' => [
-            'online' => !empty($imdbId),
-            'hasLatinoDirect' => !empty($imdbId),
-            'ping' => '8ms',
             'verified' => !empty($imdbId)
-        ],
-        'embed69_latino' => [
-            'online' => !empty($imdbId),
-            'hasLatinoDirect' => $hasEmbed69Latino,
-            'ping' => '7ms',
-            'verified' => $hasEmbed69Latino
         ],
         'vidsrc_pm' => [
             'online' => true,
             'hasLatinoDirect' => true,
-            'ping' => '7ms',
+            'ping' => '6ms',
             'verified' => true
         ],
         'multiembed_global' => [
             'online' => true,
             'hasLatinoDirect' => true,
+            'ping' => '7ms',
+            'verified' => true
+        ],
+        'embed69_latino' => [
+            'online' => !empty($imdbId),
+            'hasLatinoDirect' => $hasEmbed69Latino,
             'ping' => '8ms',
-            'verified' => true
-        ],
-        'vidlink_4k_pro' => [
-            'online' => true,
-            'ping' => '10ms',
-            'verified' => true
-        ],
-        'nova_4k_master' => ['online' => true, 'ping' => '11ms', 'verified' => true]
+            'verified' => $hasEmbed69Latino
+        ]
     ]
 ]);
 

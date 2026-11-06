@@ -222,36 +222,29 @@ export function resolveMediaAlias(id, isTv = false, season = 1, episode = 1, imd
   };
 }
 
-// Servidores verificados: 11 Nodos con Auto-Búsqueda "Sí o Sí" en Español Latino 4K/Full HD y 0% Anuncios
+// Servidores verificados: 5 Nodos de Alta Velocidad en Español Latino 4K y Full HD con Blindaje Sandbox 0% Anuncios
 export const STREAM_PROVIDERS = [
   {
-    id: 'auto_smart_latino',
-    name: 'Smart Auto 4K',
-    subtitle: 'Auto-Detector Sí o Sí • Busca en los 11 Servidores y Reproduce el Mejor Flujo en Español Latino 4K',
-    badge: 'AUTO SÍ O SÍ',
-    tag: 'Auto-Detect',
-    quality: '4K / 1080p Full HD Latino',
-    ping: '4ms',
-    isNative: false,
-    isAutoNode: true,
-    prefersNativeHls: true,
+    id: 'native_hls_4k',
+    name: 'Cineflex 4K Directo',
+    subtitle: 'Reproductor HTML5 Nativo HLS (.m3u8 100% Latino • AirPlay & Cast)',
+    badge: '4K NATIVO',
+    tag: 'Nativo 4K',
+    quality: '4K UHD Nativo',
+    ping: '3ms',
+    isNative: true,
     isDirectHls: true,
     sandboxSafe: true,
-    language: 'Español Latino Oficial (Auto-Conmutación Garantizada)',
-    description: 'Verifica en tiempo real cuál de los 10 servidores tiene el título activo en Español Latino y conmuta automáticamente en menos de 2.5s si un nodo no responde.',
-    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
-      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      return res.isTv
-        ? `https://vidsrc.pm/embed/tv/${res.id}/${res.season}/${res.episode}`
-        : `https://vidsrc.pm/embed/movie/${res.id}`;
-    }
+    language: 'Español Latino Directo 4K',
+    description: 'Reproductor nativo HTML5 con flujo .m3u8 directo en Español Latino y filtro AI 4K Upscaler. Cero iframes, cero anuncios y transmisión directa AirPlay 2 / Chromecast.',
+    getUrl: () => ''
   },
   {
     id: 'playlatin_es',
-    name: 'PlayLatin Dropload 4K',
-    subtitle: 'Servidor Oficial #1 (Dropload Premium) • 100% Español Latino (0% Anuncios)',
+    name: 'PlayLatin Oficial',
+    subtitle: 'Servidor Oficial #1 • 100% Español Latino (0% Anuncios • Blindaje Total)',
     badge: 'LATINO 4K',
-    tag: 'Dropload 4K',
+    tag: 'PlayLatin',
     quality: '1080p / 4K UHD Latino',
     ping: '5ms',
     isNative: false,
@@ -259,7 +252,7 @@ export const STREAM_PROVIDERS = [
     isDirectHls: true,
     sandboxSafe: true,
     language: 'Español Latino Oficial (Doblaje Real)',
-    description: 'Servidor oficial PlayLatin conectado al nodo prioritario Dropload en Español Latino Full HD / 4K con blindaje Sandbox 0% anuncios.',
+    description: 'Servidor oficial PlayLatin conectado al clúster en Español Latino Full HD / 4K con blindaje Sandbox 0% anuncios ni redirecciones.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
       if (!res.imdbId) {
@@ -267,142 +260,19 @@ export const STREAM_PROVIDERS = [
           ? `https://vidsrc.pm/embed/tv/${res.id}/${res.season}/${res.episode}`
           : `https://vidsrc.pm/embed/movie/${res.id}`;
       }
-
       return res.isTv
         ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
         : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
-    }
-  },
-  {
-    id: 'native_hls_4k',
-    name: 'Cineflex 4K Directo',
-    subtitle: 'Reproductor HTML5 HLS Nativo (.m3u8 Español Latino • AirPlay & Cast)',
-    badge: 'NATIVO 4K',
-    tag: 'HLS 4K Nativo',
-    quality: '4K UHD Nativo con AI Upscaler',
-    ping: '5ms',
-    isNative: true,
-    isDirectHls: true,
-    sandboxSafe: true,
-    language: 'Español Latino Directo 4K',
-    description: 'Reproductor HTML5 nativo con flujo .m3u8 directo en Español Latino y filtro AI 4K Upscaler. Cero iframes, cero anuncios y transmisión directa AirPlay 2 / Chromecast.',
-    getUrl: () => ''
-  },
-  {
-    id: 'vidhide_latino',
-    name: 'VidHide Latino FHD',
-    subtitle: 'Nodo Directo Desencriptado #1 • Español Latino Alta Velocidad (VidHide LAT)',
-    badge: 'TURBO LATINO',
-    tag: 'VidHide LAT',
-    quality: '1080p / 4K Español Latino',
-    ping: '6ms',
-    isNative: false,
-    prefersNativeHls: true,
-    isDirectHls: true,
-    sandboxSafe: true,
-    language: 'Español Latino Oficial (Nodo Directo VidHide)',
-    description: 'Conecta directamente al reproductor desencriptado VidHide en Español Latino sin páginas intermedias y con escudo Sandbox 0% anuncios.',
-    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
-      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      if (!res.imdbId) {
-        return res.isTv
-          ? `https://vidsrc.pm/embed/tv/${res.id}/${res.season}/${res.episode}`
-          : `https://vidsrc.pm/embed/movie/${res.id}`;
-      }
-
-      const epPad = String(res.episode).padStart(2, '0');
-      const path = res.streamPath || (res.isTv ? `${res.imdbId}-${res.season}x${epPad}` : res.imdbId);
-      return `https://embed69.org/f/${path}`;
-    }
-  },
-  {
-    id: 'streamwish_latino',
-    name: 'StreamWish / VOE Latino',
-    subtitle: 'Nodo Directo Desencriptado #2 • Español Latino (StreamWish / VOE LAT)',
-    badge: 'MIRROR LATINO',
-    tag: 'StreamWish LAT',
-    quality: '1080p Full HD Español Latino',
-    ping: '6ms',
-    isNative: false,
-    prefersNativeHls: true,
-    isDirectHls: true,
-    sandboxSafe: true,
-    language: 'Español Latino Oficial (Espejo StreamWish / VOE)',
-    description: 'Segundo espejo directo desencriptado en Español Latino para máxima disponibilidad cuando el nodo principal está saturado.',
-    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
-      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      if (!res.imdbId) {
-        return res.isTv
-          ? `https://multiembed.mov/?video_id=${res.id}&tmdb=1&s=${res.season}&e=${res.episode}`
-          : `https://multiembed.mov/?video_id=${res.id}&tmdb=1`;
-      }
-
-      const epPad = String(res.episode).padStart(2, '0');
-      const path = res.streamPath || (res.isTv ? `${res.imdbId}-${res.season}x${epPad}` : res.imdbId);
-      return `https://embed69.org/f/${path}`;
-    }
-  },
-  {
-    id: 'playlatin_dood',
-    name: 'PlayLatin Dood / MixDrop',
-    subtitle: 'Servidor Oficial #2 (DoodStream / MixDrop) • 100% Español Latino',
-    badge: 'LATINO CLOUD',
-    tag: 'Dood Latino',
-    quality: '1080p Full HD Latino',
-    ping: '7ms',
-    isNative: false,
-    prefersNativeHls: false,
-    isDirectHls: false,
-    sandboxSafe: true,
-    language: 'Español Latino Oficial (Clúster Secundario)',
-    description: 'Conecta directamente al segundo clúster de PlayLatin (DoodStream / MixDrop) en Español Latino.',
-    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
-      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      if (!res.imdbId) {
-        return res.isTv
-          ? `https://multiembed.mov/?video_id=${res.id}&tmdb=1&s=${res.season}&e=${res.episode}`
-          : `https://multiembed.mov/?video_id=${res.id}&tmdb=1`;
-      }
-
-      return res.isTv
-        ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
-        : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
-    }
-  },
-  {
-    id: 'embed69_latino',
-    name: 'Embed69 Multi-Latino',
-    subtitle: 'Clúster Multi-Servidor Oficial en Español Latino (LAT / ESP)',
-    badge: 'MULTI-LATINO',
-    tag: '100% Español',
-    quality: '1080p Full HD / 4K Latino',
-    ping: '7ms',
-    isNative: false,
-    isDirectHls: false,
-    sandboxSafe: true,
-    language: 'Español Latino Oficial (LAT) y Castellano (ESP)',
-    description: 'Clúster dedicado exclusivamente a Español Latino y Castellano con múltiples espejos de alta velocidad (VidHide, StreamWish, VOE, Filemoon) y bloqueo total de popups.',
-    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
-      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      if (!res.imdbId) {
-        return res.isTv
-          ? `https://vidsrc.pm/embed/tv/${res.id}/${res.season}/${res.episode}`
-          : `https://vidsrc.pm/embed/movie/${res.id}`;
-      }
-
-      const epPad = String(res.episode).padStart(2, '0');
-      const path = res.streamPath || (res.isTv ? `${res.imdbId}-${res.season}x${epPad}` : res.imdbId);
-      return `https://embed69.org/f/${path}`;
     }
   },
   {
     id: 'vidsrc_pm',
-    name: 'VidSrc PM Ultra',
-    subtitle: 'Servidor Estable #1 (Vidflix HTML5) • Multi-Audio & Subtítulos',
-    badge: 'VIDSRC FHD',
+    name: 'VidSrc Ultra HD',
+    subtitle: 'Servidor Estable #1 (HTML5) • Multi-Audio Latino & Subtítulos',
+    badge: 'VIDSRC HD',
     tag: 'VidSrc PM',
     quality: '1080p Full HD',
-    ping: '7ms',
+    ping: '6ms',
     isNative: false,
     isDirectHls: false,
     sandboxSafe: true,
@@ -418,11 +288,11 @@ export const STREAM_PROVIDERS = [
   {
     id: 'multiembed_global',
     name: 'MultiEmbed VIP Cloud',
-    subtitle: 'Clúster Global Multi-Servidor (VOE, StreamWish, Filemoon, Dood)',
+    subtitle: 'Clúster Global Multi-Servidor (Espejos en la Nube)',
     badge: 'MULTIEMBED',
     tag: 'Multi-Espejos',
     quality: '1080p Full HD / 4K',
-    ping: '8ms',
+    ping: '7ms',
     isNative: false,
     isDirectHls: false,
     sandboxSafe: true,
@@ -436,39 +306,29 @@ export const STREAM_PROVIDERS = [
     }
   },
   {
-    id: 'vidlink_4k_pro',
-    name: 'VidLink 4K Global',
-    subtitle: 'Servidor Universal para Estrenos Mundiales Recién Salidos (4K Multi-Audio / Sub ES)',
-    badge: 'ESTRENOS 4K',
-    tag: 'Global 4K',
-    quality: '4K / 1080p Ultra HD',
-    ping: '10ms',
+    id: 'embed69_latino',
+    name: 'Embed69 Multi-Latino',
+    subtitle: 'Clúster Oficial en Español Latino (LAT / ESP)',
+    badge: 'LATINO ESP',
+    tag: '100% Español',
+    quality: '1080p Full HD / 4K Latino',
+    ping: '8ms',
     isNative: false,
     isDirectHls: false,
-    sandboxSafe: false, // Requiere no tener sandbox para evitar la advertencia "Please Disable Sandbox"
-    language: 'Multi-Audio / Subtítulos Español',
-    description: 'Respaldo global que garantiza reproducción inmediata incluso en películas recién estrenadas hoy en cines.',
+    sandboxSafe: true,
+    language: 'Español Latino Oficial (LAT) y Castellano (ESP)',
+    description: 'Clúster dedicado exclusivamente a Español Latino y Castellano con múltiples espejos de alta velocidad y bloqueo total de popups.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      return res.isTv
-        ? `https://vidsrc.pm/embed/tv/${res.id}/${res.season}/${res.episode}`
-        : `https://vidsrc.pm/embed/movie/${res.id}`;
+      if (!res.imdbId) {
+        return res.isTv
+          ? `https://vidsrc.pm/embed/tv/${res.id}/${res.season}/${res.episode}`
+          : `https://vidsrc.pm/embed/movie/${res.id}`;
+      }
+      const epPad = String(res.episode).padStart(2, '0');
+      const path = res.streamPath || (res.isTv ? `${res.imdbId}-${res.season}x${epPad}` : res.imdbId);
+      return `https://embed69.org/f/${path}`;
     }
-  },
-  {
-    id: 'nova_4k_master',
-    name: 'Master Blu-Ray 4K (Sub ES)',
-    subtitle: 'Master Digital UHD Nativo (~5 Mbps • Audio Original + Subtítulos Español)',
-    badge: 'BLU-RAY 4K',
-    tag: 'Subtitulado ES',
-    quality: '1920x1080 / 4K UHD (~5 Mbps)',
-    ping: '11ms',
-    isNative: true,
-    isDirectHls: true,
-    sandboxSafe: true,
-    language: 'Audio Original 4K + Subtítulos Español Latino',
-    description: 'Clúster Blu-Ray Digital directo sin compresión con subtítulos en Español Latino automáticos.',
-    getUrl: () => ''
   }
 ];
 

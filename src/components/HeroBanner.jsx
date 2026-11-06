@@ -230,24 +230,23 @@ export default function HeroBanner({
               )}
             </div>
 
-            {/* Selector Rápido de Servidor en 1 Clic desde el Hero Banner */}
+            {/* Selector Rápido de Servidores Disponibles */}
             <div className="pt-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-xl">
-              <span className="text-[10px] font-black uppercase tracking-wider text-white/45 shrink-0 mr-1">
-                Nodos Directos:
+              <span className="text-[10px] font-black uppercase tracking-wider text-white/50 shrink-0 mr-1">
+                Servidores:
               </span>
               {[
-                { id: 'auto_smart_latino', label: 'Smart Auto 4K' },
-                { id: 'native_hls_4k', label: 'Cineflex Directo' },
-                { id: 'vidhide_latino', label: 'VidHide FHD' },
-                { id: 'streamwish_latino', label: 'StreamWish LAT' },
-                { id: 'embed69_latino', label: 'Embed69 Multi' }
+                { id: 'native_hls_4k', label: '4K Directo' },
+                { id: 'playlatin_es', label: 'PlayLatin' },
+                { id: 'vidsrc_pm', label: 'VidSrc HD' },
+                { id: 'multiembed_global', label: 'MultiEmbed' }
               ].map((srv) => (
                 <motion.button
                   key={srv.id}
                   whileHover={{ scale: 1.05, y: -1 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => onPlay(movie, 1, 1, '', srv.id)}
-                  className="px-2.5 py-1 rounded-full bg-white/[0.07] hover:bg-white/[0.16] backdrop-blur-xl border border-white/[0.14] hover:border-emerald-400/50 text-[10px] font-bold text-white/85 hover:text-white flex items-center space-x-1.5 shrink-0 transition-all cursor-pointer shadow-md"
+                  className="px-2.5 py-1 rounded-full bg-white/[0.08] hover:bg-white/[0.18] backdrop-blur-xl border border-white/[0.14] hover:border-emerald-400/50 text-[10px] font-bold text-white/85 hover:text-white flex items-center space-x-1.5 shrink-0 transition-all cursor-pointer shadow-md"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                   <span>{srv.label}</span>
