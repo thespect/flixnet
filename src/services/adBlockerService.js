@@ -82,7 +82,15 @@ const AD_DOMAINS_BLACKLIST = [
   'bidvertiser.com',
   'histats.com',
   'whos.amung.us',
-  'trafficstars.com'
+  'trafficstars.com',
+  'poringasitia.com',
+  'eq.poringasitia.com',
+  'mosevura.com',
+  'teniacites.com',
+  'stripchat.com',
+  'chaturbate.com',
+  'bongacams.com',
+  'livejasmin.com'
 ];
 
 const AD_KEYWORDS = [
@@ -113,7 +121,14 @@ const AD_KEYWORDS = [
   'track-ad',
   'banner-ad',
   'ad-delivery',
-  'adnetwork'
+  'adnetwork',
+  'poringasitia',
+  'popunder',
+  'camgirl',
+  'webcam',
+  'adult-dating',
+  'sex',
+  'porn'
 ];
 
 class AdBlockerEngine {
@@ -215,14 +230,12 @@ class AdBlockerEngine {
         while (target && target !== document.body) {
           if (target.tagName === 'A' && target.href) {
             const href = target.href.toLowerCase();
-            if (self.isAdUrl(href) || target.target === '_blank' && !target.href.includes(window.location.hostname)) {
-              if (self.isAdUrl(href)) {
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-                self.registerBlockedAd(`Clic fantasma neutralizado: ${href.slice(0, 45)}`);
-                return false;
-              }
+            if (self.isAdUrl(href) || (self.isWatchingVideo && target.target === '_blank' && !target.href.includes(window.location.hostname))) {
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+              self.registerBlockedAd(`Clic fantasma neutralizado: ${href.slice(0, 45)}`);
+              return false;
             }
           }
           target = target.parentElement;

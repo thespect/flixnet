@@ -291,13 +291,16 @@ function unpackPackerPhp($packed) {
     $a = intval($m[2]);
     $c = intval($m[3]);
     $k = explode('|', $m[4]);
-    while ($c--) {
-        if (!empty($k[$c])) {
-            $token = base_convert($c, 10, $a);
-            $p = preg_replace('/\b' . preg_quote($token, '/') . '\b/', $k[$c], $p);
+    $dict = [];
+    for ($i = 0; $i < $c; $i++) {
+        $token = base_convert($i, 10, $a);
+        if (isset($k[$i]) && $k[$i] !== '') {
+            $dict[$token] = $k[$i];
         }
     }
-    return $p;
+    return preg_replace_callback('/\b\w+\b/', function($match) use ($dict) {
+        return isset($dict[$match[0]]) ? $dict[$match[0]] : $match[0];
+    }, $p);
 }
 
 function getLocalLanIpPhp() {
@@ -411,14 +414,14 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
         preg_match("/let\s+dataLink\s*=\s*(\[.*?\]);/s", $embed69Html, $mdl)
     ) {
         $challenge = $mc[1];
-        $diff = min(intval($md[1]), 4);
+        $diff = intval($md[1]);
         $salt = $ms[1];
         $dataLink = @json_decode($mdl[1], true);
 
         if (is_array($dataLink) && count($dataLink) > 0) {
             $prefix = str_repeat('0', $diff);
             $nonce = 0;
-            while ($nonce < 30000) {
+            while ($nonce < 600000) {
                 if (strpos(hash('sha256', $challenge . $nonce), $prefix) === 0) break;
                 $nonce++;
             }
@@ -471,7 +474,7 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
     // C. Extracción directa del stream VidHide en Español Latino (Alta compatibilidad CORS y 200 OK)
     $multiExtracts = [];
     if (!empty($vidhideUrlToExtract)) {
-        $multiExtracts['vidhide'] = ['url' => $vidhideUrlToExtract, 'timeout' => 1.5, 'referer' => 'https://embed69.org/'];
+        $multiExtracts['vidhide'] = ['url' => $vidhideUrlToExtract, 'timeout' => 2.5, 'referer' => 'https://embed69.org/'];
     }
 
     if (!empty($multiExtracts)) {
@@ -480,12 +483,8 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
         if (!empty($extracted['vidhide'])) {
             $unpackedVh = unpackPackerPhp($extracted['vidhide']);
             $m3u8Vh = '';
-            if (preg_match('/"hls2"\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/', $unpackedVh, $mh2)) {
-                $m3u8Vh = $mh2[1];
-            } elseif (preg_match('/file\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/', $unpackedVh, $mhf)) {
-                $m3u8Vh = $mhf[1];
-            } elseif (preg_match('/"hls4"\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/', $unpackedVh, $mh4)) {
-                $m3u8Vh = $mh4[1];
+            if (preg_match('/(https?:\/\/[^\s"\']+\.m3u8[^\s"\']*)/', $unpackedVh, $mh)) {
+                $m3u8Vh = $mh[1];
             }
             if (!empty($m3u8Vh) && strpos($m3u8Vh, 'http') === 0) {
                 $isLatVh = ($vidhideLangKey === 'latino');

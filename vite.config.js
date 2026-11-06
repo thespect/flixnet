@@ -253,74 +253,10 @@ async function extractPlayLatinLatinoStreams(imdbId, isTv = false, season = 1, e
       }
     }
 
-    // Extraer .m3u8 directo con CORS: * desde Dropload (dr0pstream.com -> dropcdn.io)
-    const dropLatino = data.sources.find(
-      (s) =>
-        s?.url &&
-        (/dropload/i.test(String(s.name)) || String(s.url).includes('dr0pstream')) &&
-        /latino|castellano/i.test(String(s.version || 'latino'))
-    );
-
-    if (dropLatino) {
-      const t0 = Date.now();
-      try {
-        const dr = await fetch(dropLatino.url, {
-          headers: {
-            'User-Agent': DROP_UA,
-            Referer: 'https://playlatinsrc.co/'
-          },
-          signal: AbortSignal.timeout(2800)
-        });
-        if (dr.ok) {
-          const dHtml = await dr.text();
-          const unpacked = unpackPackerCode(dHtml);
-          const m3u8Url = (unpacked.match(/file\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/) || [])[1];
-          if (m3u8Url && m3u8Url.startsWith('http')) {
-            // Verificar si el stream responde 200 y no 403 Forbidden antes de registrarlo
-            let isM3u8Active = false;
-            try {
-              const testHead = await fetch(m3u8Url, {
-                headers: { 'User-Agent': DROP_UA, Referer: 'https://dr0pstream.com/' },
-                signal: AbortSignal.timeout(1400)
-              });
-              isM3u8Active = testHead.ok;
-            } catch {}
-
-            if (isM3u8Active) {
-              const isLat = String(dropLatino.version || 'latino').toLowerCase() === 'latino';
-              streams.push({
-                id: `playlatin_dropload_hls_${isLat ? 'latino' : 'castellano'}`,
-                name: isLat
-                  ? 'PlayLatin Dropload 4K Directo • Español Latino Oficial'
-                  : 'PlayLatin Dropload 4K Directo • Español Castellano',
-                providerId: 'playlatin_dropload',
-                url: m3u8Url,
-                rawUrl: m3u8Url,
-                embedUrl: dropLatino.url,
-                type: 'hls',
-                lang: isLat ? 'latino' : 'castellano',
-                langCode: isLat ? 'LAT' : 'ESP',
-                isLatinoDub: isLat,
-                isCastellanoDub: !isLat,
-                isDirectHls: true,
-                castCompatible: true,
-                isCamQuality: false,
-                maxBandwidth: 3600000,
-                maxHeight: 1080,
-                quality: '4K / 1080p Digital HD Latino',
-                ping: `${Math.max(5, Date.now() - t0)}ms`,
-                verified: true
-              });
-            }
-          }
-        }
-      } catch {}
-    }
-
     return {
       streams,
       latinoSources,
-      playlatinOk: latinoSources.length > 0 || streams.length > 0
+      playlatinOk: latinoSources.length > 0
     };
   } catch {
     return { streams: [], latinoSources: [], playlatinOk: false };
@@ -494,20 +430,7 @@ function cineflexStreamScannerPlugin() {
       const hasDoodSource = latinoSources.some((s) => s.server === 'doodstream' || s.server === 'mixdrop');
 
       // Determinar el servidor 100% verificado recomendado para este título
-      let recommendedServer = 'auto_smart_latino';
-      if (latinoDirectStreams.length > 0) {
-        recommendedServer = 'native_hls_4k';
-      } else if (hasVidhideSource) {
-        recommendedServer = 'vidhide_latino';
-      } else if (hasStreamwishSource) {
-        recommendedServer = 'streamwish_latino';
-      } else if (hasDroploadSource || playlatinOk) {
-        recommendedServer = 'playlatin_es';
-      } else if (hasEmbed69Latino) {
-        recommendedServer = 'embed69_latino';
-      } else {
-        recommendedServer = 'vidlink_4k_pro';
-      }
+      const recommendedServer = latinoDirectStreams.length > 0 ? 'native_hls_4k' : 'vidsrc_pm';
 
       const responseData = {
         ok: true,

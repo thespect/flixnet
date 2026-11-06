@@ -2370,28 +2370,49 @@ export default function VideoPlayerModal({
             </motion.div>
           </div>
         ) : (
-          /* REPRODUCTOR 2: SERVIDORES EN ESPAÑOL LATINO (Carga Instantánea en 0ms sin esperar escaneos secundarios) */
+          /* REPRODUCTOR 2: SERVIDORES EN ESPAÑOL LATINO (Con blindaje Sandbox 0% Anuncios y 0% Clics Fantasmas) */
           <div className="relative w-full h-full flex items-center justify-center p-0 sm:p-3 md:p-5 z-10">
-            <div className="relative w-full h-full max-w-7xl sm:aspect-video flex items-center justify-center">
-              <iframe
-                key={`${selectedServer}_${playLatinLang}_s${currentSeason}_e${currentEpisode}_${iframeKey}`}
-                src={showTrailer ? trailerUrl : streamUrl}
-                title={`Reproductor ${movie.title}`}
-                className="w-full h-full sm:rounded-2xl shadow-[0_28px_80px_rgba(0,0,0,0.95)] border-0 sm:border sm:border-white/[0.14] bg-[#040407]"
-                allowFullScreen
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                referrerPolicy="no-referrer-when-downgrade"
-                onLoad={() => {
-                  setIsLoading(false);
-                  hasStartedPlayingRef.current = true;
-                }}
-                onError={() => {
-                  if (!hasStartedPlayingRef.current) {
-                    iterateNextLatinoServer('Auto-Detector Sí o Sí');
+            {isScanningLinks && selectedServer === 'auto_smart_latino' ? (
+              <div className="relative w-full h-full max-w-7xl sm:aspect-video flex flex-col items-center justify-center sm:rounded-2xl bg-black/75 backdrop-blur-xl border sm:border sm:border-white/10 text-center p-6 space-y-4">
+                <div className="relative flex items-center justify-center w-14 h-14">
+                  <div className="w-14 h-14 border-4 border-white/15 border-t-netflix-red border-r-emerald-400 rounded-full animate-spin" />
+                  <span className="w-3 h-3 rounded-full bg-emerald-400 absolute animate-ping" />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="text-white text-base sm:text-lg font-black tracking-tight">
+                    Conectando a Cineflex 4K Nativo
+                  </h3>
+                  <p className="text-gray-400 text-xs sm:text-sm font-medium max-w-md">
+                    Verificando stream de alta velocidad en Español Latino Oficial (0% Anuncios • Cero Popups)...
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="relative w-full h-full max-w-7xl sm:aspect-video flex items-center justify-center">
+                <iframe
+                  key={`${selectedServer}_${playLatinLang}_s${currentSeason}_e${currentEpisode}_${iframeKey}`}
+                  src={showTrailer ? trailerUrl : streamUrl}
+                  title={`Reproductor ${movie.title}`}
+                  className="w-full h-full sm:rounded-2xl shadow-[0_28px_80px_rgba(0,0,0,0.95)] border-0 sm:border sm:border-white/[0.14] bg-[#040407]"
+                  allowFullScreen
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                  referrerPolicy="no-referrer"
+                  sandbox={
+                    currentProvider?.sandboxSafe === false
+                      ? undefined
+                      : "allow-scripts allow-same-origin allow-forms allow-presentation"
                   }
-                }}
-              />
-            </div>
+                  onLoad={() => {
+                    setIsLoading(false);
+                  }}
+                  onError={() => {
+                    if (!hasStartedPlayingRef.current) {
+                      iterateNextLatinoServer('Auto-Detector Sí o Sí');
+                    }
+                  }}
+                />
+              </div>
+            )}
           </div>
         )}
 

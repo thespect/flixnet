@@ -242,8 +242,8 @@ export const STREAM_PROVIDERS = [
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
       return res.isTv
-        ? `https://vidlink.pro/tv/${res.id}/${res.season}/${res.episode}?autoplay=true&primaryColor=e50914`
-        : `https://vidlink.pro/movie/${res.id}?autoplay=true&primaryColor=e50914`;
+        ? `https://vidsrc.pm/embed/tv/${res.id}/${res.season}/${res.episode}`
+        : `https://vidsrc.pm/embed/movie/${res.id}`;
     }
   },
   {
@@ -264,8 +264,8 @@ export const STREAM_PROVIDERS = [
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
       if (!res.imdbId) {
         return res.isTv
-          ? `https://vidlink.pro/tv/${res.id}/${res.season}/${res.episode}?autoplay=true&primaryColor=e50914`
-          : `https://vidlink.pro/movie/${res.id}?autoplay=true&primaryColor=e50914`;
+          ? `https://vidsrc.pm/embed/tv/${res.id}/${res.season}/${res.episode}`
+          : `https://vidsrc.pm/embed/movie/${res.id}`;
       }
 
       return res.isTv
@@ -451,8 +451,8 @@ export const STREAM_PROVIDERS = [
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
       return res.isTv
-        ? `https://vidlink.pro/tv/${res.id}/${res.season}/${res.episode}?autoplay=true&primaryColor=e50914`
-        : `https://vidlink.pro/movie/${res.id}?autoplay=true&primaryColor=e50914`;
+        ? `https://vidsrc.pm/embed/tv/${res.id}/${res.season}/${res.episode}`
+        : `https://vidsrc.pm/embed/movie/${res.id}`;
     }
   },
   {
