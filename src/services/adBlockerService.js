@@ -175,11 +175,14 @@ class AdBlockerEngine {
     const self = this;
     window.addEventListener('blur', () => {
       if (self.isShieldActive && self.isWatchingVideo) {
+        try {
+          window.focus();
+        } catch {}
         setTimeout(() => {
           try {
             window.focus();
           } catch {}
-        }, 120);
+        }, 60);
       }
     });
   }
@@ -219,6 +222,28 @@ class AdBlockerEngine {
   // Protector contra clics fantasmas (overlays invisibles o enlaces transparentes)
   _installClickHijackGuard() {
     const self = this;
+
+    // Interceptar llamadas sintéticas a a.click() usadas por redes de anuncios fantasmas
+    try {
+      const originalAnchorClick = HTMLAnchorElement.prototype.click;
+      HTMLAnchorElement.prototype.click = function () {
+        if (self.isShieldActive && self.isWatchingVideo) {
+          const href = String(this.href || '').toLowerCase();
+          const isWhitelisted =
+            href.includes(window.location.hostname) ||
+            href.includes('themoviedb.org') ||
+            href.includes('apple.com') ||
+            href.startsWith('blob:') ||
+            href.startsWith('data:');
+
+          if (!isWhitelisted || (this.target === '_blank' && !href.includes(window.location.hostname))) {
+            self.registerBlockedAd(`Clic programático neutralizado: ${href.slice(0, 45) || 'Anuncio fantasma'}`);
+            return;
+          }
+        }
+        return originalAnchorClick.apply(this, arguments);
+      };
+    } catch {}
 
     window.addEventListener(
       'click',

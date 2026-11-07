@@ -377,12 +377,24 @@ export default function VideoPlayerModal({
           setSelectedServer('native_hls_4k');
         }
       } else if (selectedServer === 'native_hls_4k') {
-        // Si este título no tiene .m3u8 directo verificado, conmutar al servidor recomendado de alta disponibilidad
-        const fallbackServer = report.recommendedServer && report.recommendedServer !== 'native_hls_4k'
-          ? report.recommendedServer
-          : (movie?.isTv ? 'embed69_latino' : 'auto_smart_latino');
-        setSelectedServer(fallbackServer);
-        setSelectedAudioMode('es_latino_dub');
+        const anyDirectIdx = streams.findIndex((s) => Boolean(s.url));
+        if (anyDirectIdx >= 0) {
+          // Si hay stream directo 4K nativo disponible con subtítulos en español (0% anuncios y clics)
+          setActiveHlsIndex(anyDirectIdx);
+          setSelectedAudioMode('en_original_sub_es');
+          const subs = report.subtitles || subtitlesList;
+          if (subs && subs.length > 0) {
+            const esSubIdx = subs.findIndex((s) => s.isLatino || s.isSpanish);
+            loadSubtitleTrack(esSubIdx >= 0 ? esSubIdx : 0);
+          }
+        } else {
+          // Si este título no tiene .m3u8 directo verificado, conmutar al servidor recomendado de alta disponibilidad
+          const fallbackServer = report.recommendedServer && report.recommendedServer !== 'native_hls_4k'
+            ? report.recommendedServer
+            : 'auto_smart_latino';
+          setSelectedServer(fallbackServer);
+          setSelectedAudioMode('es_latino_dub');
+        }
       }
     })();
 
@@ -402,8 +414,8 @@ export default function VideoPlayerModal({
 
     const hasLatinoHls = directHlsStreams.some((s) => s.isLatinoDub || s.isCastellanoDub);
     const priorityChain = hasLatinoHls
-      ? ['native_hls_4k', 'embed69_latino', 'auto_smart_latino', 'playlatin_es', 'multiembed_global', 'vidsrc_pm', 'vidlink_4k_pro']
-      : ['embed69_latino', 'auto_smart_latino', 'playlatin_es', 'multiembed_global', 'vidsrc_pm', 'vidlink_4k_pro'];
+      ? ['native_hls_4k', 'auto_smart_latino', 'vidsrc_pm', 'vidlink_4k_pro', 'multiembed_global', 'playlatin_es', 'embed69_latino']
+      : ['auto_smart_latino', 'vidsrc_pm', 'vidlink_4k_pro', 'multiembed_global', 'playlatin_es', 'embed69_latino'];
 
     let nextServer = priorityChain.find((id) => id !== selectedServer && !failedServersRef.current.has(id));
     if (!nextServer) {

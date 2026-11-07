@@ -227,31 +227,27 @@ export const STREAM_PROVIDERS = [
   {
     id: 'auto_smart_latino',
     name: 'Smart Auto 4K',
-    subtitle: 'Auto-Detector Sí o Sí • Reproducción Inmediata en Español Latino 4K y Full HD',
-    badge: 'AUTO LATINO',
+    subtitle: 'Auto-Detector Sí o Sí • Reproducción Inmediata 4K / Full HD (0% Anuncios)',
+    badge: 'AUTO 4K',
     tag: 'Auto-Detect',
-    quality: '4K / 1080p Latino',
+    quality: '4K / 1080p Nativo',
     ping: '3ms',
     isNative: false,
     isAutoNode: true,
     prefersNativeHls: true,
     isDirectHls: true,
-    sandboxSafe: false,
-    language: 'Español Latino Oficial (Auto-Conmutación Garantizada)',
-    description: 'Detecta en tiempo real cuál servidor tiene el título activo en Español Latino con máxima velocidad.',
+    sandboxSafe: true,
+    language: 'Español Latino / Multi-Audio Oficial (0% Anuncios)',
+    description: 'Detecta en tiempo real el servidor más rápido y estable con blindaje total anti-anuncios.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
+      if (res.isTv) {
+        return `https://vidsrc.pm/embed/tv/${res.id}/${res.season}/${res.episode}`;
+      }
       if (res.imdbId) {
-        if (res.isTv) {
-          const epPad = String(res.episode).padStart(2, '0');
-          const path = res.streamPath || `${res.imdbId}-${res.season}x${epPad}`;
-          return `https://embed69.org/f/${path}`;
-        }
         return `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
       }
-      return res.isTv
-        ? `https://vidlink.pro/tv/${res.id}/${res.season}/${res.episode}?autoplay=true&primaryColor=e50914`
-        : `https://vidlink.pro/movie/${res.id}?autoplay=true&primaryColor=e50914`;
+      return `https://vidsrc.pm/embed/movie/${res.id}`;
     }
   },
   {
@@ -290,7 +286,7 @@ export const STREAM_PROVIDERS = [
     ping: '5ms',
     isNative: false,
     isDirectHls: false,
-    sandboxSafe: false,
+    sandboxSafe: true,
     language: 'Multi-Audio / Subtítulos en Español',
     description: 'Respaldo de alta disponibilidad que garantiza reproducción instantánea para cualquier película o serie.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
