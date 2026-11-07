@@ -236,15 +236,18 @@ export const STREAM_PROVIDERS = [
     isAutoNode: true,
     prefersNativeHls: true,
     isDirectHls: true,
-    sandboxSafe: false,
+    sandboxSafe: true,
     language: 'Español Latino Oficial (Auto-Conmutación Garantizada)',
     description: 'Detecta en tiempo real cuál servidor tiene el título activo en Español Latino con máxima velocidad.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
       if (res.imdbId) {
-        return res.isTv
-          ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
-          : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
+        if (res.isTv) {
+          const epPad = String(res.episode).padStart(2, '0');
+          const path = res.streamPath || `${res.imdbId}-${res.season}x${epPad}`;
+          return `https://embed69.org/f/${path}`;
+        }
+        return `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
       }
       return res.isTv
         ? `https://vidlink.pro/tv/${res.id}/${res.season}/${res.episode}?autoplay=true&primaryColor=e50914`
@@ -287,7 +290,7 @@ export const STREAM_PROVIDERS = [
     ping: '5ms',
     isNative: false,
     isDirectHls: false,
-    sandboxSafe: false,
+    sandboxSafe: true,
     language: 'Multi-Audio / Subtítulos en Español',
     description: 'Respaldo de alta disponibilidad que garantiza reproducción instantánea para cualquier película o serie.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {

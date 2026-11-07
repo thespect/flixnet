@@ -327,6 +327,13 @@ export default function VideoPlayerModal({
           const anyLat = fastStreams.findIndex((s) => s.isLatinoDub);
           if (anyLat >= 0) {
             setActiveHlsIndex(anyLat);
+            setSelectedServer((prev) => {
+              if (prev === 'auto_smart_latino' || prev === 'playlatin_es' || prev === 'native_hls_4k') {
+                return 'native_hls_4k';
+              }
+              return prev;
+            });
+            setSelectedAudioMode('es_latino_dub');
           }
         }
         setIsScanningLinks(false);
@@ -357,20 +364,23 @@ export default function VideoPlayerModal({
 
       const anyLatinoIdx = streams.findIndex((s) => s.isLatinoDub);
 
-      if (selectedServer === 'native_hls_4k') {
-        if (anyLatinoIdx >= 0) {
-          setActiveHlsIndex(anyLatinoIdx);
-          setSelectedAudioMode('es_latino_dub');
-          loadSubtitleTrack(-1);
-        } else {
-          // Si este título no tiene .m3u8 directo, conmutar al servidor rápido
-          const fallbackServer = 'auto_smart_latino';
-          setSelectedServer(fallbackServer);
-          setSelectedAudioMode('es_latino_dub');
-        }
-      } else if (anyLatinoIdx >= 0 && (selectedServer === 'playlatin_es' || selectedServer === 'auto_smart_latino')) {
-        // Notificar que hay flujo 4K Nativo disponible
+      if (anyLatinoIdx >= 0) {
         setActiveHlsIndex(anyLatinoIdx);
+        setSelectedAudioMode('es_latino_dub');
+        loadSubtitleTrack(-1);
+        if (
+          selectedServer === 'auto_smart_latino' ||
+          selectedServer === 'playlatin_es' ||
+          selectedServer === 'native_hls_4k' ||
+          report.recommendedServer === 'native_hls_4k'
+        ) {
+          setSelectedServer('native_hls_4k');
+        }
+      } else if (selectedServer === 'native_hls_4k') {
+        // Si este título no tiene .m3u8 directo, conmutar al servidor rápido
+        const fallbackServer = 'auto_smart_latino';
+        setSelectedServer(fallbackServer);
+        setSelectedAudioMode('es_latino_dub');
       }
     })();
 
@@ -390,8 +400,8 @@ export default function VideoPlayerModal({
 
     const hasLatinoHls = directHlsStreams.some((s) => s.isLatinoDub || s.isCastellanoDub);
     const priorityChain = hasLatinoHls
-      ? ['auto_smart_latino', 'native_hls_4k', 'playlatin_es', 'vidlink_4k_pro', 'embed69_latino', 'multiembed_global', 'vidsrc_pm']
-      : ['auto_smart_latino', 'playlatin_es', 'vidlink_4k_pro', 'embed69_latino', 'multiembed_global', 'vidsrc_pm'];
+      ? ['native_hls_4k', 'embed69_latino', 'auto_smart_latino', 'playlatin_es', 'multiembed_global', 'vidsrc_pm', 'vidlink_4k_pro']
+      : ['embed69_latino', 'auto_smart_latino', 'playlatin_es', 'multiembed_global', 'vidsrc_pm', 'vidlink_4k_pro'];
 
     let nextServer = priorityChain.find((id) => id !== selectedServer && !failedServersRef.current.has(id));
     if (!nextServer) {
@@ -464,6 +474,47 @@ export default function VideoPlayerModal({
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [selectedServer, directHlsStreams, iterateNextLatinoServer, showToast]);
+
+  // Watchdog de 3.5s para Servidores Iframe (Conmutación automática ante errores silenciosos o demoras)
+  useEffect(() => {
+    // Si ya estamos en reproductor nativo o tráiler, limpiar timer y salir
+    if (selectedServer === 'native_hls_4k' || showTrailer) {
+      if (playLatinHandshakeTimerRef.current) {
+        clearTimeout(playLatinHandshakeTimerRef.current);
+        playLatinHandshakeTimerRef.current = null;
+      }
+      return;
+    }
+
+    if (playLatinHandshakeTimerRef.current) {
+      clearTimeout(playLatinHandshakeTimerRef.current);
+    }
+
+    playLatinReadyRef.current = false;
+    hasStartedPlayingRef.current = false;
+
+    playLatinHandshakeTimerRef.current = setTimeout(() => {
+      // Si no ha empezado a reproducirse ni ha emitido confirmación de ready:
+      if (!hasStartedPlayingRef.current && !playLatinReadyRef.current) {
+        const latIdx = directHlsStreams.findIndex((s) => s.isLatinoDub || s.isCastellanoDub);
+        if (latIdx >= 0) {
+          setActiveHlsIndex(latIdx);
+          setSelectedServer('native_hls_4k');
+          setSelectedAudioMode('es_latino_dub');
+          showToast('Auto-Detector: Conmutando a Cineflex 4K Nativo');
+        } else {
+          iterateNextLatinoServer('Auto-Detector: Tiempo de respuesta agotado');
+        }
+      }
+    }, 3500);
+
+    return () => {
+      if (playLatinHandshakeTimerRef.current) {
+        clearTimeout(playLatinHandshakeTimerRef.current);
+        playLatinHandshakeTimerRef.current = null;
+      }
+    };
+  }, [selectedServer, iframeKey, showTrailer, directHlsStreams, iterateNextLatinoServer, showToast]);
 
   // 3. CAMBIO DE PISTA DE AUDIO / IDIOMA (Garantiza Español Latino en 4K / Full HD)
   const handleSelectAudioTrack = (trackId) => {
@@ -2303,11 +2354,7 @@ export default function VideoPlayerModal({
                 allowFullScreen
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                 referrerPolicy="no-referrer"
-                sandbox={
-                  currentProvider?.sandboxSafe === false
-                    ? undefined
-                    : "allow-scripts allow-same-origin allow-forms allow-presentation allow-popups-to-escape-sandbox"
-                }
+                sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                 onLoad={() => {
                   setIsLoading(false);
                 }}
