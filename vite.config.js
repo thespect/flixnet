@@ -148,6 +148,19 @@ async function extractEmbed69LatinoStreams(imdbId, isTv = false, season = 1, epi
               m3u8Url = new URL(hls4, vidhide.url).href;
             }
             if (m3u8Url && m3u8Url.startsWith('http')) {
+              let isAlive = false;
+              try {
+                const probe = await fetch(m3u8Url, {
+                  method: 'HEAD',
+                  headers: { 'User-Agent': DROP_UA, Referer: 'https://embed69.org/' },
+                  signal: AbortSignal.timeout(1800)
+                });
+                isAlive = probe.ok || probe.status === 405;
+              } catch {
+                isAlive = false;
+              }
+              if (!isAlive) return null;
+
               return {
                 id: `latino_hls_${langKey}_${groupIdx}`,
                 name: `${langBadge} (VidHide 4K)`,

@@ -377,8 +377,10 @@ export default function VideoPlayerModal({
           setSelectedServer('native_hls_4k');
         }
       } else if (selectedServer === 'native_hls_4k') {
-        // Si este título no tiene .m3u8 directo, conmutar al servidor rápido
-        const fallbackServer = 'auto_smart_latino';
+        // Si este título no tiene .m3u8 directo verificado, conmutar al servidor recomendado de alta disponibilidad
+        const fallbackServer = report.recommendedServer && report.recommendedServer !== 'native_hls_4k'
+          ? report.recommendedServer
+          : (movie?.isTv ? 'embed69_latino' : 'auto_smart_latino');
         setSelectedServer(fallbackServer);
         setSelectedAudioMode('es_latino_dub');
       }
@@ -475,10 +477,20 @@ export default function VideoPlayerModal({
     return () => window.removeEventListener('message', handleMessage);
   }, [selectedServer, directHlsStreams, iterateNextLatinoServer, showToast]);
 
-  // Watchdog de 3.5s para Servidores Iframe (Conmutación automática ante errores silenciosos o demoras)
+  // Watchdog de 3.5s para Servidores PlayLatin (Conmutación automática ante errores silenciosos o demoras de MeineCloud)
   useEffect(() => {
     // Si ya estamos en reproductor nativo o tráiler, limpiar timer y salir
     if (selectedServer === 'native_hls_4k' || showTrailer) {
+      if (playLatinHandshakeTimerRef.current) {
+        clearTimeout(playLatinHandshakeTimerRef.current);
+        playLatinHandshakeTimerRef.current = null;
+      }
+      return;
+    }
+
+    // El watchdog debe activarse únicamente para servidores con protocolo de handshake (playlatin_es)
+    // Para otros servidores (embed69, vidlink, vidsrc), no interrumpir la reproducción externa
+    if (selectedServer !== 'playlatin_es') {
       if (playLatinHandshakeTimerRef.current) {
         clearTimeout(playLatinHandshakeTimerRef.current);
         playLatinHandshakeTimerRef.current = null;
@@ -494,7 +506,7 @@ export default function VideoPlayerModal({
     hasStartedPlayingRef.current = false;
 
     playLatinHandshakeTimerRef.current = setTimeout(() => {
-      // Si no ha empezado a reproducirse ni ha emitido confirmación de ready:
+      // Si PlayLatin no ha emitido ready ni ha comenzado a reproducirse:
       if (!hasStartedPlayingRef.current && !playLatinReadyRef.current) {
         const latIdx = directHlsStreams.findIndex((s) => s.isLatinoDub || s.isCastellanoDub);
         if (latIdx >= 0) {
@@ -2354,7 +2366,11 @@ export default function VideoPlayerModal({
                 allowFullScreen
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                 referrerPolicy="no-referrer"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+                sandbox={
+                  currentProvider?.sandboxSafe === false
+                    ? undefined
+                    : "allow-scripts allow-same-origin allow-forms allow-presentation"
+                }
                 onLoad={() => {
                   setIsLoading(false);
                 }}

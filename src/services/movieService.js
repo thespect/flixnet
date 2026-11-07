@@ -236,7 +236,7 @@ export const STREAM_PROVIDERS = [
     isAutoNode: true,
     prefersNativeHls: true,
     isDirectHls: true,
-    sandboxSafe: true,
+    sandboxSafe: false,
     language: 'Español Latino Oficial (Auto-Conmutación Garantizada)',
     description: 'Detecta en tiempo real cuál servidor tiene el título activo en Español Latino con máxima velocidad.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
@@ -290,7 +290,7 @@ export const STREAM_PROVIDERS = [
     ping: '5ms',
     isNative: false,
     isDirectHls: false,
-    sandboxSafe: true,
+    sandboxSafe: false,
     language: 'Multi-Audio / Subtítulos en Español',
     description: 'Respaldo de alta disponibilidad que garantiza reproducción instantánea para cualquier película o serie.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
@@ -310,7 +310,7 @@ export const STREAM_PROVIDERS = [
     ping: '7ms',
     isNative: false,
     isDirectHls: false,
-    sandboxSafe: true,
+    sandboxSafe: false,
     language: 'Español Latino (LAT) y Castellano (ESP)',
     description: 'Servidor dedicado a doblajes en Español Latino con selección de espejos.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {

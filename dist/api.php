@@ -487,27 +487,39 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
                 $m3u8Vh = $mh[1];
             }
             if (!empty($m3u8Vh) && strpos($m3u8Vh, 'http') === 0) {
-                $isLatVh = ($vidhideLangKey === 'latino');
-                $latinoDirectStreams[] = [
-                    'id' => "latino_hls_{$vidhideLangKey}_0",
-                    'name' => "{$vidhideBadge} (VidHide 4K)",
-                    'providerId' => "embed69_{$vidhideLangKey}",
-                    'url' => $m3u8Vh,
-                    'rawUrl' => $m3u8Vh,
-                    'embedUrl' => $vidhideUrlToExtract,
-                    'type' => 'hls',
-                    'lang' => $vidhideLangKey,
-                    'langCode' => $vidhideLangRaw,
-                    'isLatinoDub' => $isLatVh,
-                    'isCastellanoDub' => !$isLatVh,
-                    'isDirectHls' => true,
-                    'castCompatible' => true,
-                    'isCamQuality' => false,
-                    'maxBandwidth' => 3200000,
-                    'quality' => '4K / 1080p Digital HD Latino',
-                    'ping' => '6ms',
-                    'verified' => true
-                ];
+                $chP = curl_init($m3u8Vh);
+                curl_setopt($chP, CURLOPT_NOBODY, true);
+                curl_setopt($chP, CURLOPT_TIMEOUT_MS, 1800);
+                curl_setopt($chP, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($chP, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($chP, CURLOPT_REFERER, 'https://embed69.org/');
+                curl_exec($chP);
+                $httpCode = curl_getinfo($chP, CURLINFO_HTTP_CODE);
+                curl_close($chP);
+
+                if ($httpCode >= 200 && $httpCode < 400) {
+                    $isLatVh = ($vidhideLangKey === 'latino');
+                    $latinoDirectStreams[] = [
+                        'id' => "latino_hls_{$vidhideLangKey}_0",
+                        'name' => "{$vidhideBadge} (VidHide 4K)",
+                        'providerId' => "embed69_{$vidhideLangKey}",
+                        'url' => $m3u8Vh,
+                        'rawUrl' => $m3u8Vh,
+                        'embedUrl' => $vidhideUrlToExtract,
+                        'type' => 'hls',
+                        'lang' => $vidhideLangKey,
+                        'langCode' => $vidhideLangRaw,
+                        'isLatinoDub' => $isLatVh,
+                        'isCastellanoDub' => !$isLatVh,
+                        'isDirectHls' => true,
+                        'castCompatible' => true,
+                        'isCamQuality' => false,
+                        'maxBandwidth' => 3200000,
+                        'quality' => '4K / 1080p Digital HD Latino',
+                        'ping' => '6ms',
+                        'verified' => true
+                    ];
+                }
             }
         }
     }
