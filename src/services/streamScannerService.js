@@ -24,11 +24,11 @@ const inFlightScans = new Map();
 function getScanFromStorage(key) {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = sessionStorage.getItem(`cineflex_scan_v5_${key}`);
+    const raw = sessionStorage.getItem(`cineflex_scan_v6_${key}`);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     const hasLatino = Array.isArray(parsed?.latinoDirectStreams) && parsed.latinoDirectStreams.length > 0;
-    const ttl = hasLatino ? 2 * 60 * 60 * 1000 : 20 * 1000;
+    const ttl = hasLatino ? 15 * 60 * 1000 : 15 * 1000;
     if (parsed && Date.now() - (parsed.timestamp || 0) < ttl) {
       return parsed;
     }
@@ -39,7 +39,7 @@ function getScanFromStorage(key) {
 function saveScanToStorage(key, data) {
   if (typeof window === 'undefined' || !data) return;
   try {
-    sessionStorage.setItem(`cineflex_scan_v5_${key}`, JSON.stringify(data));
+    sessionStorage.setItem(`cineflex_scan_v6_${key}`, JSON.stringify(data));
   } catch { }
 }
 

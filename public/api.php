@@ -19,8 +19,14 @@ $action = isset($_GET['action']) ? $_GET['action'] : 'scan';
 
 // MODO 1: PROXY HLS LOCAL
 if ($action === 'proxy') {
-    $targetUrl = isset($_GET['url']) ? trim($_GET['url']) : '';
-    $customReferer = isset($_GET['referer']) ? trim($_GET['referer']) : '';
+    $b64Param = isset($_GET['b64']) ? trim($_GET['b64']) : '';
+    $ref64Param = isset($_GET['ref64']) ? trim($_GET['ref64']) : '';
+    $targetUrl = !empty($b64Param)
+        ? base64_decode(strtr($b64Param, '-_', '+/'))
+        : (isset($_GET['url']) ? trim($_GET['url']) : '');
+    $customReferer = !empty($ref64Param)
+        ? base64_decode(strtr($ref64Param, '-_', '+/'))
+        : (isset($_GET['referer']) ? trim($_GET['referer']) : '');
     if (empty($targetUrl) || strpos($targetUrl, 'http') !== 0) {
         http_response_code(400);
         echo 'Missing url';
@@ -68,7 +74,7 @@ if ($action === 'proxy') {
         $parsedBase = parse_url($targetUrl);
         $baseOrigin = $parsedBase['scheme'] . '://' . $parsedBase['host'];
         $baseDir = isset($parsedBase['path']) ? rtrim(dirname($parsedBase['path']), '/') . '/' : '/';
-        $refParam = '&referer=' . urlencode($effectiveReferer);
+        $ref64 = rtrim(strtr(base64_encode($effectiveReferer), '+/', '-_'), '=');
 
         $lines = preg_split('/\r?\n/', $body);
         $out = [];
@@ -79,12 +85,13 @@ if ($action === 'proxy') {
                 continue;
             }
             if (strpos($trim, '#') === 0) {
-                $out[] = preg_replace_callback('/URI="([^"]+)"/', function ($m) use ($baseOrigin, $baseDir, $refParam) {
+                $out[] = preg_replace_callback('/URI="([^"]+)"/', function ($m) use ($baseOrigin, $baseDir, $ref64) {
                     $u = $m[1];
                     if (strpos($u, 'http') !== 0) {
                         $u = (strpos($u, '/') === 0) ? ($baseOrigin . $u) : ($baseOrigin . $baseDir . $u);
                     }
-                    return 'URI="./api.php?action=proxy&url=' . urlencode($u) . $refParam . '"';
+                    $b64 = rtrim(strtr(base64_encode($u), '+/', '-_'), '=');
+                    return 'URI="./api.php?action=proxy&b64=' . $b64 . '&ref64=' . $ref64 . '"';
                 }, $line);
                 continue;
             }
@@ -92,7 +99,8 @@ if ($action === 'proxy') {
             if (strpos($abs, 'http') !== 0) {
                 $abs = (strpos($abs, '/') === 0) ? ($baseOrigin . $abs) : ($baseOrigin . $baseDir . $abs);
             }
-            $out[] = './api.php?action=proxy&url=' . urlencode($abs) . $refParam;
+            $b64 = rtrim(strtr(base64_encode($abs), '+/', '-_'), '=');
+            $out[] = './api.php?action=proxy&b64=' . $b64 . '&ref64=' . $ref64;
         }
         echo implode("\n", $out);
     } else {
@@ -498,13 +506,16 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
         }
     }
 
-    // C. Extracción directa de StreamWish (flaswish.com hls4) y VidHide en Español Latino (200 OK verificado)
+    // C. Extracción directa de StreamWish (flaswish.com hls4), VidHide y Dropload (PlayLatin) en Español Latino
     $multiExtracts = [];
     if (!empty($streamwishUrlToExtract)) {
         $multiExtracts['streamwish'] = ['url' => $streamwishUrlToExtract, 'timeout' => 2.8, 'referer' => 'https://embed69.org/'];
     }
     if (!empty($vidhideUrlToExtract)) {
         $multiExtracts['vidhide'] = ['url' => $vidhideUrlToExtract, 'timeout' => 2.8, 'referer' => 'https://embed69.org/'];
+    }
+    if (!empty($dropUrlToExtract)) {
+        $multiExtracts['dropload'] = ['url' => $dropUrlToExtract, 'timeout' => 2.5, 'referer' => 'https://playlatinsrc.co/'];
     }
 
     if (!empty($multiExtracts)) {
@@ -520,6 +531,15 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
                 'langRaw' => !empty($streamwishLangRaw) ? $streamwishLangRaw : 'LAT',
                 'badge' => !empty($streamwishBadge) ? $streamwishBadge : 'Cineflex CDN • Español Latino Oficial'
             ],
+            'dropload' => [
+                'label' => 'PlayLatin Dropload 4K',
+                'embedUrl' => !empty($dropUrlToExtract) ? $dropUrlToExtract : '',
+                'rawEmbed' => !empty($dropUrlToExtract) ? $dropUrlToExtract : '',
+                'referer' => 'https://dr0pstream.com/',
+                'langKey' => !empty($dropVersion) ? $dropVersion : 'latino',
+                'langRaw' => ($dropVersion === 'castellano') ? 'ESP' : 'LAT',
+                'badge' => ($dropVersion === 'castellano') ? 'PlayLatin CDN • Español Castellano' : 'PlayLatin CDN • Español Latino Oficial'
+            ],
             'vidhide' => [
                 'label' => 'VidHide 4K',
                 'embedUrl' => !empty($vidhideUrlToExtract) ? $vidhideUrlToExtract : '',
@@ -532,7 +552,7 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
         ];
 
         foreach ($candidatesToTest as $cKey => $cMeta) {
-            if (empty($extracted[$cKey]) || count($latinoDirectStreams) > 0) continue;
+            if (empty($extracted[$cKey]) || count($latinoDirectStreams) >= 3) continue;
             $unpacked = unpackPackerPhp($extracted[$cKey]);
             if (empty($unpacked)) continue;
 
@@ -549,7 +569,7 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
             }
 
             foreach ($m3u8Candidates as $candM3u8) {
-                $isAlivePhp = (strpos($candM3u8, 'flaswish.com/stream/') !== false);
+                $isAlivePhp = (strpos($candM3u8, 'flaswish.com/stream/') !== false || strpos($candM3u8, 'dropcdn.io/') !== false);
                 if (!$isAlivePhp) {
                     $chP = curl_init($candM3u8);
                     curl_setopt($chP, CURLOPT_RETURNTRANSFER, true);
@@ -566,11 +586,14 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
 
                 if ($isAlivePhp) {
                     $isLat = ($cMeta['langKey'] === 'latino');
-                    $proxiedUrl = './api.php?action=proxy&url=' . urlencode($candM3u8) . '&referer=' . urlencode($cMeta['referer']);
+                    $b64U = rtrim(strtr(base64_encode($candM3u8), '+/', '-_'), '=');
+                    $b64R = rtrim(strtr(base64_encode($cMeta['referer']), '+/', '-_'), '=');
+                    $proxiedUrl = './api.php?action=proxy&b64=' . $b64U . '&ref64=' . $b64R;
+                    $idxNum = count($latinoDirectStreams);
                     $latinoDirectStreams[] = [
-                        'id' => "latino_hls_{$cMeta['langKey']}_0",
+                        'id' => "latino_hls_{$cMeta['langKey']}_{$idxNum}",
                         'name' => "{$cMeta['badge']} ({$cMeta['label']})",
-                        'providerId' => "embed69_{$cMeta['langKey']}",
+                        'providerId' => ($cKey === 'dropload') ? 'playlatin_es' : "embed69_{$cMeta['langKey']}",
                         'url' => $proxiedUrl,
                         'rawUrl' => $candM3u8,
                         'embedUrl' => $cMeta['rawEmbed'],

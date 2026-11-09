@@ -138,6 +138,7 @@ async function extractEmbed69LatinoStreams(imdbId, isTv = false, season = 1, epi
         candidateEmbeds.push({ label: 'VidHide 4K', url: vidhide.url, rawEmbedUrl: vidhide.url, referer: vhOrigin });
       }
 
+      const groupStreams = [];
       for (const cand of candidateEmbeds) {
         const t0 = Date.now();
         try {
@@ -184,9 +185,11 @@ async function extractEmbed69LatinoStreams(imdbId, isTv = false, season = 1, epi
             }
             if (!isAlive) continue;
 
-            const proxiedUrl = `/api/hls-proxy?url=${encodeURIComponent(resolvedM3u8)}&referer=${encodeURIComponent(cand.referer)}`;
-            return {
-              id: `latino_hls_${langKey}_${groupIdx}`,
+            const b64Url = Buffer.from(resolvedM3u8, 'utf8').toString('base64url');
+            const b64Ref = Buffer.from(cand.referer, 'utf8').toString('base64url');
+            const proxiedUrl = `/api/hls-proxy?b64=${b64Url}&ref64=${b64Ref}`;
+            groupStreams.push({
+              id: `latino_hls_${langKey}_${groupIdx}_${groupStreams.length}`,
               name: `${langBadge} (${cand.label})`,
               providerId: `embed69_${langKey}`,
               url: proxiedUrl,
@@ -205,14 +208,15 @@ async function extractEmbed69LatinoStreams(imdbId, isTv = false, season = 1, epi
               quality: '4K / 1080p Digital HD Latino',
               ping: `${Math.max(6, Date.now() - t0)}ms`,
               verified: true
-            };
+            });
+            break;
           }
         } catch {}
       }
-      return null;
+      return groupStreams;
     });
 
-    const resolved = (await Promise.all(tasks)).filter(Boolean);
+    const resolved = (await Promise.all(tasks)).flat().filter(Boolean);
     resolved.sort((a, b) => {
       const score = (x) => (x.isLatinoDub ? 1 : 2);
       return score(a) - score(b);
@@ -265,6 +269,7 @@ async function extractPlayLatinLatinoStreams(imdbId, isTv = false, season = 1, e
 
     const latinoSources = [];
     const streams = [];
+    const droploadCandidates = [];
 
     for (const src of data.sources) {
       if (!src?.url || !src.url.startsWith('http')) continue;
@@ -275,8 +280,10 @@ async function extractPlayLatinLatinoStreams(imdbId, isTv = false, season = 1, e
 
       const hostName = String(src.name || '').toLowerCase();
       let serverKey = hostName.replace(/\.[a-z]+$/, '');
-      if (hostName.includes('dropload') || src.url.includes('dr0pstream')) serverKey = 'dropload';
-      else if (hostName.includes('dood')) serverKey = 'doodstream';
+      if (hostName.includes('dropload') || src.url.includes('dr0pstream')) {
+        serverKey = 'dropload';
+        droploadCandidates.push({ url: src.url, isLatino, isCastellano, ver });
+      } else if (hostName.includes('dood')) serverKey = 'doodstream';
       else if (hostName.includes('mixdrop') || src.url.includes('mxdrop')) serverKey = 'mixdrop';
 
       if (isLatino) {
@@ -289,10 +296,57 @@ async function extractPlayLatinLatinoStreams(imdbId, isTv = false, season = 1, e
       }
     }
 
+    // Extraer .m3u8 directo desde Dropload (dr0pstream.com -> ds1.dropcdn.io master.m3u8) sin iframes ni anuncios
+    for (const dropCand of droploadCandidates.slice(0, 2)) {
+      const t0 = Date.now();
+      try {
+        const dr = await fetch(dropCand.url, {
+          headers: {
+            'User-Agent': DROP_UA,
+            Referer: 'https://playlatinsrc.co/'
+          },
+          signal: AbortSignal.timeout(2500)
+        });
+        if (!dr.ok) continue;
+        const dHtml = await dr.text();
+        const unpacked = unpackPackerCode(dHtml);
+        if (!unpacked) continue;
+        const m3u8 = (unpacked.match(/file\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/) || [])[1];
+        if (!m3u8) continue;
+
+        const dropOrigin = new URL(dropCand.url).origin + '/';
+        const b64Url = Buffer.from(m3u8, 'utf8').toString('base64url');
+        const b64Ref = Buffer.from(dropOrigin, 'utf8').toString('base64url');
+        streams.push({
+          id: `playlatin_drop_${dropCand.ver}_${streams.length}`,
+          name: dropCand.isLatino
+            ? 'PlayLatin CDN • Español Latino Oficial (Dropload 4K)'
+            : 'PlayLatin CDN • Español Castellano (Dropload 4K)',
+          providerId: 'playlatin_es',
+          url: `/api/hls-proxy?b64=${b64Url}&ref64=${b64Ref}`,
+          rawUrl: m3u8,
+          embedUrl: dropCand.url,
+          type: 'hls',
+          lang: dropCand.isLatino ? 'latino' : 'castellano',
+          langCode: dropCand.isLatino ? 'LAT' : 'ESP',
+          isLatinoDub: dropCand.isLatino,
+          isCastellanoDub: dropCand.isCastellano,
+          isDirectHls: true,
+          castCompatible: true,
+          isCamQuality: false,
+          maxBandwidth: 3500000,
+          maxHeight: 1080,
+          quality: '4K / 1080p Digital HD Latino',
+          ping: `${Math.max(5, Date.now() - t0)}ms`,
+          verified: true
+        });
+      } catch {}
+    }
+
     return {
       streams,
       latinoSources,
-      playlatinOk: latinoSources.length > 0
+      playlatinOk: latinoSources.length > 0 || streams.length > 0
     };
   } catch {
     return { streams: [], latinoSources: [], playlatinOk: false };
@@ -304,8 +358,15 @@ function cineflexStreamScannerPlugin() {
   const handleHlsProxyRequest = async (req, res) => {
     try {
       const urlObj = new URL(req.url, 'http://localhost');
-      const targetUrl = urlObj.searchParams.get('url');
-      const customReferer = urlObj.searchParams.get('referer');
+      const b64Param = urlObj.searchParams.get('b64');
+      const ref64Param = urlObj.searchParams.get('ref64');
+      const targetUrl = b64Param
+        ? Buffer.from(b64Param, 'base64url').toString('utf8')
+        : urlObj.searchParams.get('url');
+      const customReferer = ref64Param
+        ? Buffer.from(ref64Param, 'base64url').toString('utf8')
+        : urlObj.searchParams.get('referer');
+
       if (!targetUrl || !targetUrl.startsWith('http')) {
         res.statusCode = 400;
         res.end('Missing or invalid url');
@@ -341,7 +402,7 @@ function cineflexStreamScannerPlugin() {
       if (targetUrl.includes('.m3u8') || ct.includes('mpegurl') || ct.includes('text')) {
         const text = await upstream.text();
         const baseUrl = new URL(targetUrl);
-        const refParam = `&referer=${encodeURIComponent(effectiveReferer)}`;
+        const ref64 = Buffer.from(effectiveReferer, 'utf8').toString('base64url');
         const rewritten = text
           .split(/\r?\n/)
           .map((line) => {
@@ -350,11 +411,13 @@ function cineflexStreamScannerPlugin() {
             if (trimmed.startsWith('#')) {
               return line.replace(/URI="([^"]+)"/g, (_, uriVal) => {
                 const absUri = uriVal.startsWith('http') ? uriVal : new URL(uriVal, baseUrl).href;
-                return `URI="/api/hls-proxy?url=${encodeURIComponent(absUri)}${refParam}"`;
+                const b64 = Buffer.from(absUri, 'utf8').toString('base64url');
+                return `URI="/api/hls-proxy?b64=${b64}&ref64=${ref64}"`;
               });
             }
             const absLine = trimmed.startsWith('http') ? trimmed : new URL(trimmed, baseUrl).href;
-            return `/api/hls-proxy?url=${encodeURIComponent(absLine)}${refParam}`;
+            const b64 = Buffer.from(absLine, 'utf8').toString('base64url');
+            return `/api/hls-proxy?b64=${b64}&ref64=${ref64}`;
           })
           .join('\n');
 

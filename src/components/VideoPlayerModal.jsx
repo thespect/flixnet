@@ -402,19 +402,31 @@ export default function VideoPlayerModal({
     };
   }, [movie, currentSeason, currentEpisode]);
 
-  // Iterador Inteligente de Servidores Compatibles (Priorizando SIEMPRE Español Latino antes que servidores internacionales)
+  // Iterador Inteligente de Servidores Compatibles (100% Español Latino • 0% Anuncios • Cero Clics Fantasmas)
   const iterateNextLatinoServer = useCallback((reasonLabel = 'Auto-Detector') => {
     if (playLatinHandshakeTimerRef.current) {
       clearTimeout(playLatinHandshakeTimerRef.current);
       playLatinHandshakeTimerRef.current = null;
     }
 
+    // 1. Si tenemos múltiples nodos HLS directos (.m3u8) extraídos (StreamWish 4K, PlayLatin Dropload 4K, VidHide 4K), iterar primero entre ellos sin salir del reproductor nativo <video>
+    if (directHlsStreams.length > 1) {
+      const nextHlsIdx = (activeHlsIndex + 1) % directHlsStreams.length;
+      if (nextHlsIdx !== activeHlsIndex) {
+        setActiveHlsIndex(nextHlsIdx);
+        setSelectedServer('native_hls_4k');
+        setSelectedAudioMode(directHlsStreams[nextHlsIdx]?.isCastellanoDub ? 'es_castellano_dub' : 'es_latino_dub');
+        showToast(`${reasonLabel}: Conectado a ${directHlsStreams[nextHlsIdx]?.name || `Nodo 4K #${nextHlsIdx + 1}`}`);
+        return;
+      }
+    }
+
     failedServersRef.current.add(selectedServer);
 
     const hasLatinoHls = directHlsStreams.some((s) => s.isLatinoDub || s.isCastellanoDub);
     const priorityChain = hasLatinoHls
-      ? ['native_hls_4k', 'playlatin_es', 'embed69_latino', 'auto_smart_latino', 'multiembed_global', 'vidlink_4k_pro', 'vidsrc_pm']
-      : ['playlatin_es', 'embed69_latino', 'auto_smart_latino', 'multiembed_global', 'vidlink_4k_pro', 'vidsrc_pm'];
+      ? ['native_hls_4k', 'playlatin_es', 'embed69_latino', 'vidlink_4k_pro', 'multiembed_global', 'auto_smart_latino']
+      : ['playlatin_es', 'embed69_latino', 'vidlink_4k_pro', 'multiembed_global', 'auto_smart_latino'];
 
     let nextServer = priorityChain.find((id) => id !== selectedServer && !failedServersRef.current.has(id));
     if (!nextServer) {
@@ -433,14 +445,15 @@ export default function VideoPlayerModal({
     setSelectedServer(nextServer);
     setSelectedAudioMode('es_latino_dub');
 
-    if (nextServer === 'native_hls_4k') {
-      const latIdx = directHlsStreams.findIndex((s) => s.isLatinoDub || s.isCastellanoDub);
-      if (latIdx >= 0) setActiveHlsIndex(latIdx);
+    if (directHlsStreams.length > 0) {
+      const serverOrder = ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'embed69_latino', 'vidlink_4k_pro', 'multiembed_global'];
+      const sIdx = Math.max(0, serverOrder.indexOf(nextServer));
+      setActiveHlsIndex(sIdx % directHlsStreams.length);
     }
 
     const prov = STREAM_PROVIDERS.find((p) => p.id === nextServer);
-    showToast(`${reasonLabel}: Conectado a ${prov?.name || 'Servidor'}`);
-  }, [directHlsStreams, selectedServer, stopSpeechSynthesis, showToast]);
+    showToast(`${reasonLabel}: Conectado a ${prov?.name || 'Servidor 4K'}`);
+  }, [directHlsStreams, activeHlsIndex, selectedServer, stopSpeechSynthesis, showToast]);
 
   // 2. ESCUCHAR EVENTOS EN TIEMPO REAL DE PLAYLATIN (Detección automática de idioma y fallos)
   useEffect(() => {
@@ -841,8 +854,9 @@ export default function VideoPlayerModal({
         hlsRef.current.destroy();
         hlsRef.current = null;
       }
+      currentLoadedUrlRef.current = '';
     };
-  }, [isNativeServer, selectedServer, iframeKey, showTrailer, resolvedNativeUrl, isHlsStream, activeHlsIndex, showToast]);
+  }, [isNativeServer, showTrailer, resolvedNativeUrl, isHlsStream]);
 
   const saveCurrentProgress = useCallback(() => {
     if (videoRef.current && videoRef.current.currentTime > 3) {
@@ -1102,70 +1116,24 @@ export default function VideoPlayerModal({
     setIsLoading(true);
     setIframeKey(prev => prev + 1);
 
-    const anyLatinoIdx = directHlsStreams.findIndex(s => s.isLatinoDub);
-    const bluRayIdx = directHlsStreams.findIndex(s => s.isBluRayMaster || s.providerId === 'nova');
+    setSelectedAudioMode('es_latino_dub');
+    setPlayLatinLang('latino');
+    loadSubtitleTrack(-1);
 
-    if (
-      serverId === 'auto_smart_latino' ||
-      serverId === 'playlatin_es' ||
-      serverId === 'embed69_latino' ||
-      serverId === 'playlatin_dood'
-    ) {
-      setSelectedAudioMode('es_latino_dub');
-      setPlayLatinLang('latino');
-      if (anyLatinoIdx >= 0) {
-        // Si hay múltiples mirrors HLS directos extraídos, permitir alternar entre ellos al cambiar entre PlayLatin y Embed69
-        const latinoList = directHlsStreams
-          .map((s, idx) => ({ s, idx }))
-          .filter((item) => item.s.isLatinoDub || item.s.isCastellanoDub);
-        if (latinoList.length > 1 && serverId === 'embed69_latino') {
-          setActiveHlsIndex(latinoList[1].idx);
-        } else {
-          setActiveHlsIndex(anyLatinoIdx);
-        }
-      }
-      loadSubtitleTrack(-1);
-      const provObj = STREAM_PROVIDERS.find((p) => p.id === serverId);
-      showToast(`${provObj?.name || 'Servidor 4K'} activado (Español Latino Oficial • 0% Anuncios)`);
-    } else if (serverId === 'native_hls_4k') {
-      if (anyLatinoIdx >= 0) {
-        setActiveHlsIndex(anyLatinoIdx);
-        setSelectedAudioMode('es_latino_dub');
-        loadSubtitleTrack(-1);
-        showToast('Cineflex 4K Directo activo (Español Latino Oficial • 0% Anuncios)');
+    if (directHlsStreams.length > 0) {
+      // Asignar a cada botón de servidor un nodo espejo HLS directo distinto cuando hay varios disponibles
+      const byProvider = directHlsStreams.findIndex((s) => s.providerId === serverId);
+      if (byProvider >= 0) {
+        setActiveHlsIndex(byProvider);
       } else {
-        iterateNextLatinoServer('Auto-Detector Sí o Sí');
-        return;
-      }
-    } else if (
-      serverId === 'vidhide_latino' ||
-      serverId === 'streamwish_latino' ||
-      serverId === 'nxsha_multilang' ||
-      serverId === 'nxsha_voe_latino' ||
-      serverId === 'vidlink_4k_pro'
-    ) {
-      setSelectedAudioMode('es_latino_dub');
-      const provObj = STREAM_PROVIDERS.find((p) => p.id === serverId);
-      showToast(`${provObj?.name || 'Servidor 4K'} activado (0% Anuncios)`);
-    } else if (serverId === 'nova_4k_master') {
-      if (bluRayIdx >= 0) {
-        setActiveHlsIndex(bluRayIdx);
-        setSelectedAudioMode('en_original_sub_es');
-        if (subtitlesList.length > 0) {
-          const esIdx = subtitlesList.findIndex(s => s.isLatino || s.isSpanish);
-          loadSubtitleTrack(esIdx >= 0 ? esIdx : 0);
-        }
-        showToast('Master Blu-Ray 4K Digital (~5 Mbps • Subtítulos en Español)');
-      } else if (anyLatinoIdx >= 0) {
-        setActiveHlsIndex(anyLatinoIdx);
-        setSelectedAudioMode('es_latino_dub');
-        loadSubtitleTrack(-1);
-        showToast('Stream 4K Español Latino Directo activo');
-      } else {
-        iterateNextLatinoServer('Auto-Detector Sí o Sí');
-        return;
+        const serverOrder = ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'embed69_latino', 'vidlink_4k_pro', 'multiembed_global'];
+        const sIdx = Math.max(0, serverOrder.indexOf(serverId));
+        setActiveHlsIndex(sIdx % directHlsStreams.length);
       }
     }
+
+    const provObj = STREAM_PROVIDERS.find((p) => p.id === serverId);
+    showToast(`${provObj?.name || 'Servidor 4K'} activado (Español Latino Oficial • 0% Anuncios)`);
     StorageService.addToHistory(movie, serverId, currentSeason, currentEpisode);
   };
 
@@ -2008,7 +1976,7 @@ export default function VideoPlayerModal({
             className="relative w-full h-full flex items-center justify-center overflow-hidden z-10"
           >
             <video
-              key={`native_${movie?.id}_s${currentSeason}_e${currentEpisode}_${selectedServer}_${activeHlsIndex}`}
+              key={`native_${movie?.id}_s${currentSeason}_e${currentEpisode}_${activeHlsIndex}`}
               ref={videoRef}
               autoPlay
               playsInline
@@ -2343,7 +2311,7 @@ export default function VideoPlayerModal({
                   </span>
                 </div>
               )}
-              {!isScanningLinks && (
+              {!isScanningLinks && (showTrailer ? trailerUrl : streamUrl) && (
                 <iframe
                   key={`${selectedServer}_${playLatinLang}_s${currentSeason}_e${currentEpisode}_${iframeKey}`}
                   src={showTrailer ? trailerUrl : streamUrl}
@@ -2352,6 +2320,7 @@ export default function VideoPlayerModal({
                   allowFullScreen
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                   referrerPolicy="origin"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                   onLoad={() => {
                     setIsLoading(false);
                   }}
