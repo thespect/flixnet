@@ -101,14 +101,14 @@ export default function VideoPlayerModal({
   const effectiveImdbId = specialAlias?.imdbId || movie?.imdb_id || KNOWN_IMDB_IDS[movie?.id] || null;
 
   const initialCachedScan = StreamScannerService.getCachedScan(movie, effectiveSeason, effectiveEpisode);
-  const hasCachedLatinoHls = (initialCachedScan?.directHlsStreams || []).some((s) => s.isLatinoDub);
+  const hasCachedLatinoHls = (initialCachedScan?.directHlsStreams || []).some((s) => s.isLatinoDub && !s.isCamQuality);
 
   const [selectedServer, setSelectedServer] = useState(
     initialServer && STREAM_PROVIDERS.some((p) => p.id === initialServer)
       ? initialServer
       : hasCachedLatinoHls
         ? 'native_hls_4k'
-        : 'auto_smart_latino'
+        : 'vidlink_4k_pro'
   );
   const [selectedAudioMode, setSelectedAudioMode] = useState('es_latino_dub');
   const [playLatinLang, setPlayLatinLang] = useState('latino');
