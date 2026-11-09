@@ -96,6 +96,16 @@ if ($action === 'proxy') {
         }
         echo implode("\n", $out);
     } else {
+        // Si el CDN disfraza fragmentos MPEG-TS (.ts) detrás de una cabecera PNG/JPEG falsa (ej. StreamWish / VidHide), recortar hasta el byte de sincronía 0x47
+        $len = strlen($body);
+        if ($len > 564 && ord($body[0]) !== 0x47) {
+            for ($i = 1; $i < 512; $i++) {
+                if (ord($body[$i]) === 0x47 && ord($body[$i + 188]) === 0x47 && ord($body[$i + 376]) === 0x47) {
+                    $body = substr($body, $i);
+                    break;
+                }
+            }
+        }
         header('Content-Type: video/mp2t');
         echo $body;
     }

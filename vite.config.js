@@ -362,10 +362,20 @@ function cineflexStreamScannerPlugin() {
         res.setHeader('Content-Type', 'application/vnd.apple.mpegurl; charset=utf-8');
         res.end(rewritten);
       } else {
-        res.statusCode = upstream.status;
-        res.setHeader('Content-Type', ct || 'video/mp2t');
         const arrayBuf = await upstream.arrayBuffer();
-        res.end(Buffer.from(arrayBuf));
+        let buf = Buffer.from(arrayBuf);
+        // Si el CDN disfraza fragmentos MPEG-TS (.ts) detrás de una cabecera PNG/JPEG falsa (ej. StreamWish / VidHide), recortar hasta el byte de sincronía 0x47
+        if (buf.length > 564 && buf[0] !== 0x47) {
+          for (let i = 1; i < 512; i++) {
+            if (buf[i] === 0x47 && buf[i + 188] === 0x47 && buf[i + 376] === 0x47) {
+              buf = buf.subarray(i);
+              break;
+            }
+          }
+        }
+        res.statusCode = upstream.status;
+        res.setHeader('Content-Type', 'video/mp2t');
+        res.end(buf);
       }
     } catch {
       res.statusCode = 502;

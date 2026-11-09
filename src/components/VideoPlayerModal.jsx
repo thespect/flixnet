@@ -1073,19 +1073,14 @@ export default function VideoPlayerModal({
     return null;
   })();
 
-  const streamUrl =
-    selectedServer === 'vidhide_latino' && directDecryptedMirrorUrl
-      ? directDecryptedMirrorUrl
-      : (selectedServer === 'streamwish_latino' || selectedServer === 'embed69_latino') && directStreamwishMirrorUrl
-        ? directStreamwishMirrorUrl
-        : currentProvider.getUrl(
-          movie.id,
-          specialAlias ? true : movie.isTv,
-          currentSeason,
-          currentEpisode,
-          resolvedImdbId || specialAlias?.imdbId,
-          playLatinLang
-        );
+  const streamUrl = currentProvider.getUrl(
+    movie.id,
+    specialAlias ? true : movie.isTv,
+    currentSeason,
+    currentEpisode,
+    resolvedImdbId || specialAlias?.imdbId,
+    playLatinLang
+  );
 
   const activeTrailerKey = movie.trailer_id || trailerKey;
   const trailerUrl = activeTrailerKey
@@ -1110,15 +1105,28 @@ export default function VideoPlayerModal({
     const anyLatinoIdx = directHlsStreams.findIndex(s => s.isLatinoDub);
     const bluRayIdx = directHlsStreams.findIndex(s => s.isBluRayMaster || s.providerId === 'nova');
 
-    if (serverId === 'auto_smart_latino' || serverId === 'playlatin_es' || serverId === 'playlatin_dood') {
+    if (
+      serverId === 'auto_smart_latino' ||
+      serverId === 'playlatin_es' ||
+      serverId === 'embed69_latino' ||
+      serverId === 'playlatin_dood'
+    ) {
       setSelectedAudioMode('es_latino_dub');
       setPlayLatinLang('latino');
       if (anyLatinoIdx >= 0) {
-        setActiveHlsIndex(anyLatinoIdx);
+        // Si hay múltiples mirrors HLS directos extraídos, permitir alternar entre ellos al cambiar entre PlayLatin y Embed69
+        const latinoList = directHlsStreams
+          .map((s, idx) => ({ s, idx }))
+          .filter((item) => item.s.isLatinoDub || item.s.isCastellanoDub);
+        if (latinoList.length > 1 && serverId === 'embed69_latino') {
+          setActiveHlsIndex(latinoList[1].idx);
+        } else {
+          setActiveHlsIndex(anyLatinoIdx);
+        }
       }
       loadSubtitleTrack(-1);
       const provObj = STREAM_PROVIDERS.find((p) => p.id === serverId);
-      showToast(`${provObj?.name || 'PlayLatin 4K'} activado (Español Latino Oficial • 0% Anuncios)`);
+      showToast(`${provObj?.name || 'Servidor 4K'} activado (Español Latino Oficial • 0% Anuncios)`);
     } else if (serverId === 'native_hls_4k') {
       if (anyLatinoIdx >= 0) {
         setActiveHlsIndex(anyLatinoIdx);
@@ -1132,7 +1140,6 @@ export default function VideoPlayerModal({
     } else if (
       serverId === 'vidhide_latino' ||
       serverId === 'streamwish_latino' ||
-      serverId === 'embed69_latino' ||
       serverId === 'nxsha_multilang' ||
       serverId === 'nxsha_voe_latino' ||
       serverId === 'vidlink_4k_pro'
@@ -2345,7 +2352,6 @@ export default function VideoPlayerModal({
                   allowFullScreen
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                   referrerPolicy="origin"
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                   onLoad={() => {
                     setIsLoading(false);
                   }}
