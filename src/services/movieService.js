@@ -159,7 +159,11 @@ export const KNOWN_IMDB_IDS = {
   1034541: 'tt23468450', // Terrifier 2
   519182: 'tt7510222',   // Mi Villano Favorito 4
   917496: 'tt2049403',   // Beetlejuice Beetlejuice
-  671: 'tt0241527'       // Harry Potter y la Piedra Filosofal
+  671: 'tt0241527',      // Harry Potter y la Piedra Filosofal
+  1434: 'tt0182576',     // Padre de Familia (Family Guy)
+  456: 'tt0096697',      // Los Simpson
+  60625: 'tt2861424',    // Rick and Morty
+  2190: 'tt0121955'      // South Park
 };
 
 // Cargar caché persistente de IMDb IDs desde localStorage para carga en 0ms
@@ -241,13 +245,14 @@ export const STREAM_PROVIDERS = [
     description: 'Detecta en tiempo real el servidor más rápido y estable con blindaje total anti-anuncios.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      if (res.isTv) {
-        return `https://vidsrc.pm/embed/tv/${res.id}/${res.season}/${res.episode}`;
-      }
       if (res.imdbId) {
-        return `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
+        return res.isTv
+          ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
+          : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
       }
-      return `https://vidsrc.pm/embed/movie/${res.id}`;
+      return res.isTv
+        ? `https://vidsrc.pm/embed/tv/${res.id}/${res.season}/${res.episode}`
+        : `https://vidsrc.pm/embed/movie/${res.id}`;
     }
   },
   {
@@ -299,26 +304,27 @@ export const STREAM_PROVIDERS = [
   {
     id: 'embed69_latino',
     name: 'Embed69 Latino',
-    subtitle: 'Clúster Especializado en Español Latino y Castellano (LAT / ESP)',
+    subtitle: 'Clúster Especializado en Español Latino y Castellano (LAT / ESP • 0% Anuncios)',
     badge: 'LATINO ESP',
     tag: '100% Español',
     quality: '1080p Full HD / 4K Latino',
     ping: '7ms',
     isNative: false,
-    isDirectHls: false,
-    sandboxSafe: false,
+    prefersNativeHls: true,
+    isDirectHls: true,
+    sandboxSafe: true,
     language: 'Español Latino (LAT) y Castellano (ESP)',
-    description: 'Servidor dedicado a doblajes en Español Latino con selección de espejos.',
-    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
+    description: 'Servidor dedicado a doblajes en Español Latino con extracción directa libre de anuncios.',
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
       if (!res.imdbId) {
         return res.isTv
           ? `https://vidlink.pro/tv/${res.id}/${res.season}/${res.episode}?autoplay=true&primaryColor=e50914`
           : `https://vidlink.pro/movie/${res.id}?autoplay=true&primaryColor=e50914`;
       }
-      const epPad = String(res.episode).padStart(2, '0');
-      const path = res.streamPath || (res.isTv ? `${res.imdbId}-${res.season}x${epPad}` : res.imdbId);
-      return `https://embed69.org/f/${path}`;
+      return res.isTv
+        ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
+        : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
     }
   },
   {

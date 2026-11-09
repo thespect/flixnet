@@ -20,11 +20,16 @@ $action = isset($_GET['action']) ? $_GET['action'] : 'scan';
 // MODO 1: PROXY HLS LOCAL
 if ($action === 'proxy') {
     $targetUrl = isset($_GET['url']) ? trim($_GET['url']) : '';
+    $customReferer = isset($_GET['referer']) ? trim($_GET['referer']) : '';
     if (empty($targetUrl) || strpos($targetUrl, 'http') !== 0) {
         http_response_code(400);
         echo 'Missing url';
         exit;
     }
+
+    $parsedTarget = parse_url($targetUrl);
+    $defaultOrigin = (isset($parsedTarget['scheme']) ? $parsedTarget['scheme'] : 'https') . '://' . (isset($parsedTarget['host']) ? $parsedTarget['host'] : 'embed69.org') . '/';
+    $effectiveReferer = !empty($customReferer) ? $customReferer : $defaultOrigin;
 
     $body = false;
     if (function_exists('curl_init')) {
@@ -37,16 +42,16 @@ if ($action === 'proxy') {
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
         curl_setopt($ch, CURLOPT_USERAGENT, $dropUa);
-        curl_setopt($ch, CURLOPT_REFERER, 'https://embed69.org/');
+        curl_setopt($ch, CURLOPT_REFERER, $effectiveReferer);
         $body = curl_exec($ch);
-       @curl_close($ch);
+        @curl_close($ch);
     }
     if ($body === false) {
         $ctx = stream_context_create([
             'http' => [
                 'method' => 'GET',
                 'timeout' => 8,
-                'header' => "User-Agent: {$dropUa}\r\nReferer: https://embed69.org/\r\n"
+                'header' => "User-Agent: {$dropUa}\r\nReferer: {$effectiveReferer}\r\n"
             ],
             'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
         ]);
@@ -63,6 +68,7 @@ if ($action === 'proxy') {
         $parsedBase = parse_url($targetUrl);
         $baseOrigin = $parsedBase['scheme'] . '://' . $parsedBase['host'];
         $baseDir = isset($parsedBase['path']) ? rtrim(dirname($parsedBase['path']), '/') . '/' : '/';
+        $refParam = '&referer=' . urlencode($effectiveReferer);
 
         $lines = preg_split('/\r?\n/', $body);
         $out = [];
@@ -73,12 +79,12 @@ if ($action === 'proxy') {
                 continue;
             }
             if (strpos($trim, '#') === 0) {
-                $out[] = preg_replace_callback('/URI="([^"]+)"/', function ($m) use ($baseOrigin, $baseDir) {
+                $out[] = preg_replace_callback('/URI="([^"]+)"/', function ($m) use ($baseOrigin, $baseDir, $refParam) {
                     $u = $m[1];
                     if (strpos($u, 'http') !== 0) {
                         $u = (strpos($u, '/') === 0) ? ($baseOrigin . $u) : ($baseOrigin . $baseDir . $u);
                     }
-                    return 'URI="./api.php?action=proxy&url=' . urlencode($u) . '"';
+                    return 'URI="./api.php?action=proxy&url=' . urlencode($u) . $refParam . '"';
                 }, $line);
                 continue;
             }
@@ -86,7 +92,7 @@ if ($action === 'proxy') {
             if (strpos($abs, 'http') !== 0) {
                 $abs = (strpos($abs, '/') === 0) ? ($baseOrigin . $abs) : ($baseOrigin . $baseDir . $abs);
             }
-            $out[] = './api.php?action=proxy&url=' . urlencode($abs);
+            $out[] = './api.php?action=proxy&url=' . urlencode($abs) . $refParam;
         }
         echo implode("\n", $out);
     } else {
@@ -134,7 +140,7 @@ if (isset($specialMediaMap[$tmdbId])) {
     $episode = $alias['episode'];
 }
 
-$cacheKey = 'cineflex_v9_' . md5("{$tmdbId}_" . ($isTv ? "tv_{$season}_{$episode}" : "movie"));
+$cacheKey = 'cineflex_v10_' . md5("{$tmdbId}_" . ($isTv ? "tv_{$season}_{$episode}" : "movie"));
 $cacheDir = __DIR__ . DIRECTORY_SEPARATOR . 'cache';
 if (!is_dir($cacheDir)) {
     @mkdir($cacheDir, 0777, true);
@@ -458,6 +464,17 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
                                     'lang' => 'latino'
                                 ];
                             }
+                            if (($srvName === 'streamwish' || strpos($embedUrl, 'hglink') !== false || strpos($embedUrl, 'wish') !== false) && empty($streamwishUrlToExtract)) {
+                                if (preg_match('/\/(?:e|f|v)\/([a-zA-Z0-9]+)/', $embedUrl, $mSw)) {
+                                    $streamwishUrlToExtract = 'https://flaswish.com/e/' . $mSw[1];
+                                } else {
+                                    $streamwishUrlToExtract = $embedUrl;
+                                }
+                                $streamwishRawEmbedUrl = $embedUrl;
+                                $streamwishLangKey = $langKey;
+                                $streamwishLangRaw = $langRaw;
+                                $streamwishBadge = $langBadge;
+                            }
                             if (($srvName === 'vidhide' || strpos($embedUrl, 'morencius') !== false) && empty($vidhideUrlToExtract)) {
                                 $vidhideUrlToExtract = $embedUrl;
                                 $vidhideLangKey = $langKey;
@@ -471,46 +488,83 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
         }
     }
 
-    // C. Extracción directa del stream VidHide en Español Latino (Alta compatibilidad CORS y 200 OK)
+    // C. Extracción directa de StreamWish (flaswish.com hls4) y VidHide en Español Latino (200 OK verificado)
     $multiExtracts = [];
+    if (!empty($streamwishUrlToExtract)) {
+        $multiExtracts['streamwish'] = ['url' => $streamwishUrlToExtract, 'timeout' => 2.8, 'referer' => 'https://embed69.org/'];
+    }
     if (!empty($vidhideUrlToExtract)) {
-        $multiExtracts['vidhide'] = ['url' => $vidhideUrlToExtract, 'timeout' => 2.5, 'referer' => 'https://embed69.org/'];
+        $multiExtracts['vidhide'] = ['url' => $vidhideUrlToExtract, 'timeout' => 2.8, 'referer' => 'https://embed69.org/'];
     }
 
     if (!empty($multiExtracts)) {
         $extracted = quickMultiGet($multiExtracts);
 
-        if (!empty($extracted['vidhide'])) {
-            $unpackedVh = unpackPackerPhp($extracted['vidhide']);
-            $m3u8Vh = '';
-            if (preg_match('/(https?:\/\/[^\s"\']+\.m3u8[^\s"\']*)/', $unpackedVh, $mh)) {
-                $m3u8Vh = $mh[1];
+        $candidatesToTest = [
+            'streamwish' => [
+                'label' => 'StreamWish 4K',
+                'embedUrl' => !empty($streamwishUrlToExtract) ? $streamwishUrlToExtract : '',
+                'rawEmbed' => !empty($streamwishRawEmbedUrl) ? $streamwishRawEmbedUrl : '',
+                'referer' => 'https://flaswish.com/',
+                'langKey' => !empty($streamwishLangKey) ? $streamwishLangKey : 'latino',
+                'langRaw' => !empty($streamwishLangRaw) ? $streamwishLangRaw : 'LAT',
+                'badge' => !empty($streamwishBadge) ? $streamwishBadge : 'Cineflex CDN • Español Latino Oficial'
+            ],
+            'vidhide' => [
+                'label' => 'VidHide 4K',
+                'embedUrl' => !empty($vidhideUrlToExtract) ? $vidhideUrlToExtract : '',
+                'rawEmbed' => !empty($vidhideUrlToExtract) ? $vidhideUrlToExtract : '',
+                'referer' => 'https://morencius.com/',
+                'langKey' => !empty($vidhideLangKey) ? $vidhideLangKey : 'latino',
+                'langRaw' => !empty($vidhideLangRaw) ? $vidhideLangRaw : 'LAT',
+                'badge' => !empty($vidhideBadge) ? $vidhideBadge : 'Cineflex CDN • Español Latino Oficial'
+            ]
+        ];
+
+        foreach ($candidatesToTest as $cKey => $cMeta) {
+            if (empty($extracted[$cKey]) || count($latinoDirectStreams) > 0) continue;
+            $unpacked = unpackPackerPhp($extracted[$cKey]);
+            if (empty($unpacked)) continue;
+
+            $parsedEmb = parse_url($cMeta['embedUrl']);
+            $embOrigin = (isset($parsedEmb['scheme']) ? $parsedEmb['scheme'] : 'https') . '://' . (isset($parsedEmb['host']) ? $parsedEmb['host'] : 'flaswish.com');
+
+            $m3u8Candidates = [];
+            if (preg_match('/"hls4"\s*:\s*"([^"]+\.m3u8[^"]*)"/', $unpacked, $m4)) {
+                $u4 = stripslashes($m4[1]);
+                $m3u8Candidates[] = (strpos($u4, 'http') === 0) ? $u4 : ($embOrigin . (strpos($u4, '/') === 0 ? '' : '/') . $u4);
             }
-            if (!empty($m3u8Vh) && strpos($m3u8Vh, 'http') === 0) {
-                $chP = curl_init($m3u8Vh);
-                curl_setopt($chP, CURLOPT_NOBODY, true);
+            if (preg_match('/(https?:\/\/[^\s"\']+\.m3u8[^\s"\']*)/', $unpacked, $mh)) {
+                $m3u8Candidates[] = stripslashes($mh[1]);
+            }
+
+            foreach ($m3u8Candidates as $candM3u8) {
+                $chP = curl_init($candM3u8);
+                curl_setopt($chP, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($chP, CURLOPT_TIMEOUT_MS, 1800);
                 curl_setopt($chP, CURLOPT_FOLLOWLOCATION, true);
                 curl_setopt($chP, CURLOPT_SSL_VERIFYPEER, false);
-                curl_setopt($chP, CURLOPT_REFERER, 'https://embed69.org/');
-                curl_exec($chP);
+                curl_setopt($chP, CURLOPT_USERAGENT, $dropUa);
+                curl_setopt($chP, CURLOPT_REFERER, $cMeta['referer']);
+                $sampleBody = curl_exec($chP);
                 $httpCode = curl_getinfo($chP, CURLINFO_HTTP_CODE);
                 curl_close($chP);
 
-                if ($httpCode >= 200 && $httpCode < 400) {
-                    $isLatVh = ($vidhideLangKey === 'latino');
+                if ($httpCode >= 200 && $httpCode < 400 && is_string($sampleBody) && strpos($sampleBody, '#EXTM3U') !== false) {
+                    $isLat = ($cMeta['langKey'] === 'latino');
+                    $proxiedUrl = './api.php?action=proxy&url=' . urlencode($candM3u8) . '&referer=' . urlencode($cMeta['referer']);
                     $latinoDirectStreams[] = [
-                        'id' => "latino_hls_{$vidhideLangKey}_0",
-                        'name' => "{$vidhideBadge} (VidHide 4K)",
-                        'providerId' => "embed69_{$vidhideLangKey}",
-                        'url' => $m3u8Vh,
-                        'rawUrl' => $m3u8Vh,
-                        'embedUrl' => $vidhideUrlToExtract,
+                        'id' => "latino_hls_{$cMeta['langKey']}_0",
+                        'name' => "{$cMeta['badge']} ({$cMeta['label']})",
+                        'providerId' => "embed69_{$cMeta['langKey']}",
+                        'url' => $proxiedUrl,
+                        'rawUrl' => $candM3u8,
+                        'embedUrl' => $cMeta['rawEmbed'],
                         'type' => 'hls',
-                        'lang' => $vidhideLangKey,
-                        'langCode' => $vidhideLangRaw,
-                        'isLatinoDub' => $isLatVh,
-                        'isCastellanoDub' => !$isLatVh,
+                        'lang' => $cMeta['langKey'],
+                        'langCode' => $cMeta['langRaw'],
+                        'isLatinoDub' => $isLat,
+                        'isCastellanoDub' => !$isLat,
                         'isDirectHls' => true,
                         'castCompatible' => true,
                         'isCamQuality' => false,
@@ -519,6 +573,7 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
                         'ping' => '6ms',
                         'verified' => true
                     ];
+                    break;
                 }
             }
         }

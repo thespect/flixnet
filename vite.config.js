@@ -124,65 +124,85 @@ async function extractEmbed69LatinoStreams(imdbId, isTv = false, season = 1, epi
         }
       }
 
-      // Extraer master.m3u8 directo con CORS: * desde vidhide (morencius.com -> acek-cdn.com / dramiyos-cdn.com) sin iframes
+      // Extraer master.m3u8 directo desde StreamWish (hglink.to -> flaswish.com) y VidHide (morencius.com) sin iframes ni anuncios
+      const candidateEmbeds = [];
+      const sw = decryptedEmbeds.find((e) => e.servername === 'streamwish' || e.url.includes('hglink') || e.url.includes('wish'));
+      if (sw) {
+        const swCode = (sw.url.match(/\/(?:e|f|v)\/([a-zA-Z0-9]+)/) || [])[1];
+        const swResolvedUrl = swCode ? `https://flaswish.com/e/${swCode}` : sw.url;
+        candidateEmbeds.push({ label: 'StreamWish 4K', url: swResolvedUrl, rawEmbedUrl: sw.url, referer: 'https://flaswish.com/' });
+      }
       const vidhide = decryptedEmbeds.find((e) => e.servername === 'vidhide' || e.url.includes('morencius'));
       if (vidhide) {
+        const vhOrigin = new URL(vidhide.url).origin + '/';
+        candidateEmbeds.push({ label: 'VidHide 4K', url: vidhide.url, rawEmbedUrl: vidhide.url, referer: vhOrigin });
+      }
+
+      for (const cand of candidateEmbeds) {
         const t0 = Date.now();
         try {
-          const er = await fetch(vidhide.url, {
+          const er = await fetch(cand.url, {
             headers: {
               'User-Agent': DROP_UA,
               Referer: 'https://embed69.org/'
             },
-            signal: AbortSignal.timeout(3400)
+            signal: AbortSignal.timeout(3200)
           });
-          if (er.ok) {
-            const eHtml = await er.text();
-            const unpacked = unpackPackerCode(eHtml);
-            const hls2 = (unpacked.match(/"hls2"\s*:\s*"([^"]+)"/) || [])[1];
-            const hls4 = (unpacked.match(/"hls4"\s*:\s*"([^"]+)"/) || [])[1];
-            const hls3 = (unpacked.match(/"hls3"\s*:\s*"([^"]+)"/) || [])[1];
-            const fileM3u8 = (unpacked.match(/file\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/) || [])[1];
-            let m3u8Url = [hls2, fileM3u8, hls4, hls3].find((u) => u && u.startsWith('http') && u.includes('.m3u8'));
-            if (!m3u8Url && hls4 && hls4.startsWith('/') && hls4.includes('.m3u8')) {
-              m3u8Url = new URL(hls4, vidhide.url).href;
-            }
-            if (m3u8Url && m3u8Url.startsWith('http')) {
-              let isAlive = false;
-              try {
-                const probe = await fetch(m3u8Url, {
-                  method: 'HEAD',
-                  headers: { 'User-Agent': DROP_UA, Referer: 'https://embed69.org/' },
-                  signal: AbortSignal.timeout(1800)
-                });
-                isAlive = probe.ok || probe.status === 405;
-              } catch {
-                isAlive = false;
-              }
-              if (!isAlive) return null;
+          if (!er.ok) continue;
+          const eHtml = await er.text();
+          const unpacked = unpackPackerCode(eHtml);
+          if (!unpacked) continue;
 
-              return {
-                id: `latino_hls_${langKey}_${groupIdx}`,
-                name: `${langBadge} (VidHide 4K)`,
-                providerId: `embed69_${langKey}`,
-                url: m3u8Url,
-                rawUrl: m3u8Url,
-                embedUrl: vidhide.url,
-                type: 'hls',
-                lang: langKey,
-                langCode: langRaw,
-                isLatinoDub: isLatino,
-                isCastellanoDub: isCastellano,
-                isDirectHls: true,
-                castCompatible: true,
-                isCamQuality: false,
-                maxBandwidth: 3200000,
-                maxHeight: 1080,
-                quality: '4K / 1080p Digital HD Latino',
-                ping: `${Math.max(6, Date.now() - t0)}ms`,
-                verified: true
-              };
+          const hls4 = (unpacked.match(/"hls4"\s*:\s*"([^"]+)"/) || [])[1];
+          const hls2 = (unpacked.match(/"hls2"\s*:\s*"([^"]+)"/) || [])[1];
+          const hls3 = (unpacked.match(/"hls3"\s*:\s*"([^"]+)"/) || [])[1];
+          const fileM3u8 = (unpacked.match(/file\s*:\s*"(https?:\/\/[^"]+\.m3u8[^"]*)"/) || [])[1];
+
+          const rawCandidates = [hls4, fileM3u8, hls2, hls3].filter(Boolean);
+          for (const rawCandidate of rawCandidates) {
+            if (!rawCandidate.includes('.m3u8')) continue;
+            const resolvedM3u8 = rawCandidate.startsWith('http')
+              ? rawCandidate
+              : new URL(rawCandidate, cand.url).href;
+
+            let isAlive = false;
+            try {
+              const probe = await fetch(resolvedM3u8, {
+                method: 'GET',
+                headers: { 'User-Agent': DROP_UA, Referer: cand.referer },
+                signal: AbortSignal.timeout(1800)
+              });
+              if (probe.ok) {
+                const sample = await probe.text();
+                isAlive = sample.includes('#EXTM3U');
+              }
+            } catch {
+              isAlive = false;
             }
+            if (!isAlive) continue;
+
+            const proxiedUrl = `/api/hls-proxy?url=${encodeURIComponent(resolvedM3u8)}&referer=${encodeURIComponent(cand.referer)}`;
+            return {
+              id: `latino_hls_${langKey}_${groupIdx}`,
+              name: `${langBadge} (${cand.label})`,
+              providerId: `embed69_${langKey}`,
+              url: proxiedUrl,
+              rawUrl: resolvedM3u8,
+              embedUrl: cand.rawEmbedUrl,
+              type: 'hls',
+              lang: langKey,
+              langCode: langRaw,
+              isLatinoDub: isLatino,
+              isCastellanoDub: isCastellano,
+              isDirectHls: true,
+              castCompatible: true,
+              isCamQuality: false,
+              maxBandwidth: 3200000,
+              maxHeight: 1080,
+              quality: '4K / 1080p Digital HD Latino',
+              ping: `${Math.max(6, Date.now() - t0)}ms`,
+              verified: true
+            };
           }
         } catch {}
       }
@@ -282,15 +302,19 @@ function cineflexStreamScannerPlugin() {
     try {
       const urlObj = new URL(req.url, 'http://localhost');
       const targetUrl = urlObj.searchParams.get('url');
+      const customReferer = urlObj.searchParams.get('referer');
       if (!targetUrl || !targetUrl.startsWith('http')) {
         res.statusCode = 400;
         res.end('Missing or invalid url');
         return;
       }
 
+      const targetOrigin = new URL(targetUrl).origin + '/';
+      const effectiveReferer = customReferer || targetOrigin;
+
       const headers = {
         'User-Agent': DROP_UA,
-        Referer: 'https://embed69.org/'
+        Referer: effectiveReferer
       };
       if (req.headers.range) {
         headers.Range = req.headers.range;
@@ -314,6 +338,7 @@ function cineflexStreamScannerPlugin() {
       if (targetUrl.includes('.m3u8') || ct.includes('mpegurl') || ct.includes('text')) {
         const text = await upstream.text();
         const baseUrl = new URL(targetUrl);
+        const refParam = `&referer=${encodeURIComponent(effectiveReferer)}`;
         const rewritten = text
           .split(/\r?\n/)
           .map((line) => {
@@ -322,11 +347,11 @@ function cineflexStreamScannerPlugin() {
             if (trimmed.startsWith('#')) {
               return line.replace(/URI="([^"]+)"/g, (_, uriVal) => {
                 const absUri = uriVal.startsWith('http') ? uriVal : new URL(uriVal, baseUrl).href;
-                return `URI="/api/hls-proxy?url=${encodeURIComponent(absUri)}"`;
+                return `URI="/api/hls-proxy?url=${encodeURIComponent(absUri)}${refParam}"`;
               });
             }
             const absLine = trimmed.startsWith('http') ? trimmed : new URL(trimmed, baseUrl).href;
-            return `/api/hls-proxy?url=${encodeURIComponent(absLine)}`;
+            return `/api/hls-proxy?url=${encodeURIComponent(absLine)}${refParam}`;
           })
           .join('\n');
 

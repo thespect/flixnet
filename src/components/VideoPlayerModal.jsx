@@ -35,10 +35,10 @@ import CastModal from './CastModal';
 import AdBlockModal from './AdBlockModal';
 import { lockBodyScroll } from '../utils/scrollLock';
 
-// Opciones de Resolución y Escalado 4K Real
+// Opciones de Resolución y Escalado 4K Real (Aceleración por Hardware GPU — Bajo Consumo CPU)
 const RESOLUTION_OPTIONS = [
-  { id: '2160p', label: '4K Ultra HD (2160p)', badge: '4K HDR10+', bitrate: '42.8 Mbps', res: '3840 x 2160', fps: '60 FPS', filter: 'url(#cineflex-4k-upscaler) contrast(1.06) saturate(1.12)' },
-  { id: '1080p', label: 'Full HD Pro (1080p)', badge: 'Alta Fidelidad', bitrate: '18.5 Mbps', res: '1920 x 1080', fps: '60 FPS', filter: 'contrast(1.03) saturate(1.05)' },
+  { id: '2160p', label: '4K Ultra HD (2160p)', badge: '4K HDR10+', bitrate: '42.8 Mbps', res: '3840 x 2160', fps: '60 FPS', filter: 'contrast(1.05) saturate(1.08)' },
+  { id: '1080p', label: 'Full HD Pro (1080p)', badge: 'Alta Fidelidad', bitrate: '18.5 Mbps', res: '1920 x 1080', fps: '60 FPS', filter: 'contrast(1.03) saturate(1.04)' },
   { id: '720p', label: 'HD Rápido (720p)', badge: 'Ahorro Datos', bitrate: '6.2 Mbps', res: '1280 x 720', fps: '30 FPS', filter: 'none' },
 ];
 
@@ -169,6 +169,7 @@ export default function VideoPlayerModal({
   const currentLoadedUrlRef = useRef('');
   const resumeTimeRef = useRef(0);
   const lastSavedProgressTimeRef = useRef(0);
+  const lastUiTimeUpdateRef = useRef(0);
   const [resumeNotice, setResumeNotice] = useState(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
@@ -324,16 +325,12 @@ export default function VideoPlayerModal({
         const fastStreams = fastReport.directHlsStreams || [];
         if (fastStreams.length > 0) {
           setDirectHlsStreams(fastStreams);
-          const anyLat = fastStreams.findIndex((s) => s.isLatinoDub);
+          const anyLat = fastStreams.findIndex((s) => s.isLatinoDub || s.isCastellanoDub);
           if (anyLat >= 0) {
+            failedServersRef.current.clear();
             setActiveHlsIndex(anyLat);
-            setSelectedServer((prev) => {
-              if (prev === 'auto_smart_latino' || prev === 'playlatin_es' || prev === 'native_hls_4k') {
-                return 'native_hls_4k';
-              }
-              return prev;
-            });
-            setSelectedAudioMode('es_latino_dub');
+            setSelectedServer('native_hls_4k');
+            setSelectedAudioMode(fastStreams[anyLat].isCastellanoDub ? 'es_castellano_dub' : 'es_latino_dub');
           }
         }
         setIsScanningLinks(false);
@@ -362,20 +359,14 @@ export default function VideoPlayerModal({
       setSubtitlesList(report.subtitles || []);
       setIsScanningLinks(false);
 
-      const anyLatinoIdx = streams.findIndex((s) => s.isLatinoDub);
+      const anyLatinoIdx = streams.findIndex((s) => s.isLatinoDub || s.isCastellanoDub);
 
       if (anyLatinoIdx >= 0) {
+        failedServersRef.current.clear();
         setActiveHlsIndex(anyLatinoIdx);
-        setSelectedAudioMode('es_latino_dub');
+        setSelectedAudioMode(streams[anyLatinoIdx].isCastellanoDub ? 'es_castellano_dub' : 'es_latino_dub');
         loadSubtitleTrack(-1);
-        if (
-          selectedServer === 'auto_smart_latino' ||
-          selectedServer === 'playlatin_es' ||
-          selectedServer === 'native_hls_4k' ||
-          report.recommendedServer === 'native_hls_4k'
-        ) {
-          setSelectedServer('native_hls_4k');
-        }
+        setSelectedServer('native_hls_4k');
       } else if (selectedServer === 'native_hls_4k') {
         const anyDirectIdx = streams.findIndex((s) => Boolean(s.url));
         if (anyDirectIdx >= 0) {
@@ -476,9 +467,11 @@ export default function VideoPlayerModal({
         showToast(`Servidor Compatible Verificado: Audio ${versions.map((v) => String(v).toUpperCase()).join(' / ')}`);
       } else if (type === 'meinecloud:error') {
         if (
-          selectedServer === 'playlatin_es' ||
-          selectedServer === 'auto_smart_latino' ||
-          selectedServer === 'playlatin_dood'
+          !isNativeServer &&
+          (selectedServer === 'playlatin_es' ||
+            selectedServer === 'auto_smart_latino' ||
+            selectedServer === 'embed69_latino' ||
+            selectedServer === 'playlatin_dood')
         ) {
           iterateNextLatinoServer('Auto-Detector Sí o Sí');
         }
@@ -487,12 +480,12 @@ export default function VideoPlayerModal({
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [selectedServer, directHlsStreams, iterateNextLatinoServer, showToast]);
+  }, [selectedServer, isNativeServer, directHlsStreams, iterateNextLatinoServer, showToast]);
 
   // Watchdog de 3.5s para Servidores PlayLatin (Conmutación automática ante errores silenciosos o demoras de MeineCloud)
   useEffect(() => {
-    // Si ya estamos en reproductor nativo o tráiler, limpiar timer y salir
-    if (selectedServer === 'native_hls_4k' || showTrailer) {
+    // Si ya estamos en reproductor nativo, escaneando o en tráiler, limpiar timer y salir
+    if (isNativeServer || isScanningLinks || selectedServer === 'native_hls_4k' || showTrailer) {
       if (playLatinHandshakeTimerRef.current) {
         clearTimeout(playLatinHandshakeTimerRef.current);
         playLatinHandshakeTimerRef.current = null;
@@ -500,9 +493,12 @@ export default function VideoPlayerModal({
       return;
     }
 
-    // El watchdog debe activarse únicamente para servidores con protocolo de handshake (playlatin_es)
-    // Para otros servidores (embed69, vidlink, vidsrc), no interrumpir la reproducción externa
-    if (selectedServer !== 'playlatin_es') {
+    // El watchdog se activa únicamente cuando un servidor iframe usa el protocolo PlayLatin (meinecloud)
+    const isUsingPlayLatinIframe =
+      Boolean(resolvedImdbId) &&
+      (selectedServer === 'playlatin_es' || selectedServer === 'auto_smart_latino' || selectedServer === 'embed69_latino');
+
+    if (!isUsingPlayLatinIframe) {
       if (playLatinHandshakeTimerRef.current) {
         clearTimeout(playLatinHandshakeTimerRef.current);
         playLatinHandshakeTimerRef.current = null;
@@ -538,7 +534,7 @@ export default function VideoPlayerModal({
         playLatinHandshakeTimerRef.current = null;
       }
     };
-  }, [selectedServer, iframeKey, showTrailer, directHlsStreams, iterateNextLatinoServer, showToast]);
+  }, [selectedServer, isNativeServer, isScanningLinks, resolvedImdbId, iframeKey, showTrailer, directHlsStreams, iterateNextLatinoServer, showToast]);
 
   // 3. CAMBIO DE PISTA DE AUDIO / IDIOMA (Garantiza Español Latino en 4K / Full HD)
   const handleSelectAudioTrack = (trackId) => {
@@ -2092,10 +2088,16 @@ export default function VideoPlayerModal({
                 if (videoRef.current && !isSeekingRef.current) {
                   const cur = videoRef.current.currentTime;
                   const dur = videoRef.current.duration || 0;
-                  setCurrentTime(cur);
-                  setDuration(dur);
-                  if (videoRef.current.buffered.length > 0) {
-                    setBuffered(videoRef.current.buffered.end(videoRef.current.buffered.length - 1));
+                  // Throttle UI state updates (~2.5 FPS) para ahorrar recursos de CPU/GPU
+                  if (Math.abs(cur - lastUiTimeUpdateRef.current) >= 0.4 || cur === 0) {
+                    lastUiTimeUpdateRef.current = cur;
+                    setCurrentTime(cur);
+                    if (dur > 0 && dur !== duration) {
+                      setDuration(dur);
+                    }
+                    if (videoRef.current.buffered.length > 0) {
+                      setBuffered(videoRef.current.buffered.end(videoRef.current.buffered.length - 1));
+                    }
                   }
                   // Guardar el minuto exacto donde se quedó el usuario de forma persistente
                   if (cur > 4 && Math.abs(cur - lastSavedProgressTimeRef.current) > 3.5) {
@@ -2364,34 +2366,36 @@ export default function VideoPlayerModal({
           /* REPRODUCTOR 2: SERVIDORES EN ESPAÑOL LATINO (Con blindaje Sandbox 0% Anuncios y 0% Clics Fantasmas) */
           <div className="relative w-full h-full flex items-center justify-center p-0 sm:p-2 md:p-4 z-10">
             <div className="relative w-full h-full max-w-7xl sm:aspect-video flex items-center justify-center">
-              {isLoading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-20 pointer-events-none space-y-3">
+              {(isLoading || isScanningLinks) && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 backdrop-blur-sm z-20 pointer-events-none space-y-3">
                   <div className="w-10 h-10 border-3 border-white/20 border-t-netflix-red rounded-full animate-spin" />
-                  <span className="text-white text-xs font-bold tracking-tight">Cargando {currentProvider.name}...</span>
+                  <span className="text-white text-xs sm:text-sm font-bold tracking-tight text-center px-4">
+                    {isScanningLinks
+                      ? 'Conectando flujo directo 4K / Full HD en Español Latino (0% anuncios)...'
+                      : `Cargando ${currentProvider.name}...`}
+                  </span>
                 </div>
               )}
-              <iframe
-                key={`${selectedServer}_${playLatinLang}_s${currentSeason}_e${currentEpisode}_${iframeKey}`}
-                src={showTrailer ? trailerUrl : streamUrl}
-                title={`Reproductor ${movie.title}`}
-                className="w-full h-full sm:rounded-2xl shadow-[0_28px_80px_rgba(0,0,0,0.95)] border-0 sm:border sm:border-white/[0.14] bg-[#040407]"
-                allowFullScreen
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                referrerPolicy="no-referrer"
-                sandbox={
-                  currentProvider?.sandboxSafe === false
-                    ? undefined
-                    : "allow-scripts allow-same-origin allow-forms allow-presentation"
-                }
-                onLoad={() => {
-                  setIsLoading(false);
-                }}
-                onError={() => {
-                  if (!hasStartedPlayingRef.current) {
-                    iterateNextLatinoServer('Auto-Detector');
-                  }
-                }}
-              />
+              {!isScanningLinks && (
+                <iframe
+                  key={`${selectedServer}_${playLatinLang}_s${currentSeason}_e${currentEpisode}_${iframeKey}`}
+                  src={showTrailer ? trailerUrl : streamUrl}
+                  title={`Reproductor ${movie.title}`}
+                  className="w-full h-full sm:rounded-2xl shadow-[0_28px_80px_rgba(0,0,0,0.95)] border-0 sm:border sm:border-white/[0.14] bg-[#040407]"
+                  allowFullScreen
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                  referrerPolicy="origin"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+                  onLoad={() => {
+                    setIsLoading(false);
+                  }}
+                  onError={() => {
+                    if (!hasStartedPlayingRef.current) {
+                      iterateNextLatinoServer('Auto-Detector');
+                    }
+                  }}
+                />
+              )}
             </div>
           </div>
         )}

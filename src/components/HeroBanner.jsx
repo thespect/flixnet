@@ -32,12 +32,14 @@ export default function HeroBanner({
     }
   }, [movie]);
 
-  // Rotación automática suave estilo Apple TV+ cuando no se está reproduciendo el tráiler
+  // Rotación automática suave estilo Apple TV+ (Optimizada para bajo consumo de CPU/GPU)
   useEffect(() => {
     if (showVideoTrailer || !onRandomizeFeatured || featuredPool.length <= 1) return;
     const timer = setInterval(() => {
-      onRandomizeFeatured();
-    }, 9500);
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        onRandomizeFeatured();
+      }
+    }, 18000);
     return () => clearInterval(timer);
   }, [showVideoTrailer, onRandomizeFeatured, featuredPool.length, movie?.id]);
 
@@ -46,9 +48,9 @@ export default function HeroBanner({
   const topCarouselItems = featuredPool.slice(0, 5);
 
   return (
-    <div className="relative h-[86dvh] sm:h-[92dvh] min-h-[580px] sm:min-h-[680px] max-h-[960px] w-full select-none overflow-hidden bg-[#040407]">
+    <div className="relative h-[82dvh] sm:h-[88dvh] min-h-[500px] sm:min-h-[620px] max-h-[920px] w-full select-none overflow-hidden bg-[#040407]">
       
-      {/* Background: High-Res 4K Backdrop with Ken Burns Cinema Motion or On-Demand Video Trailer */}
+      {/* Background: High-Res 4K Backdrop with GPU-efficient transition or On-Demand Video Trailer */}
       <div className="absolute inset-0 w-full h-full overflow-hidden">
         {trailerKey && showVideoTrailer ? (
           <div className="relative w-full h-full pointer-events-none scale-125 md:scale-110">
@@ -64,17 +66,17 @@ export default function HeroBanner({
           <AnimatePresence mode="wait">
             <motion.img 
               key={movie.id}
-              initial={{ scale: 1.12, opacity: 0 }}
-              animate={{ scale: 1.01, opacity: 1 }}
-              exit={{ opacity: 0, scale: 1.04 }}
+              initial={{ scale: 1.03, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{
-                opacity: { duration: 0.85, ease: [0.16, 1, 0.3, 1] },
-                scale: { duration: 11, ease: "linear" }
+                opacity: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+                scale: { duration: 0.65, ease: [0.16, 1, 0.3, 1] }
               }}
               src={movie.backdrop_path || movie.poster_path} 
               alt={movie.title}
               fetchPriority="high"
-              className="w-full h-full object-cover object-center filter brightness-[0.86] contrast-[1.09] saturate-[1.15]"
+              className="w-full h-full object-cover object-center brightness-[0.86] contrast-[1.06]"
             />
           </AnimatePresence>
         )}

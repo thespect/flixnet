@@ -252,23 +252,18 @@ export default function App() {
 
   const featuredItem = allFeaturedPool[featuredIndex % (allFeaturedPool.length || 1)] || null;
 
-  // Pre-calentar en segundo plano el título destacado y los primeros del Top 10 para reproducción en 0ms
+  // Pre-calentar únicamente el primer título principal una sola vez para no saturar red ni CPU
   useEffect(() => {
-    if (!featuredItem) return;
-    const warmQueue = [
-      featuredItem,
-      ...(catalog.trendingMovies || []).slice(0, 3)
-    ];
-    warmQueue.forEach((item, idx) => {
-      if (item?.id) {
-        setTimeout(() => {
-          StreamScannerService.scanAllWorkingLinks(item, 1, 1).catch(() => {});
-        }, idx * 450);
-      }
-    });
-  }, [featuredItem?.id]);
+    const firstFeatured = allFeaturedPool[0];
+    if (!firstFeatured?.id || playingMedia) return;
+    const t = setTimeout(() => {
+      StreamScannerService.scanAllWorkingLinks(firstFeatured, 1, 1).catch(() => {});
+    }, 800);
+    return () => clearTimeout(t);
+  }, [allFeaturedPool[0]?.id]);
 
   const handleNextFeatured = () => {
+    if (playingMedia || selectedMedia) return;
     setFeaturedIndex((prev) => (prev + 1) % (allFeaturedPool.length || 1));
   };
 
@@ -279,17 +274,9 @@ export default function App() {
   return (
     <MotionConfig reducedMotion="user">
       <div className="min-h-screen bg-[#040407] text-white flex flex-col font-sans selection:bg-netflix-red selection:text-white relative overflow-x-hidden">
-      {/* Luz ambiental cinemática + Ambilight dinámico sincronizado (Oculto en móvil para fluidez 60 FPS) */}
-      <div className="ambient-mesh fixed inset-0 pointer-events-none z-0 hidden md:block" />
-      {featuredItem?.backdrop_path && (
-        <div
-          className="hidden md:block fixed inset-x-0 top-0 h-[65vh] pointer-events-none z-0 opacity-20 blur-[80px] saturate-150 transition-all duration-1000"
-          style={{
-            backgroundImage: `url(${featuredItem.backdrop_path})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center top',
-          }}
-        />
+      {/* Luz ambiental cinemática ligera (Oculta en móvil y durante reproducción para fluidez 60 FPS y ahorro de recursos) */}
+      {!playingMedia && (
+        <div className="ambient-mesh fixed inset-0 pointer-events-none z-0 hidden lg:block" />
       )}
       
       {/* Navigation Header */}

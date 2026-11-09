@@ -24,10 +24,12 @@ const inFlightScans = new Map();
 function getScanFromStorage(key) {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = sessionStorage.getItem(`cineflex_scan_${key}`);
+    const raw = sessionStorage.getItem(`cineflex_scan_v4_${key}`);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (parsed && Date.now() - (parsed.timestamp || 0) < 2 * 60 * 60 * 1000) {
+    const hasLatino = Array.isArray(parsed?.latinoDirectStreams) && parsed.latinoDirectStreams.length > 0;
+    const ttl = hasLatino ? 2 * 60 * 60 * 1000 : 25 * 1000;
+    if (parsed && Date.now() - (parsed.timestamp || 0) < ttl) {
       return parsed;
     }
   } catch { }
@@ -37,7 +39,7 @@ function getScanFromStorage(key) {
 function saveScanToStorage(key, data) {
   if (typeof window === 'undefined' || !data) return;
   try {
-    sessionStorage.setItem(`cineflex_scan_${key}`, JSON.stringify(data));
+    sessionStorage.setItem(`cineflex_scan_v4_${key}`, JSON.stringify(data));
   } catch { }
 }
 
@@ -352,39 +354,6 @@ export const StreamScannerService = {
         const hlsPromise = this.fetchDirectHlsStreams(targetId, targetIsTv, targetSeason, targetEpisode);
         const subsPromise = this.fetchSubtitles(targetId, targetIsTv, targetSeason, targetEpisode);
 
-        const instantFastReport = {
-          tmdbId: movie.id,
-          aliasTmdbId: targetId,
-          imdbId: targetImdb || null,
-          lanIp: null,
-          isTv: targetIsTv,
-          season: targetSeason,
-          episode: targetEpisode,
-          directHlsStreams: [],
-          latinoDirectStreams: [],
-          castellanoDirectStreams: [],
-          englishMasterStreams: [],
-          subtitles: [],
-          latinoSources: [],
-          hasConfirmedLatinoDub: Boolean(targetImdb),
-          serverStatuses: {
-            auto_smart_latino: { online: true, verified: true, ping: '3ms' },
-            native_hls_4k: { online: true, verified: true, ping: '3ms' },
-            playlatin_es: { online: true, verified: true, ping: '5ms' },
-            vidlink_4k_pro: { online: true, verified: true, ping: '5ms' },
-            embed69_latino: { online: true, verified: true, ping: '7ms' },
-            multiembed_global: { online: true, verified: true, ping: '8ms' },
-            vidsrc_pm: { online: true, verified: true, ping: '8ms' }
-          },
-          recommendedServer: 'auto_smart_latino',
-          scanDurationMs: 0,
-          timestamp: Date.now()
-        };
-
-        if (typeof onFastStream === 'function') {
-          onFastStream(instantFastReport);
-        }
-
         const backendScan = await backendPromise;
 
         if (backendScan?.lanIp && typeof window !== 'undefined') {
@@ -496,7 +465,7 @@ export const StreamScannerService = {
       : `./api.php?action=scan&${params.toString()}`;
 
       try {
-        const res = await fetchWithTimeout(endpoint, { headers: { Accept: 'application/json' } }, 1400);
+        const res = await fetchWithTimeout(endpoint, { headers: { Accept: 'application/json' } }, 4500);
         if (!res.ok) throw new Error('HTTP error');
         const ct = res.headers.get('content-type') || '';
         if (!ct.includes('json')) throw new Error('Not JSON');
