@@ -526,20 +526,36 @@ export default function VideoPlayerModal({
 
         showToast(`Servidor Compatible Verificado: Audio ${versions.map((v) => String(v).toUpperCase()).join(' / ')}`);
       } else if (type === 'meinecloud:error') {
-        if (!isNativeServer && directHlsStreams.length > 0) {
-          setActiveHlsIndex(0);
-          setSelectedServer('native_hls_4k');
+        if (!isNativeServer) {
+          if (directHlsStreams.length > 0) {
+            setActiveHlsIndex(0);
+            setSelectedServer('native_hls_4k');
+          } else {
+            iterateNextLatinoServer('Auto-Detector: Conmutando a servidor alternativo');
+          }
         }
       }
     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [selectedServer, isNativeServer, directHlsStreams, showToast]);
+  }, [selectedServer, isNativeServer, directHlsStreams, iterateNextLatinoServer, showToast]);
 
-  // Watchdog para Servidores PlayLatin: solo conmuta si existe un flujo HLS nativo directo disponible
+  // Watchdog de 3.5s para Servidores PlayLatin (Conmutación automática ante errores silenciosos o demoras de MeineCloud)
   useEffect(() => {
-    if (isNativeServer || isScanningLinks || selectedServer === 'native_hls_4k' || showTrailer || directHlsStreams.length === 0) {
+    // Si ya estamos en reproductor nativo, escaneando o en tráiler, limpiar timer y salir
+    if (isNativeServer || isScanningLinks || selectedServer === 'native_hls_4k' || showTrailer) {
+      if (playLatinHandshakeTimerRef.current) {
+        clearTimeout(playLatinHandshakeTimerRef.current);
+        playLatinHandshakeTimerRef.current = null;
+      }
+      return;
+    }
+
+    const isUsingPlayLatinIframe =
+      selectedServer === 'playlatin_es' || selectedServer === 'auto_smart_latino';
+
+    if (!isUsingPlayLatinIframe) {
       if (playLatinHandshakeTimerRef.current) {
         clearTimeout(playLatinHandshakeTimerRef.current);
         playLatinHandshakeTimerRef.current = null;
@@ -555,13 +571,17 @@ export default function VideoPlayerModal({
     hasStartedPlayingRef.current = false;
 
     playLatinHandshakeTimerRef.current = setTimeout(() => {
-      if (!hasStartedPlayingRef.current && !playLatinReadyRef.current && directHlsStreams.length > 0) {
-        setActiveHlsIndex(0);
-        setSelectedServer('native_hls_4k');
-        setSelectedAudioMode('es_latino_dub');
-        showToast('Auto-Detector: Conmutando a Cineflex 4K Nativo');
+      if (!hasStartedPlayingRef.current && !playLatinReadyRef.current) {
+        if (directHlsStreams.length > 0) {
+          setActiveHlsIndex(0);
+          setSelectedServer('native_hls_4k');
+          setSelectedAudioMode('es_latino_dub');
+          showToast('Auto-Detector: Conmutando a Cineflex 4K Nativo');
+        } else {
+          iterateNextLatinoServer('Auto-Detector: Conmutando a Embed69');
+        }
       }
-    }, 3500);
+    }, 3800);
 
     return () => {
       if (playLatinHandshakeTimerRef.current) {
@@ -569,7 +589,7 @@ export default function VideoPlayerModal({
         playLatinHandshakeTimerRef.current = null;
       }
     };
-  }, [selectedServer, isNativeServer, isScanningLinks, resolvedImdbId, iframeKey, showTrailer, directHlsStreams, showToast]);
+  }, [selectedServer, isNativeServer, isScanningLinks, resolvedImdbId, iframeKey, showTrailer, directHlsStreams, iterateNextLatinoServer, showToast]);
 
   // 3. CAMBIO DE PISTA DE AUDIO / IDIOMA (Garantiza Español Latino en 4K / Full HD)
   const handleSelectAudioTrack = (trackId) => {

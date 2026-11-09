@@ -322,62 +322,57 @@ export const STREAM_PROVIDERS = [
     sandboxSafe: true,
     language: 'Español Latino (LAT) y Castellano (ESP)',
     description: 'Servidor dedicado a doblajes en Español Latino con extracción directa libre de anuncios.',
-    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
       if (res.imdbId) {
+        const epPad = String(res.episode).padStart(2, '0');
         return res.isTv
-          ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
-          : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
+          ? `https://embed69.org/f/${res.imdbId}-${res.season}x${epPad}`
+          : `https://embed69.org/f/${res.imdbId}`;
       }
       return '';
     }
   },
   {
     id: 'vidlink_4k_pro',
-    name: 'Dropload 4K Latino',
-    subtitle: 'Espejo Directo en la Nube • Español Latino Full HD (0% Anuncios)',
+    name: 'VidLink 4K Pro',
+    subtitle: 'Espejo Directo en la Nube • Alta Disponibilidad 4K (0% Anuncios)',
     badge: 'CLOUD 4K',
-    tag: 'Dropload HD',
+    tag: 'VidLink HD',
     quality: '4K / 1080p Ultra HD',
     ping: '6ms',
     isNative: false,
-    prefersNativeHls: true,
-    isDirectHls: true,
+    prefersNativeHls: false,
+    isDirectHls: false,
     sandboxSafe: true,
-    language: 'Español Latino Oficial (0% Anuncios)',
-    description: 'Espejo secundario de alta velocidad en Español Latino sin anuncios ni redirecciones.',
-    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
+    language: 'Español Latino Oficial / Multi-Audio',
+    description: 'Espejo secundario de alta velocidad sin anuncios ni redirecciones.',
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      if (res.imdbId) {
-        return res.isTv
-          ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
-          : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
-      }
-      return '';
+      return res.isTv
+        ? `https://vidlink.pro/tv/${res.id}/${res.season}/${res.episode}?primaryColor=e50914&autoplay=true`
+        : `https://vidlink.pro/movie/${res.id}?primaryColor=e50914&autoplay=true`;
     }
   },
   {
     id: 'multiembed_global',
-    name: 'VidHide 4K Latino',
-    subtitle: 'Nodo Espejo VIP • Español Latino y Castellano (0% Anuncios)',
-    badge: 'VIP 4K',
-    tag: 'VidHide HD',
+    name: 'MultiEmbed VIP',
+    subtitle: 'Nodo Espejo Global • Respaldo Internacional Multi-Audio',
+    badge: 'VIP GLOBAL',
+    tag: 'MultiEmbed',
     quality: '1080p Full HD / 4K',
     ping: '7ms',
     isNative: false,
-    prefersNativeHls: true,
-    isDirectHls: true,
+    prefersNativeHls: false,
+    isDirectHls: false,
     sandboxSafe: true,
-    language: 'Español Latino / Castellano (0% Anuncios)',
-    description: 'Nodo espejo verificado con extracción directa libre de anuncios y clics fantasmas.',
-    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
+    language: 'Multi-Audio / Subtitulado (0% Anuncios)',
+    description: 'Nodo espejo global de respaldo con amplia compatibilidad de títulos.',
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      if (res.imdbId) {
-        return res.isTv
-          ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
-          : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
-      }
-      return '';
+      return res.isTv
+        ? `https://multiembed.mov/?video_id=${res.id}&tmdb=1&s=${res.season}&e=${res.episode}`
+        : `https://multiembed.mov/?video_id=${res.id}&tmdb=1`;
     }
   }
 ];
