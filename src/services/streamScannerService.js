@@ -24,11 +24,11 @@ const inFlightScans = new Map();
 function getScanFromStorage(key) {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = sessionStorage.getItem(`cineflex_scan_v7_${key}`);
+    const raw = sessionStorage.getItem(`cineflex_scan_v8_${key}`);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     const hasLatino = Array.isArray(parsed?.latinoDirectStreams) && parsed.latinoDirectStreams.length > 0;
-    const ttl = hasLatino ? 15 * 60 * 1000 : 15 * 1000;
+    const ttl = hasLatino ? 25 * 60 * 1000 : 10 * 1000;
     if (parsed && Date.now() - (parsed.timestamp || 0) < ttl) {
       return parsed;
     }
@@ -39,7 +39,7 @@ function getScanFromStorage(key) {
 function saveScanToStorage(key, data) {
   if (typeof window === 'undefined' || !data) return;
   try {
-    sessionStorage.setItem(`cineflex_scan_v7_${key}`, JSON.stringify(data));
+    sessionStorage.setItem(`cineflex_scan_v8_${key}`, JSON.stringify(data));
   } catch { }
 }
 
@@ -432,44 +432,40 @@ export const StreamScannerService = {
       ...(targetImdb ? { imdbId: targetImdb } : {})
     });
 
-    const isLocalhost = typeof window !== 'undefined' && (
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1' ||
-      window.location.port === '5173'
-    );
+    const isViteDev = typeof window !== 'undefined' && window.location.port === '5173';
+    const endpointsToTry = isViteDev
+      ? [`/api/scan-streams?${params.toString()}`, `./api.php?action=scan&${params.toString()}`]
+      : [`./api.php?action=scan&${params.toString()}`, `/api/scan-streams?${params.toString()}`];
 
-    const endpoint = isLocalhost
-      ? `/api/scan-streams?${params.toString()}`
-      : `./api.php?action=scan&${params.toString()}`;
-
+    for (const endpoint of endpointsToTry) {
       try {
         const res = await fetchWithTimeout(endpoint, { headers: { Accept: 'application/json' } }, 8000);
-        if (!res.ok) throw new Error('HTTP error');
+        if (!res.ok) continue;
         const ct = res.headers.get('content-type') || '';
-        if (!ct.includes('json')) throw new Error('Not JSON');
+        if (!ct.includes('json')) continue;
         const data = await res.json();
-        if (!data || !data.ok) throw new Error('Invalid payload');
+        if (!data || !data.ok) continue;
         return data;
-      } catch {
-        // Si el backend no responde a tiempo en el host remoto, retornar fallback funcional inmediato en 0ms
-        return {
-          ok: true,
-          tmdbId: targetId,
-          imdbId: targetImdb || null,
-          lanIp: null,
-          recommendedServer: 'auto_smart_latino',
-          latinoDirectStreams: [],
-          latinoSources: [],
-          serverStatuses: {
-            auto_smart_latino: { online: true, verified: true, ping: '3ms' },
-            native_hls_4k: { online: false, verified: true, ping: '3ms' },
-            playlatin_es: { online: true, verified: true, ping: '5ms' },
-            vidlink_4k_pro: { online: true, verified: true, ping: '5ms' },
-            embed69_latino: { online: true, verified: true, ping: '7ms' },
-            multiembed_global: { online: true, verified: true, ping: '8ms' },
-            vidsrc_pm: { online: true, verified: true, ping: '8ms' }
-          }
-        };
+      } catch {}
+    }
+
+    return {
+      ok: true,
+      tmdbId: targetId,
+      imdbId: targetImdb || null,
+      lanIp: null,
+      recommendedServer: 'auto_smart_latino',
+      latinoDirectStreams: [],
+      latinoSources: [],
+      serverStatuses: {
+        auto_smart_latino: { online: true, verified: true, ping: '3ms' },
+        native_hls_4k: { online: false, verified: true, ping: '3ms' },
+        playlatin_es: { online: true, verified: true, ping: '5ms' },
+        vidlink_4k_pro: { online: true, verified: true, ping: '5ms' },
+        embed69_latino: { online: true, verified: true, ping: '7ms' },
+        multiembed_global: { online: true, verified: true, ping: '8ms' },
+        vidsrc_pm: { online: true, verified: true, ping: '8ms' }
       }
+    };
   }
 };

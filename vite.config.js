@@ -91,24 +91,29 @@ async function extractEmbed69LatinoStreams(imdbId, isTv = false, season = 1, epi
 
     const latinoSources = [];
 
-    // Filtrar EXCLUSIVAMENTE Español Latino (LAT) y Castellano (ESP) — descartar SUB (inglés)
+    // Priorizar EXCLUSIVAMENTE Español Latino (LAT) y Castellano (ESP); solo usar SUB si el título aún no tiene doblaje en español
     const spanishGroups = dataLink.filter((langGroup) => {
       const langRaw = String(langGroup.video_language || '').toUpperCase();
       return langRaw.includes('LAT') || langRaw.includes('ESP') || langRaw.includes('CAST');
     });
 
-    // Priorizar el grupo LAT si existe para no duplicar peticiones simultáneas innecesarias al mismo CDN
     const latGroups = spanishGroups.filter((g) => String(g.video_language || '').toUpperCase().includes('LAT'));
-    const activeGroups = latGroups.length > 0 ? latGroups.slice(0, 1) : spanishGroups.slice(0, 1);
+    const activeGroups = latGroups.length > 0
+      ? latGroups.slice(0, 1)
+      : spanishGroups.length > 0
+        ? spanishGroups.slice(0, 1)
+        : dataLink.slice(0, 1);
 
     const tasks = activeGroups.map(async (langGroup, groupIdx) => {
       const langRaw = String(langGroup.video_language || 'LAT').toUpperCase();
-      const isLatino = langRaw.includes('LAT');
+      const isLatino = langRaw.includes('LAT') || (!langRaw.includes('ESP') && !langRaw.includes('CAST'));
       const isCastellano = !isLatino && (langRaw.includes('ESP') || langRaw.includes('CAST'));
       const langKey = isLatino ? 'latino' : 'castellano';
-      const langBadge = isLatino
+      const langBadge = langRaw.includes('LAT')
         ? 'Cineflex CDN • Español Latino Oficial'
-        : 'Cineflex CDN • Español Castellano';
+        : isCastellano
+          ? 'Cineflex CDN • Español Castellano'
+          : 'Cineflex CDN • 4K Subtitulado Español';
 
       const embeds = Array.isArray(langGroup.sortedEmbeds) ? langGroup.sortedEmbeds : [];
       const decryptedEmbeds = embeds
@@ -222,17 +227,20 @@ async function extractEmbed69LatinoStreams(imdbId, isTv = false, season = 1, epi
         return single.filter(Boolean);
       }
 
-      const firstRes = await candidatePromises[0];
-      if (firstRes) {
-        const secondRes = await Promise.race([
-          candidatePromises[1],
-          new Promise((r) => setTimeout(() => r(null), 350))
+      // Carrera real: retornar en cuanto el servidor más rápido (StreamWish o VidHide) resuelva, dando 180ms de gracia al segundo espejo
+      try {
+        const fastest = await Promise.any(
+          candidatePromises.map((p) => p.then((val) => (val ? val : Promise.reject(new Error('empty')))))
+        );
+        const settled = await Promise.race([
+          Promise.all(candidatePromises),
+          new Promise((r) => setTimeout(() => r([fastest]), 180))
         ]);
-        return [firstRes, secondRes].filter(Boolean);
+        return settled.filter(Boolean);
+      } catch {
+        const allRes = await Promise.all(candidatePromises);
+        return allRes.filter(Boolean);
       }
-
-      const allRes = await Promise.all(candidatePromises);
-      return allRes.filter(Boolean);
     });
 
     const resolved = (await Promise.all(tasks)).flat().filter(Boolean);

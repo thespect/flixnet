@@ -90,12 +90,17 @@ export const UNRELEASED_PLACEHOLDER_IDS = new Set([
   1368337, // La Odisea (No estrenada)
   1813355, // Una historia de Derry (No estrenada)
   891621,  // Caballo salvaje nueve (No estrenada)
-  279246   // La emperatriz divorciada (No estrenada)
+  279246,  // La emperatriz divorciada (No estrenada)
+  1058424, // Hope: El primer impacto (Sin fuentes)
+  1375441, // Primetime (Sin fuentes)
+  1514026, // Buddy (Sin fuentes)
+  1792170, // Model Citizen (Sin fuentes)
+  656908,  // Ramayana (Sin fuentes)
+  1003596  // Avengers: Doomsday (No estrenada)
 ]);
 
 // Mapa rápido de IMDb IDs verificados con streams activos en Español Latino 4K/Full HD
 export const KNOWN_IMDB_IDS = {
-  1058424: 'tt27369017', // Hope: El primer impacto
   1423191: 'tt35538033', // Resident Evil: Noche cero
   1283515: 'tt32261958', // Verity: La sombra de un engaño
   1101412: 'tt31192372', // Vértigo 2: Punto muerto
@@ -103,8 +108,6 @@ export const KNOWN_IMDB_IDS = {
   1507696: 'tt37522541', // Apocalipsis Z: Nuevo mundo
   1384216: 'tt21285562', // La guerra de los últimos
   1294189: 'tt13611778', // The Mongoose
-  1375441: 'tt34206385', // Primetime
-  1514026: 'tt37281055', // Buddy
   1596275: 'tt37180686', // Velocidad y Deseo
   1657630: 'tt39120306', // El despertar
   354912: 'tt2380307',   // Coco
@@ -169,10 +172,14 @@ export const KNOWN_IMDB_IDS = {
 // Cargar caché persistente de IMDb IDs desde localStorage para carga en 0ms
 try {
   if (typeof window !== 'undefined') {
-    const savedImdbs = localStorage.getItem('cinestream_imdb_map_v4');
+    const savedImdbs = localStorage.getItem('cinestream_imdb_map_v5');
     if (savedImdbs) {
       const parsed = JSON.parse(savedImdbs);
-      Object.assign(KNOWN_IMDB_IDS, parsed);
+      for (const [k, v] of Object.entries(parsed)) {
+        if (!UNRELEASED_PLACEHOLDER_IDS.has(Number(k))) {
+          KNOWN_IMDB_IDS[k] = v;
+        }
+      }
     }
   }
 } catch {}
@@ -783,7 +790,7 @@ export const MovieAPI = {
 
     if (cacheKey && typeof window !== 'undefined') {
       try {
-        const cached = sessionStorage.getItem(`cineflex_v5_${cacheKey}`);
+        const cached = sessionStorage.getItem(`cineflex_v6_${cacheKey}`);
         if (cached) {
           const parsed = JSON.parse(cached);
           memoryCache.set(cacheKey, parsed);
@@ -818,7 +825,7 @@ export const MovieAPI = {
       if (cacheKey) {
         memoryCache.set(cacheKey, formatted);
         try {
-          sessionStorage.setItem(`cineflex_v5_${cacheKey}`, JSON.stringify(formatted));
+          sessionStorage.setItem(`cineflex_v6_${cacheKey}`, JSON.stringify(formatted));
         } catch {}
       }
       return formatted;
@@ -942,7 +949,7 @@ export const MovieAPI = {
         KNOWN_IMDB_IDS[numId] = data.imdb_id;
         try {
           if (typeof window !== 'undefined') {
-            localStorage.setItem('cinestream_imdb_map_v4', JSON.stringify(KNOWN_IMDB_IDS));
+            localStorage.setItem('cinestream_imdb_map_v5', JSON.stringify(KNOWN_IMDB_IDS));
           }
         } catch {}
         return data.imdb_id;

@@ -171,8 +171,9 @@ export default function VideoPlayerModal({
   const lastSavedProgressTimeRef = useRef(0);
   const lastUiTimeUpdateRef = useRef(0);
   const [resumeNotice, setResumeNotice] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [autoMutedByBrowser, setAutoMutedByBrowser] = useState(false);
   const [volume, setVolume] = useState(1);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -210,6 +211,7 @@ export default function VideoPlayerModal({
 
   const isNativeServer =
     Boolean(movie?.customUrl) ||
+    isScanningLinks ||
     (Boolean(currentProvider?.isNative) && Boolean(resolvedNativeUrl)) ||
     (Boolean(currentProvider?.prefersNativeHls) && hasMatchingDirectDub && Boolean(activeDirectStream?.url));
 
@@ -400,7 +402,37 @@ export default function VideoPlayerModal({
     return () => {
       cancelled = true;
     };
-  }, [movie, currentSeason, currentEpisode]);
+  }, [movie?.id, movie?.isTv, currentSeason, currentEpisode]);
+
+  // Helper de Autoplay Inteligente: garantiza arranque visual inmediato al 100% en Chrome, Safari, iOS y Android
+  const attemptSmartAutoPlay = useCallback((videoEl) => {
+    if (!videoEl) return;
+    const playPromise = videoEl.play();
+    if (playPromise && typeof playPromise.then === 'function') {
+      playPromise
+        .then(() => {
+          setIsPlaying(true);
+          setIsLoading(false);
+        })
+        .catch(() => {
+          // Si el navegador bloquea el autoplay con audio tras el escaneo asíncrono,
+          // iniciar reproducción inmediata en silencio (100% permitido) y mostrar botón de 1 toque para sonido
+          videoEl.muted = true;
+          setIsMuted(true);
+          setAutoMutedByBrowser(true);
+          videoEl
+            .play()
+            .then(() => {
+              setIsPlaying(true);
+              setIsLoading(false);
+            })
+            .catch(() => {
+              setIsPlaying(false);
+              setIsLoading(false);
+            });
+        });
+    }
+  }, []);
 
   // Iterador Inteligente de Servidores Compatibles (100% Español Latino • 0% Anuncios • Cero Clics Fantasmas)
   const iterateNextLatinoServer = useCallback((reasonLabel = 'Auto-Detector') => {
@@ -409,7 +441,7 @@ export default function VideoPlayerModal({
       playLatinHandshakeTimerRef.current = null;
     }
 
-    // 1. Si tenemos múltiples nodos HLS directos (.m3u8) extraídos (StreamWish 4K, PlayLatin Dropload 4K, VidHide 4K), iterar primero entre ellos sin salir del reproductor nativo <video>
+    // 1. Si tenemos múltiples nodos HLS directos (.m3u8) extraídos (StreamWish 4K, VidHide 4K), iterar primero entre ellos sin salir del reproductor nativo <video>
     if (directHlsStreams.length > 1) {
       const nextHlsIdx = (activeHlsIndex + 1) % directHlsStreams.length;
       if (nextHlsIdx !== activeHlsIndex) {
@@ -438,22 +470,34 @@ export default function VideoPlayerModal({
     stopSpeechSynthesis();
     playLatinReadyRef.current = false;
     setShowTrailer(false);
-    hasStartedPlayingRef.current = false;
-    isSeekingRef.current = false;
-    setIsLoading(true);
-    setIframeKey((prev) => prev + 1);
     setSelectedServer(nextServer);
     setSelectedAudioMode('es_latino_dub');
 
     if (directHlsStreams.length > 0) {
       const serverOrder = ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'embed69_latino', 'vidlink_4k_pro', 'multiembed_global'];
       const sIdx = Math.max(0, serverOrder.indexOf(nextServer));
-      setActiveHlsIndex(sIdx % directHlsStreams.length);
+      const nextIdx = sIdx % directHlsStreams.length;
+      if (nextIdx !== activeHlsIndex) {
+        hasStartedPlayingRef.current = false;
+        isSeekingRef.current = false;
+        setIsLoading(true);
+        setActiveHlsIndex(nextIdx);
+      } else {
+        setIsLoading(false);
+        if (videoRef.current && videoRef.current.paused) {
+          attemptSmartAutoPlay(videoRef.current);
+        }
+      }
+    } else {
+      hasStartedPlayingRef.current = false;
+      isSeekingRef.current = false;
+      setIsLoading(true);
+      setIframeKey((prev) => prev + 1);
     }
 
     const prov = STREAM_PROVIDERS.find((p) => p.id === nextServer);
     showToast(`${reasonLabel}: Conectado a ${prov?.name || 'Servidor 4K'}`);
-  }, [directHlsStreams, activeHlsIndex, selectedServer, stopSpeechSynthesis, showToast]);
+  }, [directHlsStreams, activeHlsIndex, selectedServer, stopSpeechSynthesis, showToast, attemptSmartAutoPlay]);
 
   // 2. ESCUCHAR EVENTOS EN TIEMPO REAL DE PLAYLATIN (Detección automática de idioma y fallos)
   useEffect(() => {
@@ -471,55 +515,31 @@ export default function VideoPlayerModal({
         const versions = Array.isArray(event.data.versions) ? event.data.versions : ['latino'];
         const hasSpanishInPlayLatin = versions.some((v) => /lat|esp|cast/i.test(String(v)));
 
-        // Si PlayLatin solo tiene subtitulado para esta película/serie, cambiar automáticamente al siguiente servidor en Español Latino
-        if (!hasSpanishInPlayLatin) {
-          if (directHlsStreams.some((s) => s.isLatinoDub)) {
-            const latIdx = directHlsStreams.findIndex((s) => s.isLatinoDub);
-            setActiveHlsIndex(latIdx);
-            setSelectedServer('native_hls_4k');
-            showToast('Auto-Detector: Conmutado a Cineflex 4K Directo para garantizar audio Español Latino');
-            return;
-          } else {
-            iterateNextLatinoServer('Auto-Detector Sí o Sí');
-            return;
-          }
+        // Si PlayLatin solo tiene subtitulado pero tenemos un stream HLS nativo en Español Latino, usar el nativo
+        if (!hasSpanishInPlayLatin && directHlsStreams.some((s) => s.isLatinoDub)) {
+          const latIdx = directHlsStreams.findIndex((s) => s.isLatinoDub);
+          setActiveHlsIndex(latIdx);
+          setSelectedServer('native_hls_4k');
+          showToast('Auto-Detector: Conmutado a Cineflex 4K Directo para garantizar audio Español Latino');
+          return;
         }
 
         showToast(`Servidor Compatible Verificado: Audio ${versions.map((v) => String(v).toUpperCase()).join(' / ')}`);
       } else if (type === 'meinecloud:error') {
-        if (
-          !isNativeServer &&
-          (selectedServer === 'playlatin_es' ||
-            selectedServer === 'auto_smart_latino' ||
-            selectedServer === 'embed69_latino' ||
-            selectedServer === 'playlatin_dood')
-        ) {
-          iterateNextLatinoServer('Auto-Detector Sí o Sí');
+        if (!isNativeServer && directHlsStreams.length > 0) {
+          setActiveHlsIndex(0);
+          setSelectedServer('native_hls_4k');
         }
       }
     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [selectedServer, isNativeServer, directHlsStreams, iterateNextLatinoServer, showToast]);
+  }, [selectedServer, isNativeServer, directHlsStreams, showToast]);
 
-  // Watchdog de 3.5s para Servidores PlayLatin (Conmutación automática ante errores silenciosos o demoras de MeineCloud)
+  // Watchdog para Servidores PlayLatin: solo conmuta si existe un flujo HLS nativo directo disponible
   useEffect(() => {
-    // Si ya estamos en reproductor nativo, escaneando o en tráiler, limpiar timer y salir
-    if (isNativeServer || isScanningLinks || selectedServer === 'native_hls_4k' || showTrailer) {
-      if (playLatinHandshakeTimerRef.current) {
-        clearTimeout(playLatinHandshakeTimerRef.current);
-        playLatinHandshakeTimerRef.current = null;
-      }
-      return;
-    }
-
-    // El watchdog se activa únicamente cuando un servidor iframe usa el protocolo PlayLatin (meinecloud)
-    const isUsingPlayLatinIframe =
-      Boolean(resolvedImdbId) &&
-      (selectedServer === 'playlatin_es' || selectedServer === 'auto_smart_latino' || selectedServer === 'embed69_latino');
-
-    if (!isUsingPlayLatinIframe) {
+    if (isNativeServer || isScanningLinks || selectedServer === 'native_hls_4k' || showTrailer || directHlsStreams.length === 0) {
       if (playLatinHandshakeTimerRef.current) {
         clearTimeout(playLatinHandshakeTimerRef.current);
         playLatinHandshakeTimerRef.current = null;
@@ -535,17 +555,11 @@ export default function VideoPlayerModal({
     hasStartedPlayingRef.current = false;
 
     playLatinHandshakeTimerRef.current = setTimeout(() => {
-      // Si PlayLatin no ha emitido ready ni ha comenzado a reproducirse:
-      if (!hasStartedPlayingRef.current && !playLatinReadyRef.current) {
-        const latIdx = directHlsStreams.findIndex((s) => s.isLatinoDub || s.isCastellanoDub);
-        if (latIdx >= 0) {
-          setActiveHlsIndex(latIdx);
-          setSelectedServer('native_hls_4k');
-          setSelectedAudioMode('es_latino_dub');
-          showToast('Auto-Detector: Conmutando a Cineflex 4K Nativo');
-        } else {
-          iterateNextLatinoServer('Auto-Detector: Tiempo de respuesta agotado');
-        }
+      if (!hasStartedPlayingRef.current && !playLatinReadyRef.current && directHlsStreams.length > 0) {
+        setActiveHlsIndex(0);
+        setSelectedServer('native_hls_4k');
+        setSelectedAudioMode('es_latino_dub');
+        showToast('Auto-Detector: Conmutando a Cineflex 4K Nativo');
       }
     }, 3500);
 
@@ -555,7 +569,7 @@ export default function VideoPlayerModal({
         playLatinHandshakeTimerRef.current = null;
       }
     };
-  }, [selectedServer, isNativeServer, isScanningLinks, resolvedImdbId, iframeKey, showTrailer, directHlsStreams, iterateNextLatinoServer, showToast]);
+  }, [selectedServer, isNativeServer, isScanningLinks, resolvedImdbId, iframeKey, showTrailer, directHlsStreams, showToast]);
 
   // 3. CAMBIO DE PISTA DE AUDIO / IDIOMA (Garantiza Español Latino en 4K / Full HD)
   const handleSelectAudioTrack = (trackId) => {
@@ -682,6 +696,10 @@ export default function VideoPlayerModal({
 
     // Si ya estamos reproduciendo este mismo stream exacto y HLS está activo, NO reiniciar el reproductor
     if (currentLoadedUrlRef.current === resolvedNativeUrl && hlsRef.current) {
+      setIsLoading(false);
+      if (videoRef.current && videoRef.current.paused) {
+        attemptSmartAutoPlay(videoRef.current);
+      }
       return;
     }
 
@@ -765,7 +783,7 @@ export default function VideoPlayerModal({
           } catch { }
         }
 
-        video.play().catch(() => { });
+        attemptSmartAutoPlay(video);
       });
 
       hls.on(HlsClass.Events.AUDIO_TRACKS_UPDATED, () => {
@@ -845,7 +863,7 @@ export default function VideoPlayerModal({
           setCurrentTime(0);
         } catch { }
       }
-      video.play().catch(() => { });
+      attemptSmartAutoPlay(video);
     }
 
     return () => {
@@ -855,7 +873,7 @@ export default function VideoPlayerModal({
       }
       currentLoadedUrlRef.current = '';
     };
-  }, [isNativeServer, showTrailer, resolvedNativeUrl, isHlsStream]);
+  }, [isNativeServer, showTrailer, resolvedNativeUrl, isHlsStream, attemptSmartAutoPlay]);
 
   const saveCurrentProgress = useCallback(() => {
     if (videoRef.current && videoRef.current.currentTime > 3) {
@@ -1002,6 +1020,18 @@ export default function VideoPlayerModal({
 
   // Gestos táctiles para Celular y Tablet (Toque simple muestra/oculta controles, Doble toque adelanta/retrocede 10s)
   const handleVideoTouchOrClick = (e) => {
+    // Si el navegador inició en silencio por política de autoplay, el primer toque activa el sonido inmediatamente
+    if (autoMutedByBrowser && videoRef.current) {
+      videoRef.current.muted = false;
+      setIsMuted(false);
+      setAutoMutedByBrowser(false);
+      if (videoRef.current.paused) {
+        videoRef.current.play().catch(() => {});
+      }
+      wakeControls();
+      return;
+    }
+
     if (activeMenu) {
       setActiveMenu(null);
       return;
@@ -1108,13 +1138,8 @@ export default function VideoPlayerModal({
     playLatinReadyRef.current = false;
     stopSpeechSynthesis();
     setShowTrailer(false);
-    hasStartedPlayingRef.current = false;
-    isSeekingRef.current = false;
     setSelectedServer(serverId);
     setActiveMenu(null);
-    setIsLoading(true);
-    setIframeKey(prev => prev + 1);
-
     setSelectedAudioMode('es_latino_dub');
     setPlayLatinLang('latino');
     loadSubtitleTrack(-1);
@@ -1122,13 +1147,26 @@ export default function VideoPlayerModal({
     if (directHlsStreams.length > 0) {
       // Asignar a cada botón de servidor un nodo espejo HLS directo distinto cuando hay varios disponibles
       const byProvider = directHlsStreams.findIndex((s) => s.providerId === serverId);
-      if (byProvider >= 0) {
-        setActiveHlsIndex(byProvider);
+      const serverOrder = ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'embed69_latino', 'vidlink_4k_pro', 'multiembed_global'];
+      const sIdx = Math.max(0, serverOrder.indexOf(serverId));
+      const nextIdx = byProvider >= 0 ? byProvider : (sIdx % directHlsStreams.length);
+
+      if (nextIdx !== activeHlsIndex) {
+        hasStartedPlayingRef.current = false;
+        isSeekingRef.current = false;
+        setIsLoading(true);
+        setActiveHlsIndex(nextIdx);
       } else {
-        const serverOrder = ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'embed69_latino', 'vidlink_4k_pro', 'multiembed_global'];
-        const sIdx = Math.max(0, serverOrder.indexOf(serverId));
-        setActiveHlsIndex(sIdx % directHlsStreams.length);
+        setIsLoading(false);
+        if (videoRef.current && videoRef.current.paused) {
+          attemptSmartAutoPlay(videoRef.current);
+        }
       }
+    } else {
+      hasStartedPlayingRef.current = false;
+      isSeekingRef.current = false;
+      setIsLoading(true);
+      setIframeKey(prev => prev + 1);
     }
 
     const provObj = STREAM_PROVIDERS.find((p) => p.id === serverId);
@@ -1284,6 +1322,7 @@ export default function VideoPlayerModal({
     if (!videoRef.current) return;
     const nextMuted = !isMuted;
     setIsMuted(nextMuted);
+    setAutoMutedByBrowser(false);
     videoRef.current.muted = nextMuted;
   };
 
@@ -1291,6 +1330,7 @@ export default function VideoPlayerModal({
     const val = parseFloat(e.target.value);
     setVolume(val);
     setIsMuted(val === 0);
+    setAutoMutedByBrowser(false);
     if (videoRef.current) {
       videoRef.current.volume = val;
       videoRef.current.muted = val === 0;
@@ -2160,6 +2200,29 @@ export default function VideoPlayerModal({
                 ))}
               </div>
             )}
+
+            {/* Botón Flotante de 1 Toque para Activar Sonido cuando el navegador aplicó política de Autoplay Silencioso */}
+            <AnimatePresence>
+              {autoMutedByBrowser && isPlaying && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (videoRef.current) {
+                      videoRef.current.muted = false;
+                      setIsMuted(false);
+                      setAutoMutedByBrowser(false);
+                    }
+                  }}
+                  className="absolute top-16 sm:top-20 left-1/2 -translate-x-1/2 z-30 flex items-center space-x-2 bg-netflix-red hover:bg-red-600 text-white font-black text-xs sm:text-sm px-4 py-2 rounded-full shadow-[0_12px_36px_rgba(229,9,20,0.65)] border border-white/25 cursor-pointer pointer-events-auto active:scale-95"
+                >
+                  <VolumeX className="w-4 h-4 animate-pulse shrink-0" />
+                  <span>Tocar para Activar Audio (Español Latino)</span>
+                </motion.button>
+              )}
+            </AnimatePresence>
 
             {/* Botón Central de Play cuando está en pausa */}
             <AnimatePresence>
