@@ -222,13 +222,17 @@ export default function VideoPlayerModal({
   }, []);
 
   useEffect(() => {
+    AdBlockerService.setIsWatchingVideo(true);
     const unsub = AdBlockerService.subscribe((count, ev) => {
       setBlockedAdsCount(count);
       if (ev?.reason) {
         showToast(`CineShield: ${ev.reason}`);
       }
     });
-    return () => unsub();
+    return () => {
+      AdBlockerService.setIsWatchingVideo(false);
+      unsub();
+    };
   }, []);
 
   const showToast = useCallback((msg) => {
@@ -457,8 +461,8 @@ export default function VideoPlayerModal({
 
     const hasLatinoHls = directHlsStreams.some((s) => s.isLatinoDub || s.isCastellanoDub);
     const priorityChain = hasLatinoHls
-      ? ['native_hls_4k', 'playlatin_es', 'embed69_latino', 'vidlink_4k_pro', 'multiembed_global', 'auto_smart_latino']
-      : ['playlatin_es', 'embed69_latino', 'vidlink_4k_pro', 'multiembed_global', 'auto_smart_latino'];
+      ? ['native_hls_4k', 'embed69_latino', 'auto_smart_latino', 'playlatin_es', 'vidlink_4k_pro', 'multiembed_global']
+      : ['playlatin_es', 'vidlink_4k_pro', 'multiembed_global', 'auto_smart_latino'];
 
     let nextServer = priorityChain.find((id) => id !== selectedServer && !failedServersRef.current.has(id));
     if (!nextServer) {
@@ -2402,7 +2406,7 @@ export default function VideoPlayerModal({
                   allowFullScreen
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                   referrerPolicy="origin"
-                  sandbox={currentProvider?.id === 'embed69_latino' ? undefined : "allow-scripts allow-same-origin allow-forms allow-presentation"}
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                   onLoad={() => {
                     setIsLoading(false);
                   }}

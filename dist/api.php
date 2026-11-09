@@ -2,9 +2,7 @@
 // API Backend Ultra-Rápida de Extracción Directa HLS (.m3u8) 100% en Español Latino para Producción / XAMPP / cPanel
 error_reporting(0);
 @ini_set('display_errors', '0');
-if (!ob_start('ob_gzhandler')) {
-    ob_start();
-}
+
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: *');
@@ -17,8 +15,11 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS
 $dropUa = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
 $action = isset($_GET['action']) ? $_GET['action'] : 'scan';
 
-// MODO 1: PROXY HLS LOCAL
+// MODO 1: PROXY HLS LOCAL (STREAMING BINARIO LIMPIO SIN GZIP)
 if ($action === 'proxy') {
+    while (ob_get_level()) {
+        @ob_end_clean();
+    }
     $b64Param = isset($_GET['b64']) ? trim($_GET['b64']) : '';
     $ref64Param = isset($_GET['ref64']) ? trim($_GET['ref64']) : '';
     $targetUrl = !empty($b64Param)
@@ -71,6 +72,7 @@ if ($action === 'proxy') {
 
     if (strpos($targetUrl, '.m3u8') !== false || strpos($body, '#EXTM3U') !== false) {
         header('Content-Type: application/vnd.apple.mpegurl; charset=utf-8');
+        header('Cache-Control: no-cache, no-store');
         $parsedBase = parse_url($targetUrl);
         $baseOrigin = $parsedBase['scheme'] . '://' . $parsedBase['host'];
         $baseDir = isset($parsedBase['path']) ? rtrim(dirname($parsedBase['path']), '/') . '/' : '/';
@@ -115,6 +117,9 @@ if ($action === 'proxy') {
             }
         }
         header('Content-Type: video/mp2t');
+        header('Content-Length: ' . strlen($body));
+        header('Accept-Ranges: bytes');
+        header('Cache-Control: public, max-age=86400');
         echo $body;
     }
     exit;

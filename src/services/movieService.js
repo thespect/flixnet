@@ -316,19 +316,18 @@ export const STREAM_PROVIDERS = [
     tag: '100% Español',
     quality: '1080p Full HD / 4K Latino',
     ping: '6ms',
-    isNative: false,
+    isNative: true,
     prefersNativeHls: true,
     isDirectHls: true,
     sandboxSafe: true,
     language: 'Español Latino (LAT) y Castellano (ESP)',
     description: 'Servidor dedicado a doblajes en Español Latino con extracción directa libre de anuncios.',
-    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
       if (res.imdbId) {
-        const epPad = String(res.episode).padStart(2, '0');
         return res.isTv
-          ? `https://embed69.org/f/${res.imdbId}-${res.season}x${epPad}`
-          : `https://embed69.org/f/${res.imdbId}`;
+          ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
+          : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
       }
       return '';
     }
