@@ -129,7 +129,7 @@ $tmdbId = isset($_GET['tmdbId']) ? trim($_GET['tmdbId']) : '';
 $isTv = isset($_GET['isTv']) && ($_GET['isTv'] === '1' || $_GET['isTv'] === 'true');
 $season = isset($_GET['season']) ? intval($_GET['season']) : 1;
 $episode = isset($_GET['episode']) ? intval($_GET['episode']) : 1;
-$imdbId = isset($_GET['imdbId']) ? trim($_GET['imdbId']) : '';
+$imdbId = isset($_GET['imdbId']) ? trim($_GET['imdbId']) : (isset($_GET['imdb']) ? trim($_GET['imdb']) : '');
 
 if (empty($tmdbId)) {
     echo json_encode(['ok' => false, 'error' => 'Missing tmdbId']);
