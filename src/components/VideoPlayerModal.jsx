@@ -323,22 +323,14 @@ export default function VideoPlayerModal({
 
     (async () => {
       let imdb = specialAlias?.imdbId || movie.imdb_id || KNOWN_IMDB_IDS[movie.id] || cached?.imdbId || null;
-      if (imdb) {
-        if (!cancelled) {
-          setResolvedImdbId(imdb);
-          setIsResolvingImdb(false);
-        }
-      } else if (!movie.customUrl) {
+      if (!imdb && !movie.customUrl) {
         setIsResolvingImdb(true);
-        MovieAPI.getImdbId(movie.id, movie.isTv).then((lateImdb) => {
-          if (!cancelled && lateImdb) {
-            setResolvedImdbId(lateImdb);
-            setIsResolvingImdb(false);
-          }
-        }).catch(() => {
-          if (!cancelled) setIsResolvingImdb(false);
-        });
-      } else {
+        try {
+          imdb = await MovieAPI.getImdbId(movie.id, movie.isTv);
+        } catch {}
+      }
+      if (!cancelled) {
+        if (imdb) setResolvedImdbId(imdb);
         setIsResolvingImdb(false);
       }
 
@@ -395,23 +387,11 @@ export default function VideoPlayerModal({
         setSelectedAudioMode(streams[anyLatinoIdx].isCastellanoDub ? 'es_castellano_dub' : 'es_latino_dub');
         loadSubtitleTrack(-1);
         setSelectedServer('native_hls_4k');
-      } else if (selectedServer === 'native_hls_4k') {
-        const anyDirectIdx = streams.findIndex((s) => Boolean(s.url));
-        if (anyDirectIdx >= 0) {
-          // Si hay stream directo 4K nativo disponible con subtítulos en español (0% anuncios y clics)
-          setActiveHlsIndex(anyDirectIdx);
-          setSelectedAudioMode('en_original_sub_es');
-          const subs = report.subtitles || subtitlesList;
-          if (subs && subs.length > 0) {
-            const esSubIdx = subs.findIndex((s) => s.isLatino || s.isSpanish);
-            loadSubtitleTrack(esSubIdx >= 0 ? esSubIdx : 0);
-          }
-        } else {
-          // Si este título no tiene .m3u8 directo verificado, conmutar al servidor recomendado de alta disponibilidad
-          const fallbackServer = report.recommendedServer && report.recommendedServer !== 'native_hls_4k'
-            ? report.recommendedServer
-            : 'auto_smart_latino';
-          setSelectedServer(fallbackServer);
+      } else {
+        // Si no hay .m3u8 directo extraído, usar SIEMPRE el servidor Español Latino (PlayLatin / Embed69) antes que cualquier servidor en inglés
+        const fallbackLatinoServer = (report.imdbId || imdb) ? 'playlatin_es' : 'auto_smart_latino';
+        if (selectedServer === 'native_hls_4k' || selectedServer === 'auto_smart_latino') {
+          setSelectedServer(fallbackLatinoServer);
           setSelectedAudioMode('es_latino_dub');
         }
       }
@@ -422,7 +402,7 @@ export default function VideoPlayerModal({
     };
   }, [movie, currentSeason, currentEpisode]);
 
-  // Iterador Inteligente de Servidores Compatibles
+  // Iterador Inteligente de Servidores Compatibles (Priorizando SIEMPRE Español Latino antes que servidores internacionales)
   const iterateNextLatinoServer = useCallback((reasonLabel = 'Auto-Detector') => {
     if (playLatinHandshakeTimerRef.current) {
       clearTimeout(playLatinHandshakeTimerRef.current);
@@ -433,8 +413,8 @@ export default function VideoPlayerModal({
 
     const hasLatinoHls = directHlsStreams.some((s) => s.isLatinoDub || s.isCastellanoDub);
     const priorityChain = hasLatinoHls
-      ? ['native_hls_4k', 'auto_smart_latino', 'vidsrc_pm', 'vidlink_4k_pro', 'multiembed_global', 'playlatin_es', 'embed69_latino']
-      : ['auto_smart_latino', 'vidsrc_pm', 'vidlink_4k_pro', 'multiembed_global', 'playlatin_es', 'embed69_latino'];
+      ? ['native_hls_4k', 'playlatin_es', 'embed69_latino', 'auto_smart_latino', 'multiembed_global', 'vidlink_4k_pro', 'vidsrc_pm']
+      : ['playlatin_es', 'embed69_latino', 'auto_smart_latino', 'multiembed_global', 'vidlink_4k_pro', 'vidsrc_pm'];
 
     let nextServer = priorityChain.find((id) => id !== selectedServer && !failedServersRef.current.has(id));
     if (!nextServer) {
@@ -1076,18 +1056,27 @@ export default function VideoPlayerModal({
 
   const directStreamwishMirrorUrl = (() => {
     if (!isScanReportCurrent) return null;
+    const dropSource = (scanReport?.latinoSources || []).find(
+      (s) => s.url && (s.server === 'dropload' || String(s.url).includes('dr0pstream'))
+    )?.url;
+    if (dropSource) return dropSource;
     const swSource = (scanReport?.latinoSources || []).find(
       (s) => s.url && (s.server === 'streamwish' || s.server === 'voe' || s.server === 'filemoon' || s.server === 'doodstream')
     )?.url;
-    if (swSource) return swSource;
-    const secondSource = (scanReport?.latinoSources || [])[1]?.url;
-    return secondSource || directDecryptedMirrorUrl || null;
+    if (swSource) {
+      const mCode = swSource.match(/\/(?:e|f|v)\/([a-zA-Z0-9]+)/);
+      if (swSource.includes('hglink') && mCode) {
+        return `https://flaswish.com/e/${mCode[1]}`;
+      }
+      return swSource;
+    }
+    return null;
   })();
 
   const streamUrl =
     selectedServer === 'vidhide_latino' && directDecryptedMirrorUrl
       ? directDecryptedMirrorUrl
-      : selectedServer === 'streamwish_latino' && directStreamwishMirrorUrl
+      : (selectedServer === 'streamwish_latino' || selectedServer === 'embed69_latino') && directStreamwishMirrorUrl
         ? directStreamwishMirrorUrl
         : currentProvider.getUrl(
           movie.id,
@@ -1476,37 +1465,36 @@ export default function VideoPlayerModal({
         )}
       </AnimatePresence>
 
-      {/* BARRA SUPERIOR LIQUID GLASS (Estilo Apple TV+ / Max — Monocromática, Elegante y 100% Responsiva) */}
+      {/* BARRA SUPERIOR LIQUID GLASS (Estilo Apple TV+ / Max — 100% Adaptativa en Móvil PWA iOS/Android, Tablet y PC) */}
       <motion.header
         animate={{ y: controlsVisible ? 0 : -110, opacity: controlsVisible ? 1 : 0 }}
-        transition={{ duration: 0.25 }}
-        className="bg-black/78 backdrop-blur-2xl border-b border-white/[0.08] px-3 sm:px-6 py-2.5 sm:py-3 pt-safe flex items-center justify-between gap-2 z-30 shrink-0 shadow-[0_10px_40px_rgba(0,0,0,0.85)]"
+        transition={{ duration: 0.2 }}
+        className="bg-[#06060b]/92 sm:bg-black/80 sm:backdrop-blur-2xl border-b border-white/[0.08] px-safe py-2 sm:py-3 pt-safe flex items-center justify-between gap-2 z-30 shrink-0 shadow-[0_8px_30px_rgba(0,0,0,0.85)]"
       >
         {/* Izquierda: Volver y Título */}
-        <div className="flex items-center space-x-2.5 sm:space-x-3.5 min-w-0 flex-1">
-          <motion.button
-            whileTap={{ scale: 0.92 }}
+        <div className="flex items-center space-x-2 sm:space-x-3.5 min-w-0 flex-1">
+          <button
             onClick={handleModalClose}
-            className="flex items-center space-x-1.5 px-3 sm:px-3.5 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.15] text-white/95 font-semibold text-xs transition-all border border-white/[0.12] shrink-0"
+            className="flex items-center space-x-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-full bg-white/[0.1] hover:bg-white/[0.16] active:scale-95 text-white font-semibold text-xs transition-all border border-white/[0.14] shrink-0"
             title="Volver al catálogo"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="hidden sm:inline">Catálogo</span>
-          </motion.button>
+          </button>
 
           <div className="min-w-0 flex-1">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1.5 sm:space-x-2">
               <h2 className="text-white text-xs sm:text-base md:text-lg font-bold tracking-tight truncate">
                 {movie.title}
               </h2>
               {(movie.isTv || specialAlias) && (
-                <span className="bg-white/[0.12] border border-white/[0.14] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
-                  T{currentSeason} · E{currentEpisode}
+                <span className="bg-netflix-red/25 border border-netflix-red/40 text-white text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full shrink-0">
+                  T{currentSeason}:E{currentEpisode}
                 </span>
               )}
               <button
                 onClick={() => setIsAdBlockModalOpen(true)}
-                className="hidden sm:inline-flex items-center space-x-1.5 bg-white/[0.06] hover:bg-white/[0.12] text-white/80 border border-white/[0.1] text-[10px] font-semibold px-2.5 py-0.5 rounded-full transition-all cursor-pointer shrink-0"
+                className="hidden md:inline-flex items-center space-x-1.5 bg-white/[0.06] hover:bg-white/[0.12] text-white/80 border border-white/[0.1] text-[10px] font-semibold px-2.5 py-0.5 rounded-full transition-all cursor-pointer shrink-0"
                 title="CineShield™ 4K AdBlocker Activo (0% Anuncios ni Toques Fantasmas)"
               >
                 <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0" />
@@ -1517,44 +1505,34 @@ export default function VideoPlayerModal({
               </button>
             </div>
 
-            <div className="flex items-center space-x-1.5 text-[10px] sm:text-[11px] text-white/55 font-medium truncate">
+            <div className="flex items-center space-x-1.5 text-[10px] sm:text-[11px] text-white/60 font-medium truncate">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-              <span className="text-white/80 font-semibold truncate">
+              <span className="text-white/85 font-semibold truncate">
                 {showTrailer
                   ? 'Tráiler Oficial 4K'
                   : selectedServer === 'auto_smart_latino' && activeDirectStream?.name
                     ? `Smart Auto → ${activeDirectStream.name}`
                     : currentProvider.name}
               </span>
-              <span>·</span>
-              <span className="text-white/70 truncate">
+              <span className="hidden xs:inline">·</span>
+              <span className="hidden xs:inline text-emerald-300 font-semibold truncate">
                 {currentAudioObj.shortLabel}
               </span>
-              {!showTrailer && (
-                <button
-                  onClick={() => iterateNextLatinoServer('Salto Manual')}
-                  className="ml-1.5 inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-netflix-red/25 hover:bg-netflix-red/50 text-white border border-netflix-red/40 text-[9px] sm:text-[10px] font-bold tracking-tight cursor-pointer transition-all"
-                  title="Cambiar al siguiente servidor compatible en Español Latino"
-                >
-                  <RotateCw className="w-2.5 h-2.5 text-rose-400" />
-                  <span>Siguiente Servidor</span>
-                </button>
-              )}
             </div>
           </div>
         </div>
 
-        {/* Derecha: Toolbar Liquid Glass Monocromático (Apple TV+ HIG) */}
-        <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+        {/* Derecha: Toolbar Compacta y Adaptativa (Móvil / Tablet / Desktop) */}
+        <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
 
-          {/* Selector de Temporadas y Capítulos */}
+          {/* Selector de Temporadas y Capítulos (en móvil también accesible abajo) */}
           {movie.isTv && (
             <button
               onClick={() => {
                 setPickerSeason(currentSeason);
                 setActiveMenu(activeMenu === 'episodes' ? null : 'episodes');
               }}
-              className={`flex items-center space-x-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition-all ${activeMenu === 'episodes'
+              className={`hidden sm:flex items-center space-x-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition-all ${activeMenu === 'episodes'
                   ? 'bg-white text-black border-white shadow-lg'
                   : 'bg-white/[0.08] hover:bg-white/[0.14] text-white border-white/[0.12]'
                 }`}
@@ -1594,34 +1572,17 @@ export default function VideoPlayerModal({
           {/* Selector de Pista de Audio / Idioma */}
           <button
             onClick={() => setActiveMenu(activeMenu === 'audio' ? null : 'audio')}
-            className={`flex items-center space-x-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition-all ${activeMenu === 'audio'
+            className={`flex items-center space-x-1 px-2.5 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition-all active:scale-95 ${activeMenu === 'audio'
                 ? 'bg-white text-black border-white shadow-lg'
-                : 'bg-white/[0.08] hover:bg-white/[0.14] text-white border-white/[0.12]'
+                : 'bg-white/[0.09] hover:bg-white/[0.15] text-white border-white/[0.14]'
               }`}
             title="Cambiar Pista de Audio / Idioma (Español Latino, Castellano, Inglés)"
           >
             <Headphones className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span className="truncate max-w-[100px] sm:max-w-none">
+            <span className="truncate max-w-[78px] sm:max-w-none">
               {currentAudioObj.shortLabel}
             </span>
           </button>
-
-          {/* Subtítulos */}
-          {isNativeServer && !showTrailer && (
-            <button
-              onClick={() => setActiveMenu(activeMenu === 'subs' ? null : 'subs')}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition-all ${activeMenu === 'subs'
-                  ? 'bg-white text-black border-white'
-                  : activeSubIndex >= 0
-                    ? 'bg-white/[0.14] text-white border-white/[0.22]'
-                    : 'bg-white/[0.08] hover:bg-white/[0.14] text-white/80 border-white/[0.12]'
-                }`}
-              title="Subtítulos en Español"
-            >
-              <Subtitles className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">CC</span>
-            </button>
-          )}
 
           {/* Calidad 4K */}
           <button
@@ -1639,17 +1600,17 @@ export default function VideoPlayerModal({
           {/* Chromecast & AirPlay */}
           <button
             onClick={() => setIsCastModalOpen(true)}
-            className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.14] text-white/90 border border-white/[0.12] text-[11px] sm:text-xs font-semibold transition-all"
+            className="p-2 sm:px-3 sm:py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.14] text-white/90 border border-white/[0.12] text-[11px] sm:text-xs font-semibold transition-all flex items-center space-x-1.5 active:scale-95"
             title="Transmitir por Chromecast o AirPlay a Smart TV"
           >
-            <Cast className="w-3.5 h-3.5 shrink-0" />
+            <Cast className="w-3.5 h-3.5 sm:w-3.5 sm:h-3.5 shrink-0" />
             <span className="hidden md:inline">AirPlay</span>
           </button>
 
           {/* Recargar */}
           <button
             onClick={handleReload}
-            className="p-2 rounded-full bg-white/[0.08] hover:bg-white/[0.14] text-white/80 hover:text-white border border-white/[0.12] transition-all"
+            className="p-2 rounded-full bg-white/[0.08] hover:bg-white/[0.14] text-white/80 hover:text-white border border-white/[0.12] transition-all active:scale-95"
             title="Recargar reproductor"
           >
             <RotateCw className="w-4 h-4" />
@@ -1658,7 +1619,7 @@ export default function VideoPlayerModal({
           {/* Cerrar */}
           <button
             onClick={handleModalClose}
-            className="p-2 rounded-full bg-white/[0.12] hover:bg-netflix-red text-white border border-white/[0.15] transition-all"
+            className="p-2 rounded-full bg-white/[0.12] hover:bg-netflix-red text-white border border-white/[0.15] transition-all active:scale-95"
             title="Cerrar reproductor"
           >
             <X className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -2244,16 +2205,16 @@ export default function VideoPlayerModal({
               )}
             </AnimatePresence>
 
-            {/* BARRA DE CONTROLES FLOTANTE DEL REPRODUCTOR NATIVO (Adaptada a Móvil, Tablet y PC) */}
+            {/* BARRA DE CONTROLES FLOTANTE DEL REPRODUCTOR NATIVO (100% Adaptada a Móvil PWA iOS/Android, Tablet y PC) */}
             <motion.div
-              animate={{ opacity: controlsVisible ? 1 : 0, y: controlsVisible ? 0 : 30 }}
-              transition={{ duration: 0.22 }}
+              animate={{ opacity: controlsVisible ? 1 : 0, y: controlsVisible ? 0 : 24 }}
+              transition={{ duration: 0.18 }}
               onClick={(e) => e.stopPropagation()}
-              className={`absolute bottom-2 sm:bottom-4 left-2 right-2 sm:left-4 sm:right-4 z-20 max-w-5xl mx-auto bg-[#0b0b12]/88 backdrop-blur-2xl border border-white/[0.14] rounded-2xl p-2.5 sm:p-4 shadow-[0_24px_60px_rgba(0,0,0,0.9)] space-y-2 ${controlsVisible ? 'pointer-events-auto' : 'pointer-events-none'
+              className={`absolute bottom-2 sm:bottom-4 left-2 right-2 sm:left-4 sm:right-4 z-20 max-w-5xl mx-auto bg-[#090910]/94 sm:bg-[#0b0b12]/88 sm:backdrop-blur-2xl border border-white/[0.14] rounded-2xl p-2 sm:p-3.5 shadow-[0_20px_50px_rgba(0,0,0,0.9)] space-y-1.5 sm:space-y-2 ${controlsVisible ? 'pointer-events-auto' : 'pointer-events-none'
                 }`}
             >
               {/* Fila 1: Línea de Tiempo Táctil + Tiempo */}
-              <div className="flex items-center space-x-2.5">
+              <div className="flex items-center space-x-2">
                 <span className="text-[10px] sm:text-xs font-mono text-gray-200 shrink-0">
                   {formatTime(currentTime)}
                 </span>
@@ -2271,13 +2232,13 @@ export default function VideoPlayerModal({
                 </span>
               </div>
 
-              {/* Fila 2: Controles de Reproducción, Volumen, Selector de Idioma/Audio y Pantalla Completa */}
-              <div className="flex items-center justify-between gap-1.5 flex-wrap sm:flex-nowrap">
+              {/* Fila 2: Controles de Reproducción en una sola línea limpia y deslizable en pantallas pequeñas */}
+              <div className="flex items-center justify-between gap-1.5 overflow-x-auto no-scrollbar">
                 {/* Controles Izquierdos */}
-                <div className="flex items-center space-x-1.5 sm:space-x-3">
+                <div className="flex items-center space-x-1 sm:space-x-2.5 shrink-0">
                   <button
                     onClick={togglePlayPause}
-                    className="text-white hover:text-netflix-red transition-colors p-1.5 rounded-lg bg-white/10 sm:bg-transparent"
+                    className="text-white hover:text-netflix-red transition-colors p-1.5 rounded-lg bg-white/10 sm:bg-transparent active:scale-95"
                     title={isPlaying ? "Pausar" : "Reproducir"}
                   >
                     {isPlaying ? <Pause className="w-4 h-4 sm:w-5 sm:h-5 fill-current" /> : <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />}
@@ -2285,22 +2246,22 @@ export default function VideoPlayerModal({
 
                   <button
                     onClick={() => skipTime(-10)}
-                    className="text-gray-200 hover:text-white transition-colors text-[11px] font-black px-2 py-1 rounded-lg bg-white/10 active:scale-95"
+                    className="text-gray-200 hover:text-white transition-colors text-[10px] sm:text-[11px] font-black px-2 py-1 rounded-lg bg-white/10 active:scale-95"
                     title="Retroceder 10s"
                   >
                     -10s
                   </button>
                   <button
                     onClick={() => skipTime(10)}
-                    className="text-gray-200 hover:text-white transition-colors text-[11px] font-black px-2 py-1 rounded-lg bg-white/10 active:scale-95"
+                    className="text-gray-200 hover:text-white transition-colors text-[10px] sm:text-[11px] font-black px-2 py-1 rounded-lg bg-white/10 active:scale-95"
                     title="Adelantar 10s"
                   >
                     +10s
                   </button>
 
                   {/* Volumen */}
-                  <div className="flex items-center space-x-1.5">
-                    <button onClick={toggleMute} className="text-gray-300 hover:text-white p-1">
+                  <div className="flex items-center space-x-1">
+                    <button onClick={toggleMute} className="text-gray-300 hover:text-white p-1.5 active:scale-95">
                       {isMuted || volume === 0 ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4" />}
                     </button>
                     <input
@@ -2315,27 +2276,26 @@ export default function VideoPlayerModal({
                   </div>
                 </div>
 
-                {/* Controles Derechos: Selector de Pista de Audio / Idioma directo en la barra del reproductor */}
-                <div className="flex items-center space-x-1.5 sm:space-x-2.5 ml-auto">
+                {/* Controles Derechos */}
+                <div className="flex items-center space-x-1 sm:space-x-2 shrink-0 ml-auto">
                   <button
                     onClick={() => setActiveMenu(activeMenu === 'audio' ? null : 'audio')}
-                    className="px-2.5 sm:px-3 py-1 rounded-full bg-white/[0.1] hover:bg-white/[0.18] border border-white/[0.15] text-white text-[10px] sm:text-xs font-semibold flex items-center space-x-1 active:scale-95"
+                    className="px-2 sm:px-3 py-1 rounded-full bg-white/[0.1] hover:bg-white/[0.18] border border-white/[0.15] text-white text-[10px] sm:text-xs font-semibold flex items-center space-x-1 active:scale-95"
                     title="Cambiar Pista de Audio / Idioma"
                   >
-                    <Headphones className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>{currentAudioObj.shortLabel}</span>
+                    <Headphones className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-400 shrink-0" />
+                    <span className="truncate max-w-[72px] sm:max-w-none">{currentAudioObj.shortLabel}</span>
                   </button>
 
                   <button
                     onClick={() => setActiveMenu(activeMenu === 'subs' ? null : 'subs')}
-                    className="px-2.5 py-1 rounded-full bg-white/[0.08] hover:bg-white/[0.16] border border-white/[0.12] text-gray-200 text-[10px] sm:text-xs font-semibold flex items-center space-x-1 active:scale-95"
+                    className="px-2 sm:px-2.5 py-1 rounded-full bg-white/[0.08] hover:bg-white/[0.16] border border-white/[0.12] text-gray-200 text-[10px] sm:text-xs font-semibold flex items-center space-x-1 active:scale-95"
                     title="Subtítulos"
                   >
                     <Subtitles className="w-3.5 h-3.5" />
-                    <span className="hidden xs:inline">CC</span>
+                    <span className="hidden sm:inline">CC</span>
                   </button>
 
-                  {/* Botón Directo AirPlay 2 / Chromecast en la Barra del Reproductor */}
                   <button
                     onClick={() => {
                       if (CastService.isAirPlayAvailable() && videoRef.current) {
@@ -2344,7 +2304,7 @@ export default function VideoPlayerModal({
                         setIsCastModalOpen(true);
                       }
                     }}
-                    className="px-2.5 py-1 rounded-full bg-white/[0.08] hover:bg-white/[0.16] border border-white/[0.12] text-white text-[10px] sm:text-xs font-semibold flex items-center space-x-1 active:scale-95"
+                    className="px-2 sm:px-2.5 py-1 rounded-full bg-white/[0.08] hover:bg-white/[0.16] border border-white/[0.12] text-white text-[10px] sm:text-xs font-semibold flex items-center space-x-1 active:scale-95"
                     title="Transmitir a Smart TV por AirPlay o Chromecast"
                   >
                     <Airplay className="w-3.5 h-3.5 shrink-0" />
@@ -2353,7 +2313,7 @@ export default function VideoPlayerModal({
 
                   <button
                     onClick={toggleFullscreen}
-                    className="text-white hover:text-netflix-red p-1.5 rounded-lg bg-white/10 sm:bg-transparent transition-colors"
+                    className="text-white hover:text-netflix-red p-1.5 rounded-lg bg-white/10 sm:bg-transparent transition-colors active:scale-95"
                     title="Pantalla Completa"
                   >
                     {isFullscreen ? <Minimize className="w-4 h-4 sm:w-5 sm:h-5" /> : <Maximize className="w-4 h-4 sm:w-5 sm:h-5" />}
@@ -2402,26 +2362,24 @@ export default function VideoPlayerModal({
 
       </main>
 
-      {/* BARRA INFERIOR DE SERVIDORES Y EPISODIOS (Liquid Glass Dock — Apple TV+ / Max Style) */}
+      {/* BARRA INFERIOR DE SERVIDORES Y EPISODIOS (100% Adaptativa en Móvil PWA iOS/Android, Tablet y PC) */}
       <motion.footer
-        animate={{ y: controlsVisible ? 0 : 100, opacity: controlsVisible ? 1 : 0 }}
-        transition={{ duration: 0.25 }}
-        className="bg-black/82 backdrop-blur-2xl border-t border-white/[0.08] px-3 sm:px-6 py-2.5 pb-safe shrink-0 z-30 shadow-2xl"
+        animate={{ y: controlsVisible ? 0 : 110, opacity: controlsVisible ? 1 : 0 }}
+        transition={{ duration: 0.2 }}
+        className="bg-[#06060b]/94 sm:bg-black/82 sm:backdrop-blur-2xl border-t border-white/[0.08] px-safe py-2 pb-safe shrink-0 z-30 shadow-2xl"
       >
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2">
 
-          {/* Carrusel Horizontal Deslizable de Servidores + Botón de Iteración Rápida */}
-          <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar py-0.5 flex-1 min-w-0">
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.94 }}
+          {/* Carrusel Horizontal Deslizable de Servidores + Botón de Iteración Rápida (Ancho completo en celular) */}
+          <div className="flex items-center space-x-1.5 sm:space-x-2 overflow-x-auto no-scrollbar py-0.5 w-full sm:flex-1 min-w-0">
+            <button
               onClick={() => iterateNextLatinoServer('Iterador Rápido')}
-              className="px-3 py-1.5 rounded-full bg-gradient-to-r from-netflix-red to-rose-600 hover:from-red-600 hover:to-rose-500 text-white text-[11px] sm:text-xs font-black flex items-center space-x-1.5 shrink-0 shadow-[0_4px_20px_rgba(229,9,20,0.45)] cursor-pointer border border-white/20"
+              className="px-3 py-1.5 rounded-full bg-gradient-to-r from-netflix-red to-rose-600 hover:from-red-600 hover:to-rose-500 active:scale-95 transition-transform text-white text-[11px] sm:text-xs font-black flex items-center space-x-1.5 shrink-0 shadow-[0_4px_16px_rgba(229,9,20,0.45)] cursor-pointer border border-white/20"
               title="Iterar instantáneamente al siguiente servidor en Español Latino"
             >
-              <RotateCw className="w-3 h-3 animate-spin" style={{ animationDuration: '4s' }} />
+              <RotateCw className="w-3 h-3" />
               <span>Iterar Servidor</span>
-            </motion.button>
+            </button>
 
             {STREAM_PROVIDERS.map((provider) => {
               const isActive = !showTrailer && selectedServer === provider.id;
@@ -2430,75 +2388,59 @@ export default function VideoPlayerModal({
               const livePing = statusObj?.ping || provider.ping;
 
               return (
-                <motion.button
+                <button
                   key={provider.id}
-                  whileHover={{ scale: 1.04, y: -1 }}
-                  whileTap={{ scale: 0.94 }}
                   onClick={() => handleServerChange(provider.id)}
-                  className={`relative px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap cursor-pointer ${isActive
-                      ? 'text-black font-bold shadow-[0_4px_20px_rgba(255,255,255,0.4)]'
+                  className={`relative px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all active:scale-95 flex items-center space-x-1.5 shrink-0 whitespace-nowrap cursor-pointer ${isActive
+                      ? 'bg-white text-black font-bold shadow-[0_4px_16px_rgba(255,255,255,0.35)]'
                       : 'text-white/80 hover:text-white bg-white/[0.07] hover:bg-white/[0.14] border border-white/[0.12]'
                     }`}
                 >
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeServerPill"
-                      className="absolute inset-0 bg-white rounded-full glow-active-server"
-                      transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                    />
-                  )}
                   <span
-                    className={`w-1.5 h-1.5 rounded-full relative z-10 shrink-0 ${isVerifiedOnline ? 'bg-emerald-500' : 'bg-amber-400'
+                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${isVerifiedOnline ? 'bg-emerald-500' : 'bg-amber-400'
                       }`}
                   />
-                  <span className="relative z-10">{provider.name}</span>
-                  <span className={`relative z-10 text-[9px] px-1.5 py-0.2 rounded-full font-bold ${isActive ? 'bg-black/10 text-black/80' : 'bg-white/10 text-white/60'
+                  <span>{provider.name}</span>
+                  <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold ${isActive ? 'bg-black/10 text-black/80' : 'bg-white/10 text-white/60'
                     }`}>
                     {provider.badge}
                   </span>
-                  <span className={`relative z-10 text-[9px] font-mono hidden md:inline ${isActive ? 'text-black/60' : 'text-emerald-400/80'
+                  <span className={`text-[9px] font-mono hidden md:inline ${isActive ? 'text-black/60' : 'text-emerald-400/80'
                     }`}>
                     {livePing}
                   </span>
-                </motion.button>
+                </button>
               );
             })}
 
             {activeTrailerKey && (
-              <motion.button
-                whileHover={{ scale: 1.04, y: -1 }}
-                whileTap={{ scale: 0.94 }}
+              <button
                 onClick={handleOpenTrailer}
-                className={`relative px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap cursor-pointer ${showTrailer
-                    ? 'text-black font-bold shadow-lg'
+                className={`relative px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all active:scale-95 flex items-center space-x-1.5 shrink-0 whitespace-nowrap cursor-pointer ${showTrailer
+                    ? 'bg-white text-black font-bold shadow-lg'
                     : 'text-white/80 hover:text-white bg-white/[0.07] hover:bg-white/[0.14] border border-white/[0.12]'
                   }`}
               >
-                {showTrailer && (
-                  <motion.div
-                    layoutId="activeServerPill"
-                    className="absolute inset-0 bg-white rounded-full glow-active-server"
-                    transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                  />
-                )}
-                <Youtube className={`w-3.5 h-3.5 relative z-10 ${showTrailer ? 'text-netflix-red' : 'text-red-400'}`} />
-                <span className="relative z-10">Tráiler 4K</span>
-              </motion.button>
+                <Youtube className={`w-3.5 h-3.5 ${showTrailer ? 'text-netflix-red' : 'text-red-400'}`} />
+                <span>Tráiler 4K</span>
+              </button>
             )}
           </div>
 
-          {/* Controles Rápidos de Temporadas y Capítulos en la Barra Inferior */}
+          {/* Controles Rápidos de Temporadas y Capítulos (Fila dedicada y cómoda en celular, alineada a la derecha en tablet/PC) */}
           {movie.isTv && (
-            <div className="flex items-center space-x-1.5 shrink-0">
-              {currentEpisode > 1 && (
+            <div className="flex items-center justify-between sm:justify-end space-x-1.5 w-full sm:w-auto shrink-0 pt-1 sm:pt-0 border-t border-white/[0.06] sm:border-0">
+              {currentEpisode > 1 ? (
                 <button
                   onClick={handlePrevEpisode}
-                  className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] sm:text-xs flex items-center space-x-0.5 border border-white/15"
+                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white font-bold text-[11px] sm:text-xs flex items-center space-x-1 border border-white/15"
                   title="Capítulo Anterior"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
-                  <span>E{currentEpisode - 1}</span>
+                  <span>Cap. {currentEpisode - 1}</span>
                 </button>
+              ) : (
+                <div className="sm:hidden" />
               )}
 
               <button
@@ -2506,21 +2448,19 @@ export default function VideoPlayerModal({
                   setPickerSeason(currentSeason);
                   setActiveMenu(activeMenu === 'episodes' ? null : 'episodes');
                 }}
-                className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-black text-[11px] sm:text-xs flex items-center space-x-1 border border-white/20"
+                className="flex-1 sm:flex-initial justify-center px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 text-white font-black text-[11px] sm:text-xs flex items-center space-x-1.5 border border-white/20"
                 title="Elegir Temporada o Capítulo"
               >
                 <Tv className="w-3.5 h-3.5 text-netflix-red shrink-0" />
-                <span className="hidden md:inline">Capítulos</span>
-                <span>(T{currentSeason}:E{currentEpisode})</span>
+                <span>Temporada {currentSeason} · Cap. {currentEpisode}</span>
               </button>
 
               <button
                 onClick={handleNextEpisode}
-                className="px-3 sm:px-4 py-1.5 rounded-xl bg-netflix-red hover:bg-red-700 text-white font-black text-[11px] sm:text-xs flex items-center space-x-1 shadow-lg shadow-red-900/40"
+                className="px-3 sm:px-4 py-1.5 rounded-xl bg-netflix-red hover:bg-red-700 active:scale-95 text-white font-black text-[11px] sm:text-xs flex items-center space-x-1 shadow-lg shadow-red-900/40"
                 title="Siguiente Capítulo"
               >
-                <span className="hidden sm:inline">Sig.</span>
-                <span>E{currentEpisode + 1}</span>
+                <span>Cap. {currentEpisode + 1}</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>

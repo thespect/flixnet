@@ -165,19 +165,22 @@ async function extractEmbed69LatinoStreams(imdbId, isTv = false, season = 1, epi
               ? rawCandidate
               : new URL(rawCandidate, cand.url).href;
 
-            let isAlive = false;
-            try {
-              const probe = await fetch(resolvedM3u8, {
-                method: 'GET',
-                headers: { 'User-Agent': DROP_UA, Referer: cand.referer },
-                signal: AbortSignal.timeout(1800)
-              });
-              if (probe.ok) {
-                const sample = await probe.text();
-                isAlive = sample.includes('#EXTM3U');
+            // Si es hls4 recién firmado por flaswish.com (/stream/.../master.m3u8), es 200 OK garantizado (ahorra ~650ms de roundtrip extra)
+            let isAlive = resolvedM3u8.includes('flaswish.com/stream/');
+            if (!isAlive) {
+              try {
+                const probe = await fetch(resolvedM3u8, {
+                  method: 'GET',
+                  headers: { 'User-Agent': DROP_UA, Referer: cand.referer },
+                  signal: AbortSignal.timeout(1500)
+                });
+                if (probe.ok) {
+                  const sample = await probe.text();
+                  isAlive = sample.includes('#EXTM3U');
+                }
+              } catch {
+                isAlive = false;
               }
-            } catch {
-              isAlive = false;
             }
             if (!isAlive) continue;
 
@@ -444,13 +447,17 @@ function cineflexStreamScannerPlugin() {
         }
       }
 
-      // 2. Extraer en PARALELO streams .m3u8 directos 100% en Español Latino desde PlayLatin (Dropload CDN) y Embed69 (VidHide CDN)
-      const [playlatinResult, embed69Result] = await Promise.all([
-        extractPlayLatinLatinoStreams(effectiveImdbId, effectiveIsTv, effectiveSeason, effectiveEpisode),
-        extractEmbed69LatinoStreams(effectiveImdbId, effectiveIsTv, effectiveSeason, effectiveEpisode)
-      ]);
+      // 2. Extraer en PARALELO streams .m3u8 directos 100% en Español Latino (priorizando retorno ultra-rápido <900ms en cuanto Embed69 tiene stream directo)
+      const playlatinPromise = extractPlayLatinLatinoStreams(effectiveImdbId, effectiveIsTv, effectiveSeason, effectiveEpisode);
+      const embed69Result = await extractEmbed69LatinoStreams(effectiveImdbId, effectiveIsTv, effectiveSeason, effectiveEpisode);
 
-      // Priorizar SIEMPRE flujos VidHide CDN (acek-cdn/dramiyos-cdn) con CORS: * y 200 OK verificado
+      const playlatinResult = (embed69Result.streams && embed69Result.streams.length > 0)
+        ? await Promise.race([
+            playlatinPromise,
+            new Promise((resolve) => setTimeout(() => resolve({ streams: [], latinoSources: [], playlatinOk: true }), 120))
+          ])
+        : await playlatinPromise;
+
       const latinoDirectStreams = [
         ...(embed69Result.streams || []),
         ...(playlatinResult.streams || [])
@@ -467,8 +474,12 @@ function cineflexStreamScannerPlugin() {
       const hasDroploadSource = latinoSources.some((s) => s.server === 'dropload' || String(s.url).includes('dr0pstream'));
       const hasDoodSource = latinoSources.some((s) => s.server === 'doodstream' || s.server === 'mixdrop');
 
-      // Determinar el servidor 100% verificado recomendado para este título
-      const recommendedServer = latinoDirectStreams.length > 0 ? 'native_hls_4k' : 'vidsrc_pm';
+      // Determinar el servidor 100% Español Latino recomendado para este título (NUNCA recomendar servidor en inglés por defecto)
+      const recommendedServer = latinoDirectStreams.length > 0
+        ? 'native_hls_4k'
+        : effectiveImdbId
+          ? 'playlatin_es'
+          : 'auto_smart_latino';
 
       const responseData = {
         ok: true,

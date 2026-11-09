@@ -8,6 +8,7 @@
     color: #ffffff;
     font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     overflow-x: hidden;
+    overscroll-behavior-y: none;
     letter-spacing: -0.012em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -418,10 +419,11 @@ input[type="range"].touch-scrubber:active::-webkit-slider-thumb {
   .glass-card,
   .glass-chrome,
   .glass-pill,
-  .btn-glass-cinema {
+  .btn-glass-cinema,
+  .floating-nav-capsule {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    background: rgba(10, 10, 16, 0.94) !important;
+    background: rgba(10, 10, 16, 0.95) !important;
   }
 
   .cinema-metallic-title {

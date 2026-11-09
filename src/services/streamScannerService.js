@@ -24,11 +24,11 @@ const inFlightScans = new Map();
 function getScanFromStorage(key) {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = sessionStorage.getItem(`cineflex_scan_v4_${key}`);
+    const raw = sessionStorage.getItem(`cineflex_scan_v5_${key}`);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     const hasLatino = Array.isArray(parsed?.latinoDirectStreams) && parsed.latinoDirectStreams.length > 0;
-    const ttl = hasLatino ? 2 * 60 * 60 * 1000 : 25 * 1000;
+    const ttl = hasLatino ? 2 * 60 * 60 * 1000 : 20 * 1000;
     if (parsed && Date.now() - (parsed.timestamp || 0) < ttl) {
       return parsed;
     }
@@ -39,7 +39,7 @@ function getScanFromStorage(key) {
 function saveScanToStorage(key, data) {
   if (typeof window === 'undefined' || !data) return;
   try {
-    sessionStorage.setItem(`cineflex_scan_v4_${key}`, JSON.stringify(data));
+    sessionStorage.setItem(`cineflex_scan_v5_${key}`, JSON.stringify(data));
   } catch { }
 }
 
@@ -342,7 +342,7 @@ export const StreamScannerService = {
 
     const scanPromise = (async () => {
       try {
-        // Lanzamos backend, subtítulos y HLS en paralelo
+        // Lanzamos backend y subtítulos en paralelo (NUNCA mezclar streams en inglés dentro de directHlsStreams)
         const backendPromise = this.fetchBackendVerification(
           targetId,
           targetIsTv,
@@ -351,7 +351,6 @@ export const StreamScannerService = {
           targetImdb
         );
 
-        const hlsPromise = this.fetchDirectHlsStreams(targetId, targetIsTv, targetSeason, targetEpisode);
         const subsPromise = this.fetchSubtitles(targetId, targetIsTv, targetSeason, targetEpisode);
 
         const backendScan = await backendPromise;
@@ -388,7 +387,7 @@ export const StreamScannerService = {
             multiembed_global: { online: true, verified: true, ping: '8ms' },
             vidsrc_pm: { online: true, verified: true, ping: '8ms' }
           },
-          recommendedServer: backendScan?.recommendedServer || (spanishDirect.length > 0 ? 'native_hls_4k' : 'auto_smart_latino'),
+          recommendedServer: backendScan?.recommendedServer || (spanishDirect.length > 0 ? 'native_hls_4k' : 'playlatin_es'),
           scanDurationMs: Math.round(performance.now() - startTime),
           timestamp: Date.now()
         };
@@ -400,30 +399,9 @@ export const StreamScannerService = {
           onFastStream(result);
         }
 
-        // Subtítulos y streams en inglés de respaldo se resuelven en segundo plano sin congelar la interfaz
-        Promise.allSettled([hlsPromise, subsPromise]).then(([hlsRes, subRes]) => {
-          const englishMasterStreams = hlsRes.status === 'fulfilled' && Array.isArray(hlsRes.value?.streams)
-            ? hlsRes.value.streams
-            : [];
-          const subtitles = subRes.status === 'fulfilled' && Array.isArray(subRes.value)
-            ? subRes.value
-            : [];
-
-          const rankStream = (s) => {
-            if (s.isLatinoDub) return 1;
-            if (s.isCastellanoDub) return 2;
-            if (s.isBluRayMaster || s.providerId === 'nova') return 3;
-            return 4;
-          };
-
-          const combinedDirectStreams = [...spanishDirect, ...englishMasterStreams].sort(
-            (a, b) => rankStream(a) - rankStream(b)
-          );
-
-          result.directHlsStreams = combinedDirectStreams;
-          result.englishMasterStreams = englishMasterStreams;
-          result.subtitles = subtitles;
-
+        // Subtítulos se resuelven en segundo plano sin mezclar flujos en inglés
+        subsPromise.then((subRes) => {
+          result.subtitles = Array.isArray(subRes) ? subRes : [];
           scanCache.set(cacheKey, result);
           saveScanToStorage(cacheKey, result);
         }).catch(() => { });

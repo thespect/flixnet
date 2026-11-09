@@ -539,18 +539,22 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
             }
 
             foreach ($m3u8Candidates as $candM3u8) {
-                $chP = curl_init($candM3u8);
-                curl_setopt($chP, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($chP, CURLOPT_TIMEOUT_MS, 1800);
-                curl_setopt($chP, CURLOPT_FOLLOWLOCATION, true);
-                curl_setopt($chP, CURLOPT_SSL_VERIFYPEER, false);
-                curl_setopt($chP, CURLOPT_USERAGENT, $dropUa);
-                curl_setopt($chP, CURLOPT_REFERER, $cMeta['referer']);
-                $sampleBody = curl_exec($chP);
-                $httpCode = curl_getinfo($chP, CURLINFO_HTTP_CODE);
-                curl_close($chP);
+                $isAlivePhp = (strpos($candM3u8, 'flaswish.com/stream/') !== false);
+                if (!$isAlivePhp) {
+                    $chP = curl_init($candM3u8);
+                    curl_setopt($chP, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($chP, CURLOPT_TIMEOUT_MS, 1500);
+                    curl_setopt($chP, CURLOPT_FOLLOWLOCATION, true);
+                    curl_setopt($chP, CURLOPT_SSL_VERIFYPEER, false);
+                    curl_setopt($chP, CURLOPT_USERAGENT, $dropUa);
+                    curl_setopt($chP, CURLOPT_REFERER, $cMeta['referer']);
+                    $sampleBody = curl_exec($chP);
+                    $httpCode = curl_getinfo($chP, CURLINFO_HTTP_CODE);
+                    curl_close($chP);
+                    $isAlivePhp = ($httpCode >= 200 && $httpCode < 400 && is_string($sampleBody) && strpos($sampleBody, '#EXTM3U') !== false);
+                }
 
-                if ($httpCode >= 200 && $httpCode < 400 && is_string($sampleBody) && strpos($sampleBody, '#EXTM3U') !== false) {
+                if ($isAlivePhp) {
                     $isLat = ($cMeta['langKey'] === 'latino');
                     $proxiedUrl = './api.php?action=proxy&url=' . urlencode($candM3u8) . '&referer=' . urlencode($cMeta['referer']);
                     $latinoDirectStreams[] = [

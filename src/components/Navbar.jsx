@@ -43,9 +43,10 @@ export default function Navbar({
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      const scrolled = window.scrollY > 20;
+      setIsScrolled((prev) => (prev === scrolled ? prev : scrolled));
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
 
     const checkStandalone = () => {
       const standalone =
@@ -124,27 +125,28 @@ export default function Navbar({
         initial={{ y: -60 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-        className={`fixed z-40 transition-all duration-300 pt-safe ${
+        style={{
+          top: isScrolled ? 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' : '0px'
+        }}
+        className={`fixed z-40 transition-all duration-300 ${
           isScrolled 
-            ? 'top-2 inset-x-2.5 sm:inset-x-5 lg:inset-x-8 max-w-7xl mx-auto rounded-2xl floating-nav-capsule py-2 sm:py-2.5' 
-            : 'top-0 left-0 right-0 bg-gradient-to-b from-[#040407]/95 via-[#040407]/75 to-transparent py-3 sm:py-4'
+            ? 'inset-x-2 sm:inset-x-5 lg:inset-x-8 max-w-7xl mx-auto rounded-2xl floating-nav-capsule py-2 sm:py-2.5' 
+            : 'left-0 right-0 bg-gradient-to-b from-[#040407]/95 via-[#040407]/75 to-transparent pt-safe pb-2.5 sm:py-4'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-6 flex items-center justify-between gap-2">
+        <div className="max-w-7xl mx-auto px-2.5 sm:px-5 lg:px-6 flex items-center justify-between gap-2">
           
           {/* Left: Brand Identity & Desktop Navigation */}
-          <div className="flex items-center space-x-5 lg:space-x-7 min-w-0">
-            <motion.div 
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.96 }}
+          <div className="flex items-center space-x-4 lg:space-x-7 min-w-0">
+            <div 
               onClick={() => { setActiveTab('home'); clearSearch(); }}
-              className="flex items-center space-x-2.5 cursor-pointer select-none group shrink-0"
+              className="flex items-center space-x-2 sm:space-x-2.5 cursor-pointer select-none group shrink-0 active:scale-95 transition-transform"
             >
-              <div className="btn-shimmer w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-netflix-red via-red-600 to-rose-700 flex items-center justify-center shadow-[0_4px_24px_rgba(229,9,20,0.65)] border border-white/25 transition-all">
+              <div className="btn-shimmer w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-netflix-red via-red-600 to-rose-700 flex items-center justify-center shadow-[0_4px_24px_rgba(229,9,20,0.65)] border border-white/25 transition-all shrink-0">
                 <Film className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
-              <div className="flex items-center space-x-2">
-                <span className="logo-font text-2xl sm:text-3xl font-black text-white tracking-wider leading-none drop-shadow-md">
+              <div className={`${searchOpen || searchQuery ? 'hidden sm:flex' : 'flex'} items-center space-x-2`}>
+                <span className="logo-font text-xl sm:text-3xl font-black text-white tracking-wider leading-none drop-shadow-md">
                   CINE<span className="text-netflix-red">FLEX</span>
                 </span>
                 <span className="hidden xl:inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/35 text-[9px] font-black text-emerald-300 tracking-wider uppercase shadow-[0_0_15px_rgba(16,185,129,0.2)]">
@@ -156,7 +158,7 @@ export default function Navbar({
                   <span>7 SERVIDORES 4K</span>
                 </span>
               </div>
-            </motion.div>
+            </div>
 
             {/* Desktop Navigation Links — Apple TV+ Liquid Glass Pill Dock */}
             <div className="hidden lg:flex items-center space-x-1 bg-[#0b0b14]/80 backdrop-blur-2xl border border-white/[0.12] rounded-full p-1 text-xs font-semibold shadow-[0_8px_30px_rgba(0,0,0,0.6)]">
@@ -192,15 +194,14 @@ export default function Navbar({
           </div>
 
           {/* Right: Search, Install PWA, Smart TV Cast, Profile */}
-          <div className="flex items-center space-x-2 sm:space-x-2.5">
+          <div className="flex items-center space-x-1.5 sm:space-x-2.5 min-w-0">
             
-            {/* Animated Search Bar */}
-            <motion.div 
-              layout
-              className={`relative flex items-center transition-all ${
+            {/* Adaptive Search Bar (16px en móvil para evitar auto-zoom de iOS Safari/PWA) */}
+            <div 
+              className={`relative flex items-center transition-all duration-200 ${
                 searchOpen || searchQuery 
-                  ? 'w-44 sm:w-64 md:w-72 bg-white/[0.08] backdrop-blur-2xl border border-white/20 rounded-full px-3.5 py-1.5 shadow-2xl' 
-                  : 'w-9 h-9 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] justify-center cursor-pointer'
+                  ? 'w-48 sm:w-64 md:w-72 bg-[#14141f] border border-white/25 rounded-full px-3 py-1.5 shadow-2xl' 
+                  : 'w-9 h-9 rounded-full bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] justify-center cursor-pointer shrink-0 active:scale-95'
               }`}
               onClick={() => {
                 if (!searchOpen) setSearchOpen(true);
@@ -210,59 +211,52 @@ export default function Navbar({
                 className="w-4 h-4 text-white/85 shrink-0" 
               />
               
-              <AnimatePresence>
-                {(searchOpen || searchQuery) && (
-                  <motion.div 
-                    initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: '100%' }}
-                    exit={{ opacity: 0, width: 0 }}
-                    className="flex items-center w-full"
+              {(searchOpen || searchQuery) && (
+                <div className="flex items-center w-full min-w-0">
+                  <input 
+                    type="text" 
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    placeholder="Buscar películas o series..." 
+                    className="bg-transparent text-base sm:text-sm text-white px-2 focus:outline-none w-full placeholder-white/45 font-medium"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      clearSearch();
+                    }}
+                    className="p-1 text-white/60 hover:text-white cursor-pointer shrink-0"
+                    aria-label="Limpiar búsqueda"
                   >
-                    <input 
-                      type="text" 
-                      value={searchQuery}
-                      onChange={handleSearchChange}
-                      placeholder="Buscar películas o series..." 
-                      className="bg-transparent text-xs sm:text-sm text-white px-2 focus:outline-none w-full placeholder-white/45 font-medium"
-                      autoFocus
-                    />
-                    <X 
-                      className="w-3.5 h-3.5 text-white/50 hover:text-white cursor-pointer shrink-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        clearSearch();
-                      }}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
 
-            {/* Botón Instalar App PWA */}
-            {!isStandalonePwa && (
-              <motion.button
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
+            {/* Botón Instalar App PWA (Visible en Android, iOS y Desktop) */}
+            {!isStandalonePwa && !(searchOpen || searchQuery) && (
+              <button
                 onClick={handleInstallPwaClick}
-                className="hidden sm:flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.15] text-white text-xs font-semibold border border-white/[0.12] transition-all shrink-0 cursor-pointer"
-                title="Instalar aplicación Cineflex 4K"
+                className="flex items-center space-x-1.5 px-2.5 sm:px-3.5 h-9 rounded-full bg-netflix-red/20 hover:bg-netflix-red/30 text-white text-[11px] sm:text-xs font-bold border border-netflix-red/40 transition-all shrink-0 cursor-pointer active:scale-95"
+                title="Instalar aplicación Cineflex 4K (PWA Android / iOS)"
               >
-                <Download className="w-3.5 h-3.5 shrink-0" />
+                <Download className="w-3.5 h-3.5 text-netflix-red shrink-0" />
                 <span>App</span>
-              </motion.button>
+              </button>
             )}
 
             {/* Cast Smart TV Button */}
             {onOpenCastModal && (
-              <motion.button 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              <button 
                 onClick={onOpenCastModal}
-                className="w-9 h-9 rounded-full bg-white/[0.06] hover:bg-white/[0.14] text-white/85 hover:text-white border border-white/[0.1] transition-all flex items-center justify-center shrink-0 cursor-pointer"
+                className="w-9 h-9 rounded-full bg-white/[0.08] hover:bg-white/[0.14] text-white/85 hover:text-white border border-white/[0.12] transition-all flex items-center justify-center shrink-0 cursor-pointer active:scale-95"
                 title="Transmitir a Smart TV (AirPlay / Chromecast)"
               >
                 <Cast className="w-4 h-4" />
-              </motion.button>
+              </button>
             )}
 
             {/* Profile Switcher Menu */}
