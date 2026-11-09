@@ -433,9 +433,30 @@ export const StreamScannerService = {
     });
 
     const isViteDev = typeof window !== 'undefined' && window.location.port === '5173';
-    const endpointsToTry = isViteDev
-      ? [`/api/scan-streams?${params.toString()}`, `./api.php?action=scan&${params.toString()}`]
-      : [`./api.php?action=scan&${params.toString()}`, `/api/scan-streams?${params.toString()}`];
+    let endpointsToTry = [];
+    if (typeof window !== 'undefined') {
+      const origin = window.location.origin;
+      const path = window.location.pathname;
+      const basePath = path.endsWith('/') ? path : path.slice(0, path.lastIndexOf('/') + 1);
+      const q = params.toString();
+      if (isViteDev) {
+        endpointsToTry = [
+          `/api/scan-streams?${q}`,
+          `${origin}${basePath}api.php?action=scan&${q}`,
+          `./api.php?action=scan&${q}`
+        ];
+      } else {
+        endpointsToTry = [
+          `${origin}${basePath}api.php?action=scan&${q}`,
+          `./api.php?action=scan&${q}`,
+          `api.php?action=scan&${q}`,
+          `/api.php?action=scan&${q}`,
+          `/api/scan-streams?${q}`
+        ];
+      }
+    } else {
+      endpointsToTry = [`./api.php?action=scan&${params.toString()}`];
+    }
 
     for (const endpoint of endpointsToTry) {
       try {

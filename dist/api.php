@@ -175,14 +175,14 @@ if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < 14400) {
     }
 }
 
-function quickGet($url, $timeout = 1.5, $referer = '') {
+function quickGet($url, $timeout = 3.0, $referer = '') {
     global $dropUa;
     if (function_exists('curl_init')) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
         curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
@@ -271,8 +271,8 @@ function quickMultiGet($requests) {
         curl_setopt($ch, CURLOPT_URL, $req['url']);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
-        curl_setopt($ch, CURLOPT_TIMEOUT, isset($req['timeout']) ? $req['timeout'] : 1.5);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+        curl_setopt($ch, CURLOPT_TIMEOUT, isset($req['timeout']) ? $req['timeout'] : 3.5);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
         curl_setopt($ch, CURLOPT_USERAGENT, $dropUa);
@@ -288,11 +288,12 @@ function quickMultiGet($requests) {
     } while ($mrc == CURLM_CALL_MULTI_PERFORM);
 
     while ($active && $mrc == CURLM_OK) {
-        if (curl_multi_select($mh, 0.1) != -1) {
-            do {
-                $mrc = curl_multi_exec($mh, $active);
-            } while ($mrc == CURLM_CALL_MULTI_PERFORM);
+        if (curl_multi_select($mh, 0.2) == -1) {
+            usleep(50000);
         }
+        do {
+            $mrc = curl_multi_exec($mh, $active);
+        } while ($mrc == CURLM_CALL_MULTI_PERFORM);
     }
 
     $results = [];

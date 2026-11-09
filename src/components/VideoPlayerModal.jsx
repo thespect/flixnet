@@ -2402,7 +2402,7 @@ export default function VideoPlayerModal({
                   allowFullScreen
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                   referrerPolicy="origin"
-                  sandbox={currentProvider?.id === 'embed69_latino' ? "allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox" : "allow-scripts allow-same-origin allow-forms allow-presentation"}
+                  sandbox={currentProvider?.id === 'embed69_latino' ? undefined : "allow-scripts allow-same-origin allow-forms allow-presentation"}
                   onLoad={() => {
                     setIsLoading(false);
                   }}
