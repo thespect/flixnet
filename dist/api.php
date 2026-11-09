@@ -158,7 +158,7 @@ if (isset($specialMediaMap[$tmdbId])) {
     $episode = $alias['episode'];
 }
 
-$cacheKey = 'cineflex_v10_' . md5("{$tmdbId}_" . ($isTv ? "tv_{$season}_{$episode}" : "movie"));
+$cacheKey = 'cineflex_v11_' . md5("{$tmdbId}_" . ($isTv ? "tv_{$season}_{$episode}" : "movie"));
 $cacheDir = __DIR__ . DIRECTORY_SEPARATOR . 'cache';
 if (!is_dir($cacheDir)) {
     @mkdir($cacheDir, 0777, true);
@@ -506,16 +506,13 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
         }
     }
 
-    // C. Extracción directa de StreamWish (flaswish.com hls4), VidHide y Dropload (PlayLatin) en Español Latino
+    // C. Extracción directa en paralelo de StreamWish (flaswish.com hls4) y VidHide (morencius.com) en Español Latino
     $multiExtracts = [];
     if (!empty($streamwishUrlToExtract)) {
         $multiExtracts['streamwish'] = ['url' => $streamwishUrlToExtract, 'timeout' => 2.8, 'referer' => 'https://embed69.org/'];
     }
     if (!empty($vidhideUrlToExtract)) {
         $multiExtracts['vidhide'] = ['url' => $vidhideUrlToExtract, 'timeout' => 2.8, 'referer' => 'https://embed69.org/'];
-    }
-    if (!empty($dropUrlToExtract)) {
-        $multiExtracts['dropload'] = ['url' => $dropUrlToExtract, 'timeout' => 2.5, 'referer' => 'https://playlatinsrc.co/'];
     }
 
     if (!empty($multiExtracts)) {
@@ -530,15 +527,6 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
                 'langKey' => !empty($streamwishLangKey) ? $streamwishLangKey : 'latino',
                 'langRaw' => !empty($streamwishLangRaw) ? $streamwishLangRaw : 'LAT',
                 'badge' => !empty($streamwishBadge) ? $streamwishBadge : 'Cineflex CDN • Español Latino Oficial'
-            ],
-            'dropload' => [
-                'label' => 'PlayLatin Dropload 4K',
-                'embedUrl' => !empty($dropUrlToExtract) ? $dropUrlToExtract : '',
-                'rawEmbed' => !empty($dropUrlToExtract) ? $dropUrlToExtract : '',
-                'referer' => 'https://dr0pstream.com/',
-                'langKey' => !empty($dropVersion) ? $dropVersion : 'latino',
-                'langRaw' => ($dropVersion === 'castellano') ? 'ESP' : 'LAT',
-                'badge' => ($dropVersion === 'castellano') ? 'PlayLatin CDN • Español Castellano' : 'PlayLatin CDN • Español Latino Oficial'
             ],
             'vidhide' => [
                 'label' => 'VidHide 4K',
@@ -569,7 +557,7 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
             }
 
             foreach ($m3u8Candidates as $candM3u8) {
-                $isAlivePhp = (strpos($candM3u8, 'flaswish.com/stream/') !== false || strpos($candM3u8, 'dropcdn.io/') !== false);
+                $isAlivePhp = (strpos($candM3u8, '/stream/') !== false);
                 if (!$isAlivePhp) {
                     $chP = curl_init($candM3u8);
                     curl_setopt($chP, CURLOPT_RETURNTRANSFER, true);

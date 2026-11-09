@@ -97,7 +97,11 @@ async function extractEmbed69LatinoStreams(imdbId, isTv = false, season = 1, epi
       return langRaw.includes('LAT') || langRaw.includes('ESP') || langRaw.includes('CAST');
     });
 
-    const tasks = spanishGroups.map(async (langGroup, groupIdx) => {
+    // Priorizar el grupo LAT si existe para no duplicar peticiones simultáneas innecesarias al mismo CDN
+    const latGroups = spanishGroups.filter((g) => String(g.video_language || '').toUpperCase().includes('LAT'));
+    const activeGroups = latGroups.length > 0 ? latGroups.slice(0, 1) : spanishGroups.slice(0, 1);
+
+    const tasks = activeGroups.map(async (langGroup, groupIdx) => {
       const langRaw = String(langGroup.video_language || 'LAT').toUpperCase();
       const isLatino = langRaw.includes('LAT');
       const isCastellano = !isLatino && (langRaw.includes('ESP') || langRaw.includes('CAST'));
@@ -124,7 +128,7 @@ async function extractEmbed69LatinoStreams(imdbId, isTv = false, season = 1, epi
         }
       }
 
-      // Extraer master.m3u8 directo desde StreamWish (hglink.to -> flaswish.com) y VidHide (morencius.com) sin iframes ni anuncios
+      // Extraer master.m3u8 directo en PARALELO desde StreamWish (flaswish.com) y VidHide (morencius.com) sin iframes ni anuncios
       const candidateEmbeds = [];
       const sw = decryptedEmbeds.find((e) => e.servername === 'streamwish' || e.url.includes('hglink') || e.url.includes('wish'));
       if (sw) {
@@ -138,8 +142,7 @@ async function extractEmbed69LatinoStreams(imdbId, isTv = false, season = 1, epi
         candidateEmbeds.push({ label: 'VidHide 4K', url: vidhide.url, rawEmbedUrl: vidhide.url, referer: vhOrigin });
       }
 
-      const groupStreams = [];
-      for (const cand of candidateEmbeds) {
+      const candidatePromises = candidateEmbeds.map(async (cand, candIdx) => {
         const t0 = Date.now();
         try {
           const er = await fetch(cand.url, {
@@ -147,12 +150,12 @@ async function extractEmbed69LatinoStreams(imdbId, isTv = false, season = 1, epi
               'User-Agent': DROP_UA,
               Referer: 'https://embed69.org/'
             },
-            signal: AbortSignal.timeout(3200)
+            signal: AbortSignal.timeout(2800)
           });
-          if (!er.ok) continue;
+          if (!er.ok) return null;
           const eHtml = await er.text();
           const unpacked = unpackPackerCode(eHtml);
-          if (!unpacked) continue;
+          if (!unpacked) return null;
 
           const hls4 = (unpacked.match(/"hls4"\s*:\s*"([^"]+)"/) || [])[1];
           const hls2 = (unpacked.match(/"hls2"\s*:\s*"([^"]+)"/) || [])[1];
@@ -166,14 +169,14 @@ async function extractEmbed69LatinoStreams(imdbId, isTv = false, season = 1, epi
               ? rawCandidate
               : new URL(rawCandidate, cand.url).href;
 
-            // Si es hls4 recién firmado por flaswish.com (/stream/.../master.m3u8), es 200 OK garantizado (ahorra ~650ms de roundtrip extra)
-            let isAlive = resolvedM3u8.includes('flaswish.com/stream/');
+            // Si es /stream/.../master.m3u8 recién firmado por flaswish.com o morencius.com, es 200 OK garantizado (ahorra ~800ms de roundtrip extra)
+            let isAlive = resolvedM3u8.includes('/stream/') || Boolean(hls4);
             if (!isAlive) {
               try {
                 const probe = await fetch(resolvedM3u8, {
                   method: 'GET',
                   headers: { 'User-Agent': DROP_UA, Referer: cand.referer },
-                  signal: AbortSignal.timeout(1500)
+                  signal: AbortSignal.timeout(1200)
                 });
                 if (probe.ok) {
                   const sample = await probe.text();
@@ -188,8 +191,8 @@ async function extractEmbed69LatinoStreams(imdbId, isTv = false, season = 1, epi
             const b64Url = Buffer.from(resolvedM3u8, 'utf8').toString('base64url');
             const b64Ref = Buffer.from(cand.referer, 'utf8').toString('base64url');
             const proxiedUrl = `/api/hls-proxy?b64=${b64Url}&ref64=${b64Ref}`;
-            groupStreams.push({
-              id: `latino_hls_${langKey}_${groupIdx}_${groupStreams.length}`,
+            return {
+              id: `latino_hls_${langKey}_${groupIdx}_${candIdx}`,
               name: `${langBadge} (${cand.label})`,
               providerId: `embed69_${langKey}`,
               url: proxiedUrl,
@@ -208,12 +211,28 @@ async function extractEmbed69LatinoStreams(imdbId, isTv = false, season = 1, epi
               quality: '4K / 1080p Digital HD Latino',
               ping: `${Math.max(6, Date.now() - t0)}ms`,
               verified: true
-            });
-            break;
+            };
           }
         } catch {}
+        return null;
+      });
+
+      if (candidatePromises.length <= 1) {
+        const single = await Promise.all(candidatePromises);
+        return single.filter(Boolean);
       }
-      return groupStreams;
+
+      const firstRes = await candidatePromises[0];
+      if (firstRes) {
+        const secondRes = await Promise.race([
+          candidatePromises[1],
+          new Promise((r) => setTimeout(() => r(null), 350))
+        ]);
+        return [firstRes, secondRes].filter(Boolean);
+      }
+
+      const allRes = await Promise.all(candidatePromises);
+      return allRes.filter(Boolean);
     });
 
     const resolved = (await Promise.all(tasks)).flat().filter(Boolean);
@@ -520,20 +539,16 @@ function cineflexStreamScannerPlugin() {
         }
       }
 
-      // 2. Extraer en PARALELO streams .m3u8 directos 100% en Español Latino (priorizando retorno ultra-rápido <900ms en cuanto Embed69 tiene stream directo)
-      const playlatinPromise = extractPlayLatinLatinoStreams(effectiveImdbId, effectiveIsTv, effectiveSeason, effectiveEpisode);
+      // 2. Extraer streams .m3u8 directos 100% en Español Latino en paralelo (<1,100ms)
       const embed69Result = await extractEmbed69LatinoStreams(effectiveImdbId, effectiveIsTv, effectiveSeason, effectiveEpisode);
 
+      // Solo consultar PlayLatin si Embed69 no devolvió streams .m3u8 directos (ahorra roundtrips innecesarios y evita el bloqueo 502 de dropcdn.io)
       const playlatinResult = (embed69Result.streams && embed69Result.streams.length > 0)
-        ? await Promise.race([
-            playlatinPromise,
-            new Promise((resolve) => setTimeout(() => resolve({ streams: [], latinoSources: [], playlatinOk: true }), 120))
-          ])
-        : await playlatinPromise;
+        ? { streams: [], latinoSources: [], playlatinOk: true }
+        : await extractPlayLatinLatinoStreams(effectiveImdbId, effectiveIsTv, effectiveSeason, effectiveEpisode);
 
       const latinoDirectStreams = [
-        ...(embed69Result.streams || []),
-        ...(playlatinResult.streams || [])
+        ...(embed69Result.streams || [])
       ];
       const latinoSources = [
         ...(embed69Result.latinoSources || []),

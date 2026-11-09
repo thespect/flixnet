@@ -24,7 +24,7 @@ const inFlightScans = new Map();
 function getScanFromStorage(key) {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = sessionStorage.getItem(`cineflex_scan_v6_${key}`);
+    const raw = sessionStorage.getItem(`cineflex_scan_v7_${key}`);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     const hasLatino = Array.isArray(parsed?.latinoDirectStreams) && parsed.latinoDirectStreams.length > 0;
@@ -39,7 +39,7 @@ function getScanFromStorage(key) {
 function saveScanToStorage(key, data) {
   if (typeof window === 'undefined' || !data) return;
   try {
-    sessionStorage.setItem(`cineflex_scan_v6_${key}`, JSON.stringify(data));
+    sessionStorage.setItem(`cineflex_scan_v7_${key}`, JSON.stringify(data));
   } catch { }
 }
 
@@ -443,7 +443,7 @@ export const StreamScannerService = {
       : `./api.php?action=scan&${params.toString()}`;
 
       try {
-        const res = await fetchWithTimeout(endpoint, { headers: { Accept: 'application/json' } }, 4500);
+        const res = await fetchWithTimeout(endpoint, { headers: { Accept: 'application/json' } }, 8000);
         if (!res.ok) throw new Error('HTTP error');
         const ct = res.headers.get('content-type') || '';
         if (!ct.includes('json')) throw new Error('Not JSON');

@@ -723,8 +723,7 @@ export default function VideoPlayerModal({
               bestIdx = i;
             }
           }
-          // Iniciar en nivel 0 para arranque instantáneo (<0.4s) y activar ABR hacia la máxima calidad
-          hls.nextLevel = bestIdx;
+          // Arrancar en startLevel: 0 para primer fotograma instantáneo (<0.4s) y permitir que ABR escale automáticamente a 1080p/4K sin bloquear el segmento 0
           const h = hls.levels[bestIdx]?.height || 1080;
           setRealResolution(h >= 2160 ? '3840 x 2160 (4K Nativo)' : '3840 x 2160 (Escalado 4K UHD)');
         }
