@@ -179,6 +179,9 @@ export default function App() {
       if (mediaItem.isTv) {
         url.searchParams.set('s', season);
         url.searchParams.set('e', episode);
+      } else {
+        url.searchParams.delete('s');
+        url.searchParams.delete('e');
       }
       window.history.pushState({}, '', url.toString());
     } catch (e) {}

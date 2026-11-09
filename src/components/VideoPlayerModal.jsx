@@ -186,6 +186,33 @@ export default function VideoPlayerModal({
   const [isAdBlockModalOpen, setIsAdBlockModalOpen] = useState(false);
   const [blockedAdsCount, setBlockedAdsCount] = useState(AdBlockerService.getBlockedCount());
 
+  // Variables derivadas de proveedor y flujo nativo (declaradas antes de todos los hooks para evitar Temporal Dead Zone)
+  const currentProvider = STREAM_PROVIDERS.find(p => p.id === selectedServer) || STREAM_PROVIDERS[0];
+  const hasMatchingDirectDub =
+    playLatinLang === 'castellano'
+      ? directHlsStreams.some((s) => s.isCastellanoDub)
+      : directHlsStreams.some((s) => s.isLatinoDub);
+
+  const activeDirectStream = directHlsStreams[activeHlsIndex] || null;
+  const resolvedNativeUrl = movie?.customUrl
+    ? movie.customUrl
+    : activeDirectStream?.url || '';
+
+  const isHlsStream = Boolean(
+    resolvedNativeUrl &&
+    (resolvedNativeUrl.includes('.m3u8') ||
+      resolvedNativeUrl.includes('/api/hls-proxy') ||
+      resolvedNativeUrl.includes('api.php?action=proxy') ||
+      resolvedNativeUrl.includes('vidrack.created.app/proxy') ||
+      resolvedNativeUrl.includes('px.php?play=') ||
+      activeDirectStream?.type === 'hls')
+  );
+
+  const isNativeServer =
+    Boolean(movie?.customUrl) ||
+    (Boolean(currentProvider?.isNative) && Boolean(resolvedNativeUrl)) ||
+    (Boolean(currentProvider?.prefersNativeHls) && hasMatchingDirectDub && Boolean(activeDirectStream?.url));
+
   // BLOQUEO ESTRICTO DEL SCROLL DE LA PÁGINA DE FONDO (iOS Safari, Android Chrome y Desktop)
   useEffect(() => {
     const unlock = lockBodyScroll();
@@ -276,8 +303,9 @@ export default function VideoPlayerModal({
 
     // Recuperar el minuto exacto donde se quedó el usuario previamente para ESTE episodio
     let validSavedTime = 0;
+    let saved = null;
     if (!forceResetToZeroRef.current) {
-      const saved = StorageService.getPlaybackProgress(movie.id, movie.isTv, currentSeason, currentEpisode);
+      saved = StorageService.getPlaybackProgress(movie.id, movie.isTv, currentSeason, currentEpisode);
       const isEpisodeMatch = !movie.isTv || (saved && Number(saved.season) === Number(currentSeason) && Number(saved.episode) === Number(currentEpisode));
       validSavedTime = (saved && isEpisodeMatch && saved.currentTime > 5) ? saved.currentTime : 0;
     }
@@ -592,19 +620,6 @@ export default function VideoPlayerModal({
   };
 
   // 4. MOTOR DE REPRODUCCIÓN NATIVA HLS.JS (0% ANUNCIOS, 0% CLICS FANTASMAS)
-  const currentProvider = STREAM_PROVIDERS.find(p => p.id === selectedServer) || STREAM_PROVIDERS[0];
-  const hasMatchingDirectDub =
-    playLatinLang === 'castellano'
-      ? directHlsStreams.some((s) => s.isCastellanoDub)
-      : directHlsStreams.some((s) => s.isLatinoDub);
-
-  const activeDirectStream = directHlsStreams[activeHlsIndex] || null;
-
-  const isNativeServer =
-    Boolean(movie?.customUrl) ||
-    (Boolean(currentProvider?.isNative) && Boolean(resolvedNativeUrl)) ||
-    (Boolean(currentProvider?.prefersNativeHls) && hasMatchingDirectDub && Boolean(activeDirectStream?.url));
-
   // Si un servidor nativo termina de escanear y no tiene stream directo en el idioma elegido, conmutar al servidor iframe latino
   useEffect(() => {
     if (isScanningLinks || showTrailer || movie?.customUrl || hasStartedPlayingRef.current) return;
@@ -668,21 +683,6 @@ export default function VideoPlayerModal({
       } catch { }
     }
   }, [activeCueText, selectedAudioMode, isPlaying, isMuted, volume]);
-
-  // NUNCA usar videos de demostración como fallback: reproduce únicamente el stream real de la película o serie seleccionada
-  const resolvedNativeUrl = movie?.customUrl
-    ? movie.customUrl
-    : activeDirectStream?.url || '';
-
-  const isHlsStream = Boolean(
-    resolvedNativeUrl &&
-    (resolvedNativeUrl.includes('.m3u8') ||
-      resolvedNativeUrl.includes('/api/hls-proxy') ||
-      resolvedNativeUrl.includes('api.php?action=proxy') ||
-      resolvedNativeUrl.includes('vidrack.created.app/proxy') ||
-      resolvedNativeUrl.includes('px.php?play=') ||
-      activeDirectStream?.type === 'hls')
-  );
 
   useEffect(() => {
     if (!isNativeServer || showTrailer || !videoRef.current || !resolvedNativeUrl) return;
