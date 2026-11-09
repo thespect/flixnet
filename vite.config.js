@@ -196,9 +196,13 @@ async function extractEmbed69LatinoStreams(imdbId, isTv = false, season = 1, epi
             const b64Url = Buffer.from(resolvedM3u8, 'utf8').toString('base64url');
             const b64Ref = Buffer.from(cand.referer, 'utf8').toString('base64url');
             const proxiedUrl = `/api/hls-proxy?b64=${b64Url}&ref64=${b64Ref}`;
+            const isCam = Boolean(
+              /cam|telesync|hdcam|ts-|-ts\.|camrip|hd-cam|cine/i.test(resolvedM3u8) ||
+              /cam|telesync|hdcam|camrip/i.test(cand.rawEmbedUrl || '')
+            );
             return {
               id: `latino_hls_${langKey}_${groupIdx}_${candIdx}`,
-              name: `${langBadge} (${cand.label})`,
+              name: isCam ? `${langBadge} (Cine CAM Latino)` : `${langBadge} (${cand.label})`,
               providerId: `embed69_${langKey}`,
               url: proxiedUrl,
               rawUrl: resolvedM3u8,
@@ -210,10 +214,10 @@ async function extractEmbed69LatinoStreams(imdbId, isTv = false, season = 1, epi
               isCastellanoDub: isCastellano,
               isDirectHls: true,
               castCompatible: true,
-              isCamQuality: false,
-              maxBandwidth: 3200000,
-              maxHeight: 1080,
-              quality: '4K / 1080p Digital HD Latino',
+              isCamQuality: isCam,
+              maxBandwidth: isCam ? 1200000 : 3200000,
+              maxHeight: isCam ? 480 : 1080,
+              quality: isCam ? 'Grabación de Cine (CAM)' : '4K / 1080p Digital HD Latino',
               ping: `${Math.max(6, Date.now() - t0)}ms`,
               verified: true
             };

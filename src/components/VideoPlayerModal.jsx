@@ -351,12 +351,21 @@ export default function VideoPlayerModal({
         const fastStreams = fastReport.directHlsStreams || [];
         if (fastStreams.length > 0) {
           setDirectHlsStreams(fastStreams);
-          const anyLat = fastStreams.findIndex((s) => s.isLatinoDub || s.isCastellanoDub);
-          if (anyLat >= 0) {
+          const anyHdLat = fastStreams.findIndex((s) => (s.isLatinoDub || s.isCastellanoDub) && !s.isCamQuality);
+          const anyLat = anyHdLat >= 0 ? anyHdLat : fastStreams.findIndex((s) => s.isLatinoDub || s.isCastellanoDub);
+          if (anyHdLat >= 0) {
+            failedServersRef.current.clear();
+            setActiveHlsIndex(anyHdLat);
+            setSelectedServer('native_hls_4k');
+            setSelectedAudioMode(fastStreams[anyHdLat].isCastellanoDub ? 'es_castellano_dub' : 'es_latino_dub');
+          } else if (anyLat >= 0 && !fastStreams[anyLat]?.isCamQuality) {
             failedServersRef.current.clear();
             setActiveHlsIndex(anyLat);
             setSelectedServer('native_hls_4k');
             setSelectedAudioMode(fastStreams[anyLat].isCastellanoDub ? 'es_castellano_dub' : 'es_latino_dub');
+          } else {
+            // Si el único flujo encontrado es grabación de cine (CAM), saltar a VidLink 4K Digital Oficial
+            setSelectedServer('vidlink_4k_pro');
           }
         }
         setIsScanningLinks(false);
@@ -385,21 +394,25 @@ export default function VideoPlayerModal({
       setSubtitlesList(report.subtitles || []);
       setIsScanningLinks(false);
 
-      const anyLatinoIdx = streams.findIndex((s) => s.isLatinoDub || s.isCastellanoDub);
+      const anyHdLatIdx = streams.findIndex((s) => (s.isLatinoDub || s.isCastellanoDub) && !s.isCamQuality);
+      const anyLatinoIdx = anyHdLatIdx >= 0 ? anyHdLatIdx : streams.findIndex((s) => s.isLatinoDub || s.isCastellanoDub);
 
-      if (anyLatinoIdx >= 0) {
+      if (anyHdLatIdx >= 0) {
+        failedServersRef.current.clear();
+        setActiveHlsIndex(anyHdLatIdx);
+        setSelectedAudioMode(streams[anyHdLatIdx].isCastellanoDub ? 'es_castellano_dub' : 'es_latino_dub');
+        loadSubtitleTrack(-1);
+        setSelectedServer('native_hls_4k');
+      } else if (anyLatinoIdx >= 0 && !streams[anyLatinoIdx]?.isCamQuality) {
         failedServersRef.current.clear();
         setActiveHlsIndex(anyLatinoIdx);
         setSelectedAudioMode(streams[anyLatinoIdx].isCastellanoDub ? 'es_castellano_dub' : 'es_latino_dub');
         loadSubtitleTrack(-1);
         setSelectedServer('native_hls_4k');
       } else {
-        // Si no hay .m3u8 directo extraído, usar SIEMPRE el servidor Español Latino (PlayLatin / Embed69) antes que cualquier servidor en inglés
-        const fallbackLatinoServer = (report.imdbId || imdb) ? 'playlatin_es' : 'auto_smart_latino';
-        if (selectedServer === 'native_hls_4k' || selectedServer === 'auto_smart_latino') {
-          setSelectedServer(fallbackLatinoServer);
-          setSelectedAudioMode('es_latino_dub');
-        }
+        // Si no hay flujo HD nativo o solo hay CAM de cine, conmutar a VidLink 4K Digital Oficial (100% Full HD, 0% CAM, 0% Anuncios)
+        setSelectedServer('vidlink_4k_pro');
+        setSelectedAudioMode('es_latino_dub');
       }
     })();
 
@@ -459,10 +472,10 @@ export default function VideoPlayerModal({
 
     failedServersRef.current.add(selectedServer);
 
-    const hasLatinoHls = directHlsStreams.some((s) => s.isLatinoDub || s.isCastellanoDub);
+    const hasLatinoHls = directHlsStreams.some((s) => (s.isLatinoDub || s.isCastellanoDub) && !s.isCamQuality);
     const priorityChain = hasLatinoHls
-      ? ['native_hls_4k', 'embed69_latino', 'auto_smart_latino', 'playlatin_es', 'vidlink_4k_pro', 'multiembed_global']
-      : ['playlatin_es', 'vidlink_4k_pro', 'multiembed_global', 'auto_smart_latino'];
+      ? ['native_hls_4k', 'auto_smart_latino', 'vidlink_4k_pro', 'embed69_latino', 'multiembed_global']
+      : ['vidlink_4k_pro', 'multiembed_global', 'auto_smart_latino', 'native_hls_4k'];
 
     let nextServer = priorityChain.find((id) => id !== selectedServer && !failedServersRef.current.has(id));
     if (!nextServer) {

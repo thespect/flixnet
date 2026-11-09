@@ -580,13 +580,30 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
 
                 if ($isAlivePhp) {
                     $isLat = ($cMeta['langKey'] === 'latino');
+                    $isCam = (
+                        stripos($candM3u8, 'cam') !== false ||
+                        stripos($candM3u8, 'telesync') !== false ||
+                        stripos($candM3u8, 'hdcam') !== false ||
+                        stripos($candM3u8, 'ts-') !== false ||
+                        stripos($candM3u8, '-ts.') !== false ||
+                        stripos($cMeta['embedUrl'], 'cam') !== false ||
+                        stripos($unpacked, 'camrip') !== false ||
+                        stripos($unpacked, 'hd-cam') !== false ||
+                        stripos($unpacked, 'cine') !== false
+                    );
                     $b64U = rtrim(strtr(base64_encode($candM3u8), '+/', '-_'), '=');
                     $b64R = rtrim(strtr(base64_encode($cMeta['referer']), '+/', '-_'), '=');
                     $proxiedUrl = './api.php?action=proxy&b64=' . $b64U . '&ref64=' . $b64R;
                     $idxNum = count($latinoDirectStreams);
+                    $displayName = $isCam
+                        ? "{$cMeta['badge']} (Cine CAM Latino)"
+                        : "{$cMeta['badge']} ({$cMeta['label']})";
+                    $displayQuality = $isCam
+                        ? 'Grabación de Cine (CAM)'
+                        : '4K / 1080p Digital HD Latino';
                     $latinoDirectStreams[] = [
                         'id' => "latino_hls_{$cMeta['langKey']}_{$idxNum}",
-                        'name' => "{$cMeta['badge']} ({$cMeta['label']})",
+                        'name' => $displayName,
                         'providerId' => ($cKey === 'dropload') ? 'playlatin_es' : "embed69_{$cMeta['langKey']}",
                         'url' => $proxiedUrl,
                         'rawUrl' => $candM3u8,
@@ -598,9 +615,9 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
                         'isCastellanoDub' => !$isLat,
                         'isDirectHls' => true,
                         'castCompatible' => true,
-                        'isCamQuality' => false,
-                        'maxBandwidth' => 3200000,
-                        'quality' => '4K / 1080p Digital HD Latino',
+                        'isCamQuality' => $isCam,
+                        'maxBandwidth' => $isCam ? 1200000 : 3200000,
+                        'quality' => $displayQuality,
                         'ping' => '6ms',
                         'verified' => true
                     ];
