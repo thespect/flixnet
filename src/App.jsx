@@ -13,6 +13,7 @@ import CastModal from './components/CastModal';
 import QuickLauncher from './components/QuickLauncher';
 import BrandHubs from './components/BrandHubs';
 import AdBlockModal from './components/AdBlockModal';
+import { forceUnlockAllScroll } from './utils/scrollLock';
 import { AdBlockerService } from './services/adBlockerService';
 import { StreamScannerService } from './services/streamScannerService';
 import {
@@ -202,6 +203,7 @@ export default function App() {
   const handleClosePlayer = () => {
     setPlayingMedia(null);
     setHistory(StorageService.getHistory());
+    forceUnlockAllScroll();
     try {
       const url = new URL(window.location.href);
       url.searchParams.delete('watch');

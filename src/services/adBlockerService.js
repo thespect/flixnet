@@ -274,6 +274,10 @@ class AdBlockerEngine {
     this.isWatchingVideo = Boolean(status);
   }
 
+  setIsWatchingVideo(status) {
+    this.isWatchingVideo = Boolean(status);
+  }
+
   // Evita redirecciones forzadas que intenten secuestrar la pestaña principal
   _installNavigationGuard() {
     const self = this;

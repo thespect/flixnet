@@ -8,9 +8,7 @@ import './index.css'
 if ('caches' in window) {
   caches.keys().then((keys) => {
     keys.forEach((k) => {
-      if (k !== 'cineflex-max-4k-v12') {
-        caches.delete(k).catch(() => {});
-      }
+      caches.delete(k).catch(() => {});
     });
   }).catch(() => {});
 }
