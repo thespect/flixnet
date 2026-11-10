@@ -563,7 +563,7 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
             }
 
             foreach ($m3u8Candidates as $candM3u8) {
-                $isAlivePhp = (strpos($candM3u8, '/stream/') !== false);
+                $isAlivePhp = (strpos($candM3u8, '.m3u8') !== false);
                 if (!$isAlivePhp) {
                     $chP = curl_init($candM3u8);
                     curl_setopt($chP, CURLOPT_RETURNTRANSFER, true);
