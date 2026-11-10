@@ -671,10 +671,10 @@ $responsePayload = json_encode([
             'ping' => '5ms',
             'verified' => !empty($imdbId)
         ],
-        'vidlink_4k_pro' => [
+        'embed69_latino' => [
             'online' => true,
             'hasLatinoDirect' => true,
-            'ping' => '5ms',
+            'ping' => '6ms',
             'verified' => true
         ],
         'vidsrc_pm' => [

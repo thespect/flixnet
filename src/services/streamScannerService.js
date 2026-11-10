@@ -382,7 +382,6 @@ export const StreamScannerService = {
             auto_smart_latino: { online: true, verified: true, ping: '3ms' },
             native_hls_4k: { online: spanishDirect.length > 0, verified: true, ping: '3ms' },
             playlatin_es: { online: true, verified: true, ping: '5ms' },
-            vidlink_4k_pro: { online: true, verified: true, ping: '5ms' },
             embed69_latino: { online: true, verified: true, ping: '7ms' },
             multiembed_global: { online: true, verified: true, ping: '8ms' },
             vidsrc_pm: { online: true, verified: true, ping: '8ms' }
@@ -482,7 +481,6 @@ export const StreamScannerService = {
         auto_smart_latino: { online: true, verified: true, ping: '3ms' },
         native_hls_4k: { online: false, verified: true, ping: '3ms' },
         playlatin_es: { online: true, verified: true, ping: '5ms' },
-        vidlink_4k_pro: { online: true, verified: true, ping: '5ms' },
         embed69_latino: { online: true, verified: true, ping: '7ms' },
         multiembed_global: { online: true, verified: true, ping: '8ms' },
         vidsrc_pm: { online: true, verified: true, ping: '8ms' }

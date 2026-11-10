@@ -108,7 +108,7 @@ export default function VideoPlayerModal({
       ? initialServer
       : hasCachedLatinoHls
         ? 'native_hls_4k'
-        : 'vidlink_4k_pro'
+        : 'auto_smart_latino'
   );
   const [selectedAudioMode, setSelectedAudioMode] = useState('es_latino_dub');
   const [playLatinLang, setPlayLatinLang] = useState('latino');
@@ -364,8 +364,8 @@ export default function VideoPlayerModal({
             setSelectedServer('native_hls_4k');
             setSelectedAudioMode(fastStreams[anyLat].isCastellanoDub ? 'es_castellano_dub' : 'es_latino_dub');
           } else {
-            // Si el único flujo encontrado es grabación de cine (CAM), saltar a VidLink 4K Digital Oficial
-            setSelectedServer('vidlink_4k_pro');
+            // Si el flujo no es HLS nativo, utilizar PlayLatin en Español Latino Oficial
+            setSelectedServer('playlatin_es');
           }
         }
         setIsScanningLinks(false);
@@ -410,8 +410,8 @@ export default function VideoPlayerModal({
         loadSubtitleTrack(-1);
         setSelectedServer('native_hls_4k');
       } else {
-        // Si no hay flujo HD nativo o solo hay CAM de cine, conmutar a VidLink 4K Digital Oficial (100% Full HD, 0% CAM, 0% Anuncios)
-        setSelectedServer('vidlink_4k_pro');
+        // Conmutar a PlayLatin Oficial (100% Latino Oficial, 0% Anuncios)
+        setSelectedServer('playlatin_es');
         setSelectedAudioMode('es_latino_dub');
       }
     })();
@@ -474,8 +474,8 @@ export default function VideoPlayerModal({
 
     const hasLatinoHls = directHlsStreams.some((s) => (s.isLatinoDub || s.isCastellanoDub) && !s.isCamQuality);
     const priorityChain = hasLatinoHls
-      ? ['native_hls_4k', 'auto_smart_latino', 'vidlink_4k_pro', 'embed69_latino', 'multiembed_global']
-      : ['vidlink_4k_pro', 'multiembed_global', 'auto_smart_latino', 'native_hls_4k'];
+      ? ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'embed69_latino', 'multiembed_global']
+      : ['auto_smart_latino', 'playlatin_es', 'embed69_latino', 'multiembed_global', 'native_hls_4k'];
 
     let nextServer = priorityChain.find((id) => id !== selectedServer && !failedServersRef.current.has(id));
     if (!nextServer) {
@@ -491,7 +491,7 @@ export default function VideoPlayerModal({
     setSelectedAudioMode('es_latino_dub');
 
     if (directHlsStreams.length > 0) {
-      const serverOrder = ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'embed69_latino', 'vidlink_4k_pro', 'multiembed_global'];
+      const serverOrder = ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'embed69_latino', 'multiembed_global'];
       const sIdx = Math.max(0, serverOrder.indexOf(nextServer));
       const nextIdx = sIdx % directHlsStreams.length;
       if (nextIdx !== activeHlsIndex) {
@@ -1184,7 +1184,7 @@ export default function VideoPlayerModal({
     if (directHlsStreams.length > 0) {
       // Asignar a cada botón de servidor un nodo espejo HLS directo distinto cuando hay varios disponibles
       const byProvider = directHlsStreams.findIndex((s) => s.providerId === serverId);
-      const serverOrder = ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'embed69_latino', 'vidlink_4k_pro', 'multiembed_global'];
+      const serverOrder = ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'embed69_latino', 'multiembed_global'];
       const sIdx = Math.max(0, serverOrder.indexOf(serverId));
       const nextIdx = byProvider >= 0 ? byProvider : (sIdx % directHlsStreams.length);
 

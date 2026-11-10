@@ -238,7 +238,7 @@ export const STREAM_PROVIDERS = [
   {
     id: 'auto_smart_latino',
     name: 'Smart Auto 4K',
-    subtitle: 'Auto-Detector Sí o Sí • 4K / Full HD Digital (0% Anuncios)',
+    subtitle: 'Auto-Detector Sí o Sí • 4K / Full HD Latino (0% Anuncios)',
     badge: 'AUTO 4K',
     tag: 'Auto-Detect',
     quality: '4K / 1080p Nativo',
@@ -249,33 +249,41 @@ export const STREAM_PROVIDERS = [
     isDirectHls: true,
     sandboxSafe: true,
     language: 'Español Latino Oficial (0% Anuncios)',
-    description: 'Detecta en tiempo real el flujo directo .m3u8 más rápido y estable en Full HD digital.',
-    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
+    description: 'Detecta en tiempo real el flujo directo .m3u8 más rápido y estable con blindaje total anti-anuncios.',
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
+      if (res.imdbId) {
+        return res.isTv
+          ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
+          : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
+      }
       return res.isTv
-        ? `https://vidlink.pro/tv/${res.id}/${res.season}/${res.episode}?primaryColor=e50914&autoplay=true&nextbutton=true`
-        : `https://vidlink.pro/movie/${res.id}?primaryColor=e50914&autoplay=true`;
+        ? `https://multiembed.mov/?video_id=${res.id}&tmdb=1&s=${res.season}&e=${res.episode}`
+        : `https://multiembed.mov/?video_id=${res.id}&tmdb=1`;
     }
   },
   {
-    id: 'vidlink_4k_pro',
-    name: 'VidLink 4K Digital',
-    subtitle: '100% Digital HD WEB-DL Oficial • Cero Grabaciones de Cine • 0% Anuncios',
-    badge: 'DIGITAL 4K',
-    tag: 'Digital HD',
-    quality: '4K / 1080p Ultra HD',
+    id: 'playlatin_es',
+    name: 'PlayLatin Oficial',
+    subtitle: 'Servidor Oficial #1 • 100% Español Latino (0% Anuncios)',
+    badge: 'LATINO 4K',
+    tag: 'PlayLatin',
+    quality: '1080p / 4K UHD Latino',
     ping: '5ms',
-    isNative: false,
-    prefersNativeHls: false,
-    isDirectHls: false,
+    isNative: true,
+    prefersNativeHls: true,
+    isDirectHls: true,
     sandboxSafe: true,
-    language: 'Español Latino / Multi-Audio Digital',
-    description: 'Master digital oficial en Full HD y 4K libre de grabaciones de cine, sin anuncios ni redirecciones.',
-    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
+    language: 'Español Latino Oficial (Doblaje Real)',
+    description: 'Servidor oficial PlayLatin en Español Latino Full HD / 4K con blindaje total.',
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      return res.isTv
-        ? `https://vidlink.pro/tv/${res.id}/${res.season}/${res.episode}?primaryColor=e50914&autoplay=true&nextbutton=true`
-        : `https://vidlink.pro/movie/${res.id}?primaryColor=e50914&autoplay=true`;
+      if (res.imdbId) {
+        return res.isTv
+          ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
+          : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
+      }
+      return '';
     }
   },
   {
@@ -292,32 +300,38 @@ export const STREAM_PROVIDERS = [
     sandboxSafe: true,
     language: 'Español Latino Directo 4K',
     description: 'Reproductor nativo HTML5 con flujo .m3u8 directo en Español Latino y filtro AI 4K Upscaler.',
-    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      return res.isTv
-        ? `https://vidlink.pro/tv/${res.id}/${res.season}/${res.episode}?primaryColor=e50914&autoplay=true&nextbutton=true`
-        : `https://vidlink.pro/movie/${res.id}?primaryColor=e50914&autoplay=true`;
+      if (res.imdbId) {
+        return res.isTv
+          ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
+          : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
+      }
+      return '';
     }
   },
   {
     id: 'embed69_latino',
-    name: 'Cineflex VIP Latino',
-    subtitle: 'Servidor Latino de Respaldo (Flujo HLS Directo)',
-    badge: 'LATINO VIP',
-    tag: '100% Latino',
-    quality: '1080p Full HD Latino',
+    name: 'Embed69 Latino',
+    subtitle: 'Clúster Especializado en Español Latino y Castellano (LAT / ESP • 0% Anuncios)',
+    badge: 'LATINO ESP',
+    tag: '100% Español',
+    quality: '1080p Full HD / 4K Latino',
     ping: '6ms',
     isNative: true,
     prefersNativeHls: true,
     isDirectHls: true,
     sandboxSafe: true,
-    language: 'Español Latino (LAT)',
-    description: 'Servidor dedicado a flujos directos en Español Latino libre de anuncios.',
+    language: 'Español Latino (LAT) y Castellano (ESP)',
+    description: 'Servidor dedicado a doblajes en Español Latino con extracción directa libre de anuncios.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      return res.isTv
-        ? `https://vidlink.pro/tv/${res.id}/${res.season}/${res.episode}?primaryColor=e50914&autoplay=true&nextbutton=true`
-        : `https://vidlink.pro/movie/${res.id}?primaryColor=e50914&autoplay=true`;
+      if (res.imdbId) {
+        return res.isTv
+          ? `https://embed69.org/f/${res.imdbId}-${res.season}x${String(res.episode).padStart(2, '0')}`
+          : `https://embed69.org/f/${res.imdbId}`;
+      }
+      return '';
     }
   },
   {
