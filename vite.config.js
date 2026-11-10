@@ -691,11 +691,11 @@ export default defineConfig({
     cssCodeSplit: false,
     rollupOptions: {
       output: {
-        entryFileNames: 'assets/cineflex.js',
-        chunkFileNames: 'assets/cineflex-[name].js',
+        entryFileNames: 'assets/cineflex-[hash].js',
+        chunkFileNames: 'assets/chunk-[hash].js',
         assetFileNames: (assetInfo) => {
           if (assetInfo.name && assetInfo.name.endsWith('.css')) {
-            return 'assets/cineflex.css';
+            return 'assets/cineflex-[hash].css';
           }
           return 'assets/[name]-[hash][extname]';
         }

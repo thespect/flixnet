@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && cp -f public/api.php dist/api.php && cp -f public/.htaccess dist/.htaccess && cp -f public/sw.js dist/sw.js && cp -f public/sw.js sw.js",
+    "build": "vite build && cp -f public/api.php dist/api.php && cp -f public/.htaccess dist/.htaccess && cp -f public/sw.js dist/sw.js && cp -f public/sw.js sw.js && cp -f dist/assets/cineflex-*.js dist/assets/cineflex.js && cp -f dist/assets/cineflex-*.css dist/assets/cineflex.css",
     "preview": "vite preview"
   },
   "dependencies": {
