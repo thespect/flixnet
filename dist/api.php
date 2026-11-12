@@ -473,6 +473,16 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
                     ? $langGroup['sortedEmbeds']
                     : [];
 
+                // Priorizar estrictamente servidores en calidad Digital HD / Full HD / 4K sobre grabaciones de cine (CAM)
+                usort($sortedEmbeds, function($a, $b) {
+                    $nameA = strtolower((isset($a['name']) ? $a['name'] : '') . ' ' . (isset($a['servername']) ? $a['servername'] : ''));
+                    $nameB = strtolower((isset($b['name']) ? $b['name'] : '') . ' ' . (isset($b['servername']) ? $b['servername'] : ''));
+                    $isCamA = (strpos($nameA, 'cam') !== false || strpos($nameA, 'ts') !== false || strpos($nameA, 'cine') !== false);
+                    $isCamB = (strpos($nameB, 'cam') !== false || strpos($nameB, 'ts') !== false || strpos($nameB, 'cine') !== false);
+                    if ($isCamA !== $isCamB) return $isCamA ? 1 : -1;
+                    return 0;
+                });
+
                 foreach ($sortedEmbeds as $emb) {
                     $srvName = strtolower(isset($emb['servername']) ? $emb['servername'] : '');
                     if (!empty($emb['link'])) {
@@ -626,6 +636,14 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
             }
         }
     }
+
+    // Asegurar que las fuentes Digital Full HD / 4K siempre queden en la posición #1 antes que cualquier CAM
+    usort($latinoDirectStreams, function($a, $b) {
+        if ($a['isCamQuality'] !== $b['isCamQuality']) {
+            return $a['isCamQuality'] ? 1 : -1;
+        }
+        return 0;
+    });
 }
 
 $hasEmbed69Latino = count($latinoDirectStreams) > 0 || count($latinoSources) > 0;

@@ -335,6 +335,69 @@ export const STREAM_PROVIDERS = [
     }
   },
   {
+    id: 'vidsrc_latino',
+    name: 'Vidsrc Pro Latino',
+    subtitle: 'Servidor Ultrarrápido de Alta Tasa de Bits (Películas, Series y Anime)',
+    badge: 'PRO 4K',
+    tag: 'Vidsrc Latino',
+    quality: '4K / 1080p Digital',
+    ping: '4ms',
+    isNative: false,
+    prefersNativeHls: false,
+    isDirectHls: false,
+    sandboxSafe: true,
+    language: 'Español Latino / Multi-Audio',
+    description: 'Servidor de ultra-alta velocidad sin buffering con catálogo amplio de anime, series y películas.',
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
+      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
+      return res.isTv
+        ? `https://vidsrc.icu/embed/tv/${res.id}/${res.season}/${res.episode}`
+        : `https://vidsrc.icu/embed/movie/${res.id}`;
+    }
+  },
+  {
+    id: 'autoembed_latino',
+    name: 'AutoEmbed 4K',
+    subtitle: 'Nodo Automatizado con Respaldo Múltiple (0% Esperas)',
+    badge: 'AUTOEMBED',
+    tag: 'AutoEmbed',
+    quality: '1080p / 4K HDR',
+    ping: '5ms',
+    isNative: false,
+    prefersNativeHls: false,
+    isDirectHls: false,
+    sandboxSafe: true,
+    language: 'Español Latino / Subtitulado',
+    description: 'Nodo automatizado con conmutación dinámica de CDN para máxima disponibilidad.',
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
+      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
+      return res.isTv
+        ? `https://player.autoembed.cc/embed/tv/${res.id}/${res.season}/${res.episode}`
+        : `https://player.autoembed.cc/embed/movie/${res.id}`;
+    }
+  },
+  {
+    id: 'vidsrc_cc',
+    name: 'Anime & Series Master',
+    subtitle: 'Especializado en Anime 4K y Temporadas Completas',
+    badge: 'ANIME 4K',
+    tag: 'Anime Master',
+    quality: '1080p / 4K UHD',
+    ping: '6ms',
+    isNative: false,
+    prefersNativeHls: false,
+    isDirectHls: false,
+    sandboxSafe: true,
+    language: 'Audio Latino & Japonés Subtitulado',
+    description: 'Optimizado para animes y series con listas de episodios completas y audio dual.',
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
+      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
+      return res.isTv
+        ? `https://vidsrc.cc/v2/embed/tv/${res.id}/${res.season}/${res.episode}`
+        : `https://vidsrc.cc/v2/embed/movie/${res.id}`;
+    }
+  },
+  {
     id: 'multiembed_global',
     name: 'MultiEmbed VIP',
     subtitle: 'Nodo Espejo Global • Respaldo Internacional Multi-Audio',

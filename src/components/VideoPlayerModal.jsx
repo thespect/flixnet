@@ -474,8 +474,8 @@ export default function VideoPlayerModal({
 
     const hasLatinoHls = directHlsStreams.some((s) => (s.isLatinoDub || s.isCastellanoDub) && !s.isCamQuality);
     const priorityChain = hasLatinoHls
-      ? ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'embed69_latino', 'multiembed_global']
-      : ['auto_smart_latino', 'playlatin_es', 'embed69_latino', 'multiembed_global', 'native_hls_4k'];
+      ? ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'embed69_latino', 'vidsrc_latino', 'autoembed_latino', 'vidsrc_cc', 'multiembed_global']
+      : ['auto_smart_latino', 'playlatin_es', 'embed69_latino', 'vidsrc_latino', 'autoembed_latino', 'vidsrc_cc', 'multiembed_global', 'native_hls_4k'];
 
     let nextServer = priorityChain.find((id) => id !== selectedServer && !failedServersRef.current.has(id));
     if (!nextServer) {
@@ -491,7 +491,7 @@ export default function VideoPlayerModal({
     setSelectedAudioMode('es_latino_dub');
 
     if (directHlsStreams.length > 0) {
-      const serverOrder = ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'embed69_latino', 'multiembed_global'];
+      const serverOrder = ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'embed69_latino', 'vidsrc_latino', 'autoembed_latino', 'vidsrc_cc', 'multiembed_global'];
       const sIdx = Math.max(0, serverOrder.indexOf(nextServer));
       const nextIdx = sIdx % directHlsStreams.length;
       if (nextIdx !== activeHlsIndex) {
@@ -1184,7 +1184,7 @@ export default function VideoPlayerModal({
     if (directHlsStreams.length > 0) {
       // Asignar a cada botón de servidor un nodo espejo HLS directo distinto cuando hay varios disponibles
       const byProvider = directHlsStreams.findIndex((s) => s.providerId === serverId);
-      const serverOrder = ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'embed69_latino', 'multiembed_global'];
+      const serverOrder = ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'embed69_latino', 'vidsrc_latino', 'autoembed_latino', 'vidsrc_cc', 'multiembed_global'];
       const sIdx = Math.max(0, serverOrder.indexOf(serverId));
       const nextIdx = byProvider >= 0 ? byProvider : (sIdx % directHlsStreams.length);
 
@@ -2410,6 +2410,28 @@ export default function VideoPlayerModal({
                   </span>
                 </div>
               )}
+              {/* Banner Rápido si hay flujo Nativo 4K disponible */}
+              {!isScanningLinks && directHlsStreams.length > 0 && !showTrailer && (
+                <div className="absolute top-3 inset-x-3 sm:inset-x-8 z-30 flex items-center justify-between p-2.5 sm:p-3 rounded-2xl bg-gradient-to-r from-emerald-600/95 via-teal-700/95 to-emerald-900/95 border border-emerald-400/40 shadow-[0_8px_30px_rgba(16,185,129,0.5)] backdrop-blur-xl animate-fadeIn">
+                  <div className="flex items-center space-x-2 text-white min-w-0">
+                    <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300 animate-pulse shrink-0" />
+                    <div className="truncate">
+                      <p className="text-xs sm:text-sm font-black tracking-tight truncate">Flujo Nativo 4K Disponible (0% Anuncios)</p>
+                      <p className="text-[10px] sm:text-xs text-emerald-100 font-medium truncate hidden sm:block">Reproduce sin anuncios externos y con pausa nativa</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedServer('native_hls_4k');
+                      setActiveHlsIndex(0);
+                    }}
+                    className="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white text-black font-black text-xs hover:bg-neutral-100 active:scale-95 transition-all shadow-lg cursor-pointer shrink-0 ml-2"
+                  >
+                    Activar Nativo
+                  </button>
+                </div>
+              )}
+
               {!isScanningLinks && (showTrailer ? trailerUrl : streamUrl) && (
                 <iframe
                   key={`${selectedServer}_${playLatinLang}_s${currentSeason}_e${currentEpisode}_${iframeKey}`}

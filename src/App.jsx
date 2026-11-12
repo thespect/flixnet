@@ -622,6 +622,29 @@ export default function App() {
                       isInMyList={isInMyList}
                     />
                   </>
+                ) : activeCategoryFilter === 'anime' ? (
+                  <>
+                    <MovieRow
+                      icon={Sparkles}
+                      title="Anime 4K en Español Latino & Audio Dual"
+                      badgeText="Latino & Sub"
+                      movies={catalog.animationTv}
+                      onPlay={(m) => handleStartPlay(m, 1, 1)}
+                      onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                      onToggleMyList={handleToggleMyList}
+                      isInMyList={isInMyList}
+                    />
+                    <MovieRow
+                      icon={Flame}
+                      title="Series y Películas Animadas Destacadas"
+                      badgeText="4K UHD"
+                      movies={catalog.actionTv}
+                      onPlay={(m) => handleStartPlay(m, 1, 1)}
+                      onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                      onToggleMyList={handleToggleMyList}
+                      isInMyList={isInMyList}
+                    />
+                  </>
                 ) : activeCategoryFilter === 'horror' ? (
                   <MovieRow
                     icon={Skull}
@@ -850,8 +873,8 @@ export default function App() {
                   key={nav.id}
                   onClick={() => handleTabChange(nav.id)}
                   className={`relative flex flex-col items-center justify-center py-1.5 px-2.5 sm:px-3.5 rounded-full transition-all duration-150 cursor-pointer min-w-[56px] sm:min-w-0 active:scale-95 ${isActive
-                      ? 'bg-white text-black font-bold shadow-[0_4px_18px_rgba(255,255,255,0.35)]'
-                      : 'text-white/70 hover:text-white'
+                    ? 'bg-white text-black font-bold shadow-[0_4px_18px_rgba(255,255,255,0.35)]'
+                    : 'text-white/70 hover:text-white'
                     }`}
                 >
                   <div className="relative z-10">

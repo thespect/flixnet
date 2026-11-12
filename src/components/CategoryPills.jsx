@@ -6,6 +6,7 @@ export const CATEGORY_FILTERS = [
   { id: 'all', label: 'Explorar Todo', icon: Film },
   { id: 'movies', label: 'Películas 4K', icon: Zap },
   { id: 'series', label: 'Series', icon: Tv },
+  { id: 'anime', label: 'Anime 4K', icon: Sparkles },
   { id: 'top10', label: 'Top 10 Hoy', icon: Flame },
   { id: 'action', label: 'Acción', icon: Rocket },
   { id: 'scifi', label: 'Ciencia Ficción', icon: Compass },

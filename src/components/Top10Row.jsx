@@ -105,9 +105,12 @@ export default function Top10Row({
                     height="288"
                     className="w-full h-full object-cover transition-transform duration-300 sm:group-hover/card:scale-105"
                   />
-                  <div className="absolute top-2 left-2 z-10 pointer-events-none">
-                    <span className="bg-black/80 text-white/95 border border-white/15 text-[9px] font-black tracking-wider px-1.5 py-0.5 rounded-md">
-                      4K UHD
+                  <div className="absolute top-2 inset-x-2 z-10 flex items-center justify-between pointer-events-none">
+                    <span className="bg-emerald-500/90 text-black text-[9px] font-black px-1.5 py-0.5 rounded shadow">
+                      LATINO 4K
+                    </span>
+                    <span className="bg-black/80 text-amber-300 border border-white/15 text-[9px] font-bold px-1.5 py-0.5 rounded">
+                      ★ {Number(movie.vote_average || 8.4).toFixed(1)}
                     </span>
                   </div>
 

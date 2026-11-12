@@ -67,6 +67,17 @@ export const BRAND_HUBS = [
     backdrop: 'https://image.tmdb.org/t/p/w780/b0PlSFdDwbyK0cf5RxwDpaOJQvQ.jpg',
     filterKey: 'action',
     searchTerm: 'Batman'
+  },
+  {
+    id: 'anime',
+    title: 'ANIME 4K',
+    subtitle: 'Shonen · Doblaje Latino',
+    gradient: 'from-[#521703]/90 via-[#360e02]/75 to-[#120401]/95',
+    glowColor: 'rgba(249, 115, 22, 0.4)',
+    borderColor: 'border-white/[0.12] hover:border-orange-500/70',
+    backdrop: 'https://image.tmdb.org/t/p/w780/kC3A8n5E71j6lH56d3K3h7y6z7A.jpg',
+    filterKey: 'animation',
+    searchTerm: 'Anime'
   }
 ];
 
@@ -74,7 +85,7 @@ export default function BrandHubs({ activeHub, onSelectHub }) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-5 select-none relative z-20">
       {/* Grid de Brand Hubs con Fotografía Cinematográfica y Liquid Glass (Estilo Disney+ / Max) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5 sm:gap-3.5">
         {BRAND_HUBS.map((hub) => {
           const isActive = activeHub === hub.id;
 

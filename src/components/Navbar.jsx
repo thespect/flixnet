@@ -155,7 +155,7 @@ export default function Navbar({
                     <span className="w-0.5 bg-emerald-400 rounded-full eq-bar-2" />
                     <span className="w-0.5 bg-emerald-400 rounded-full eq-bar-3" />
                   </span>
-                  <span>7 SERVIDORES 4K</span>
+                  <span>8 SERVIDORES 4K</span>
                 </span>
               </div>
             </div>
