@@ -379,10 +379,9 @@ export const STREAM_PROVIDERS = [
     description: 'Servidor de ultra-alta velocidad sin buffering con pistas de audio en español.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      const targetId = res.imdbId || KNOWN_IMDB_IDS[res.id] || res.id;
       return res.isTv
-        ? `https://vidsrc.sh/embed/tv?imdb=${targetId}&season=${res.season}&episode=${res.episode}`
-        : `https://vidsrc.sh/embed/movie?imdb=${targetId}`;
+        ? `https://vidsrc.me/embed/tv?tmdb=${res.id}&season=${res.season}&episode=${res.episode}`
+        : `https://vidsrc.me/embed/movie?tmdb=${res.id}`;
     }
   },
   {
@@ -412,27 +411,65 @@ export const STREAM_PROVIDERS = [
   },
   {
     id: 'cuevana_latino',
-    name: 'Cuevana VIP Latino',
-    subtitle: 'Respaldo Latino de Alta Disponibilidad • Full HD 1080p',
-    badge: 'CUEVANA 4K',
-    tag: 'Cuevana VIP',
+    name: 'AutoEmbed 4K Multi',
+    subtitle: 'Respaldo Digital Rápido • Full HD 1080p / 4K Multi-Audio',
+    badge: 'AUTO 4K',
+    tag: 'AutoEmbed',
     quality: '1080p Full HD / 4K',
     ping: '6ms',
     isNative: false,
     prefersNativeHls: false,
     isDirectHls: false,
     sandboxSafe: true,
-    language: 'Español Latino Oficial',
-    description: 'Nodo espejo de respaldo especializado en películas y series en Español Latino.',
+    language: 'Español Latino / Subtitulado',
+    description: 'Nodo espejo de respaldo rápido con múltiples servidores digitales.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      const effectiveImdb = res.imdbId || KNOWN_IMDB_IDS[res.id] || null;
-      if (effectiveImdb) {
-        return res.isTv
-          ? `https://embed69.org/f/${effectiveImdb}-${res.season}x${String(res.episode).padStart(2, '0')}`
-          : `https://embed69.org/f/${effectiveImdb}`;
-      }
-      return '';
+      return res.isTv
+        ? `https://autoembed.co/tv/tmdb/${res.id}-${res.season}-${res.episode}`
+        : `https://autoembed.co/movie/tmdb/${res.id}`;
+    }
+  },
+  {
+    id: 'vidsrc_to',
+    name: 'VidSrc.to 4K VIP',
+    subtitle: 'Servidor Internacional Digital 4K con Subtítulos en Español',
+    badge: 'VIDSRC TO',
+    tag: '4K Digital',
+    quality: '4K / 1080p Digital',
+    ping: '6ms',
+    isNative: false,
+    prefersNativeHls: false,
+    isDirectHls: false,
+    sandboxSafe: true,
+    language: 'Multi-Audio / Subtítulos Español',
+    description: 'Respaldo internacional estable para estrenos en calidad Digital.',
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
+      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
+      return res.isTv
+        ? `https://vidsrc.to/embed/tv/${res.id}/${res.season}/${res.episode}`
+        : `https://vidsrc.to/embed/movie/${res.id}`;
+    }
+  },
+  {
+    id: 'twoembed_hd',
+    name: '2Embed Digital HD',
+    subtitle: 'Respaldo Global Full HD 1080p • Carga Rápida',
+    badge: '2EMBED HD',
+    tag: 'Full HD',
+    quality: '1080p Full HD',
+    ping: '7ms',
+    isNative: false,
+    prefersNativeHls: false,
+    isDirectHls: false,
+    sandboxSafe: true,
+    language: 'Multi-Audio / Subtítulos',
+    description: 'Servidor de respaldo adicional de alta disponibilidad.',
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
+      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
+      return res.isTv
+        ? `https://www.2embed.cc/embedtv/${res.id}&s=${res.season}&e=${res.episode}`
+        : `https://www.2embed.cc/embed/${res.id}`;
     }
   }
 ];

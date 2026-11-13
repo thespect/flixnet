@@ -2,9 +2,8 @@
 // API Backend Ultra-Rápida de Extracción Directa HLS (.m3u8) 100% en Español Latino para Producción / XAMPP / cPanel
 error_reporting(0);
 @ini_set('display_errors', '0');
-if (!ob_start('ob_gzhandler')) {
-    ob_start();
-}
+@ini_set('zlib.output_compression', '0');
+ob_start();
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: *');
@@ -679,7 +678,11 @@ $responsePayload = json_encode([
             'verified' => true
         ]
     ]
-]);
+], JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_SLASHES);
+
+if ($responsePayload === false) {
+    $responsePayload = json_encode(['ok' => false, 'error' => 'JSON encode error', 'latinoDirectStreams' => []]);
+}
 
 @file_put_contents($cacheFile, $responsePayload);
 echo $responsePayload;
