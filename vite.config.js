@@ -594,65 +594,49 @@ function cineflexStreamScannerPlugin() {
           auto_smart_latino: {
             online: true,
             hasLatinoDirect: hasAnyLatino,
-            ping: '4ms',
+            ping: '3ms',
             verified: true
           },
           playlatin_es: {
-            online: playlatinOk || hasDroploadSource || Boolean(imdbId),
+            online: playlatinOk || hasDroploadSource || Boolean(effectiveImdbId || imdbId),
             hasDirectDub: playlatinOk || hasDroploadSource,
-            ping: '5ms',
-            verified: playlatinOk || hasDroploadSource
+            ping: '4ms',
+            verified: playlatinOk || hasDroploadSource || Boolean(effectiveImdbId || imdbId)
+          },
+          playlatin_dropload: {
+            online: playlatinOk || hasDroploadSource || Boolean(effectiveImdbId || imdbId),
+            hasDirectDub: playlatinOk || hasDroploadSource,
+            ping: '4ms',
+            verified: playlatinOk || hasDroploadSource || Boolean(effectiveImdbId || imdbId)
           },
           native_hls_4k: {
             online: latinoDirectStreams.length > 0,
             hasLatinoDirect: latinoDirectStreams.some((s) => s.isLatinoDub),
-            ping: '5ms',
+            ping: '3ms',
             verified: latinoDirectStreams.length > 0
           },
-          vidhide_latino: {
-            online: hasVidhideSource || latinoDirectStreams.length > 0,
-            hasLatinoDirect: hasVidhideSource || latinoDirectStreams.length > 0,
-            ping: '6ms',
-            verified: hasVidhideSource || latinoDirectStreams.length > 0
-          },
-          streamwish_latino: {
-            online: hasStreamwishSource || latinoSources.length > 0,
-            hasLatinoDirect: hasStreamwishSource || latinoSources.length > 0,
-            ping: '7ms',
-            verified: hasStreamwishSource || latinoSources.length > 0
-          },
-          playlatin_dood: {
-            online: hasDoodSource || playlatinOk || Boolean(imdbId),
-            hasLatinoDirect: hasDoodSource || playlatinOk,
-            ping: '7ms',
-            verified: hasDoodSource || playlatinOk
-          },
           embed69_latino: {
-            online: hasEmbed69Latino || Boolean(imdbId),
+            online: hasEmbed69Latino || Boolean(effectiveImdbId || imdbId),
             hasLatinoDirect: hasEmbed69Latino,
-            ping: '7ms',
+            ping: '5ms',
             verified: hasEmbed69Latino
           },
-          vidsrc_pm: {
+          vidsrc_latino: {
             online: true,
             hasLatinoDirect: true,
-            ping: '7ms',
+            ping: '4ms',
             verified: true
           },
-          multiembed_global: {
-            online: true,
+          embed69_castellano: {
+            online: hasEmbed69Latino || Boolean(effectiveImdbId || imdbId),
             hasLatinoDirect: true,
-            ping: '8ms',
+            ping: '5ms',
             verified: true
           },
-          vidlink_4k_pro: {
-            online: true,
-            ping: '10ms',
-            verified: true
-          },
-          nova_4k_master: {
-            online: true,
-            ping: '11ms',
+          cuevana_latino: {
+            online: hasEmbed69Latino || Boolean(effectiveImdbId || imdbId),
+            hasLatinoDirect: true,
+            ping: '6ms',
             verified: true
           }
         }

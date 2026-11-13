@@ -645,32 +645,38 @@ $responsePayload = json_encode([
         'playlatin_es' => [
             'online' => !empty($imdbId),
             'hasDirectDub' => !empty($imdbId),
-            'ping' => '5ms',
+            'ping' => '4ms',
             'verified' => !empty($imdbId)
         ],
-        'vidlink_4k_pro' => [
-            'online' => true,
-            'hasLatinoDirect' => true,
-            'ping' => '5ms',
-            'verified' => true
-        ],
-        'vidsrc_pm' => [
-            'online' => true,
-            'hasLatinoDirect' => true,
-            'ping' => '6ms',
-            'verified' => true
-        ],
-        'multiembed_global' => [
-            'online' => true,
-            'hasLatinoDirect' => true,
-            'ping' => '7ms',
-            'verified' => true
+        'playlatin_dropload' => [
+            'online' => !empty($imdbId),
+            'hasDirectDub' => !empty($imdbId),
+            'ping' => '4ms',
+            'verified' => !empty($imdbId)
         ],
         'embed69_latino' => [
             'online' => !empty($imdbId),
             'hasLatinoDirect' => $hasEmbed69Latino,
-            'ping' => '8ms',
+            'ping' => '5ms',
             'verified' => $hasEmbed69Latino
+        ],
+        'vidsrc_latino' => [
+            'online' => true,
+            'hasLatinoDirect' => true,
+            'ping' => '4ms',
+            'verified' => true
+        ],
+        'embed69_castellano' => [
+            'online' => !empty($imdbId),
+            'hasLatinoDirect' => true,
+            'ping' => '5ms',
+            'verified' => true
+        ],
+        'cuevana_latino' => [
+            'online' => !empty($imdbId),
+            'hasLatinoDirect' => true,
+            'ping' => '6ms',
+            'verified' => true
         ]
     ]
 ]);

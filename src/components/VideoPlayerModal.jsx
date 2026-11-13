@@ -474,8 +474,8 @@ export default function VideoPlayerModal({
 
     const hasLatinoHls = directHlsStreams.some((s) => (s.isLatinoDub || s.isCastellanoDub) && !s.isCamQuality);
     const priorityChain = hasLatinoHls
-      ? ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'embed69_latino', 'vidsrc_latino', 'autoembed_latino', 'vidsrc_cc', 'multiembed_global']
-      : ['auto_smart_latino', 'playlatin_es', 'embed69_latino', 'vidsrc_latino', 'autoembed_latino', 'vidsrc_cc', 'multiembed_global', 'native_hls_4k'];
+      ? ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'playlatin_dropload', 'embed69_latino', 'vidsrc_latino', 'embed69_castellano', 'cuevana_latino']
+      : ['auto_smart_latino', 'playlatin_es', 'playlatin_dropload', 'embed69_latino', 'vidsrc_latino', 'embed69_castellano', 'cuevana_latino', 'native_hls_4k'];
 
     let nextServer = priorityChain.find((id) => id !== selectedServer && !failedServersRef.current.has(id));
     if (!nextServer) {
@@ -491,7 +491,7 @@ export default function VideoPlayerModal({
     setSelectedAudioMode('es_latino_dub');
 
     if (directHlsStreams.length > 0) {
-      const serverOrder = ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'embed69_latino', 'vidsrc_latino', 'autoembed_latino', 'vidsrc_cc', 'multiembed_global'];
+      const serverOrder = ['native_hls_4k', 'auto_smart_latino', 'playlatin_es', 'playlatin_dropload', 'embed69_latino', 'vidsrc_latino', 'embed69_castellano', 'cuevana_latino'];
       const sIdx = Math.max(0, serverOrder.indexOf(nextServer));
       const nextIdx = sIdx % directHlsStreams.length;
       if (nextIdx !== activeHlsIndex) {
@@ -2400,11 +2400,11 @@ export default function VideoPlayerModal({
           /* REPRODUCTOR 2: SERVIDORES EN ESPAÑOL LATINO (Con blindaje Sandbox 0% Anuncios y 0% Clics Fantasmas) */
           <div className="relative w-full h-full flex items-center justify-center p-0 sm:p-2 md:p-4 z-10">
             <div className="relative w-full h-full max-w-7xl sm:aspect-video flex items-center justify-center">
-              {(isLoading || isScanningLinks) && (
+              {(isLoading || isScanningLinks || (!showTrailer && isResolvingImdb)) && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 backdrop-blur-sm z-20 pointer-events-none space-y-3">
                   <div className="w-10 h-10 border-3 border-white/20 border-t-netflix-red rounded-full animate-spin" />
                   <span className="text-white text-xs sm:text-sm font-bold tracking-tight text-center px-4">
-                    {isScanningLinks
+                    {isScanningLinks || isResolvingImdb
                       ? 'Conectando flujo directo 4K / Full HD en Español Latino (0% anuncios)...'
                       : `Cargando ${currentProvider.name}...`}
                   </span>
@@ -2432,7 +2432,7 @@ export default function VideoPlayerModal({
                 </div>
               )}
 
-              {!isScanningLinks && (showTrailer ? trailerUrl : streamUrl) && (
+              {!isScanningLinks && (showTrailer ? trailerUrl : (!isResolvingImdb && streamUrl)) && (
                 <iframe
                   key={`${selectedServer}_${playLatinLang}_s${currentSeason}_e${currentEpisode}_${iframeKey}`}
                   src={showTrailer ? trailerUrl : streamUrl}
@@ -2441,6 +2441,7 @@ export default function VideoPlayerModal({
                   allowFullScreen
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                   referrerPolicy="origin"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                   onLoad={() => {
                     setIsLoading(false);
                   }}

@@ -252,14 +252,15 @@ export const STREAM_PROVIDERS = [
     description: 'Detecta en tiempo real el flujo directo .m3u8 más rápido y estable con blindaje total anti-anuncios.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      if (res.imdbId) {
+      const effectiveImdb = res.imdbId || KNOWN_IMDB_IDS[res.id] || null;
+      if (effectiveImdb) {
         return res.isTv
-          ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
-          : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
+          ? `https://playlatinsrc.co/custom/serial/${effectiveImdb}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
+          : `https://playlatinsrc.co/custom/movie/${effectiveImdb}?lang=${lang}&autoplay=1`;
       }
       return res.isTv
-        ? `https://multiembed.mov/?video_id=${res.id}&tmdb=1&s=${res.season}&e=${res.episode}`
-        : `https://multiembed.mov/?video_id=${res.id}&tmdb=1`;
+        ? `https://vidsrc.sh/embed/tv?imdb=${res.id}&season=${res.season}&episode=${res.episode}`
+        : `https://vidsrc.sh/embed/movie?imdb=${res.id}`;
     }
   },
   {
@@ -278,10 +279,36 @@ export const STREAM_PROVIDERS = [
     description: 'Servidor oficial PlayLatin en Español Latino Full HD / 4K con blindaje total.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      if (res.imdbId) {
+      const effectiveImdb = res.imdbId || KNOWN_IMDB_IDS[res.id] || null;
+      if (effectiveImdb) {
         return res.isTv
-          ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
-          : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
+          ? `https://playlatinsrc.co/custom/serial/${effectiveImdb}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
+          : `https://playlatinsrc.co/custom/movie/${effectiveImdb}?lang=${lang}&autoplay=1`;
+      }
+      return '';
+    }
+  },
+  {
+    id: 'playlatin_dropload',
+    name: 'PlayLatin Dropload',
+    subtitle: 'Flujo Rápido CDN Dropload • Selector Dual de Idioma',
+    badge: 'DROPLOAD',
+    tag: 'Dropload 4K',
+    quality: '1080p / 4K UHD Latino',
+    ping: '4ms',
+    isNative: true,
+    prefersNativeHls: true,
+    isDirectHls: true,
+    sandboxSafe: true,
+    language: 'Español Latino Oficial (Dropload)',
+    description: 'Servidor Dropload de alta velocidad con interfaz nativa y selector de idiomas.',
+    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
+      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
+      const effectiveImdb = res.imdbId || KNOWN_IMDB_IDS[res.id] || null;
+      if (effectiveImdb) {
+        return res.isTv
+          ? `https://playlatinsrc.co/serial/${effectiveImdb}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
+          : `https://playlatinsrc.co/movie/${effectiveImdb}?lang=${lang}&autoplay=1`;
       }
       return '';
     }
@@ -302,10 +329,11 @@ export const STREAM_PROVIDERS = [
     description: 'Reproductor nativo HTML5 con flujo .m3u8 directo en Español Latino y filtro AI 4K Upscaler.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null, lang = 'latino') => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      if (res.imdbId) {
+      const effectiveImdb = res.imdbId || KNOWN_IMDB_IDS[res.id] || null;
+      if (effectiveImdb) {
         return res.isTv
-          ? `https://playlatinsrc.co/custom/serial/${res.imdbId}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
-          : `https://playlatinsrc.co/custom/movie/${res.imdbId}?lang=${lang}&autoplay=1`;
+          ? `https://playlatinsrc.co/custom/serial/${effectiveImdb}/${res.season}/${res.episode}?lang=${lang}&autoplay=1`
+          : `https://playlatinsrc.co/custom/movie/${effectiveImdb}?lang=${lang}&autoplay=1`;
       }
       return '';
     }
@@ -317,7 +345,7 @@ export const STREAM_PROVIDERS = [
     badge: 'LATINO ESP',
     tag: '100% Español',
     quality: '1080p Full HD / 4K Latino',
-    ping: '6ms',
+    ping: '5ms',
     isNative: true,
     prefersNativeHls: true,
     isDirectHls: true,
@@ -326,20 +354,21 @@ export const STREAM_PROVIDERS = [
     description: 'Servidor dedicado a doblajes en Español Latino con extracción directa libre de anuncios.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      if (res.imdbId) {
+      const effectiveImdb = res.imdbId || KNOWN_IMDB_IDS[res.id] || null;
+      if (effectiveImdb) {
         return res.isTv
-          ? `https://embed69.org/f/${res.imdbId}-${res.season}x${String(res.episode).padStart(2, '0')}`
-          : `https://embed69.org/f/${res.imdbId}`;
+          ? `https://embed69.org/f/${effectiveImdb}-${res.season}x${String(res.episode).padStart(2, '0')}`
+          : `https://embed69.org/f/${effectiveImdb}`;
       }
       return '';
     }
   },
   {
     id: 'vidsrc_latino',
-    name: 'Vidsrc Pro Latino',
-    subtitle: 'Servidor Ultrarrápido de Alta Tasa de Bits (Películas, Series y Anime)',
+    name: 'VidSrc Multi-Audio 4K',
+    subtitle: 'Servidor 4K Ultrarrápido con Pistas de Audio en Español y Subtítulos',
     badge: 'PRO 4K',
-    tag: 'Vidsrc Latino',
+    tag: 'VidSrc Latino',
     quality: '4K / 1080p Digital',
     ping: '4ms',
     isNative: false,
@@ -347,75 +376,63 @@ export const STREAM_PROVIDERS = [
     isDirectHls: false,
     sandboxSafe: true,
     language: 'Español Latino / Multi-Audio',
-    description: 'Servidor de ultra-alta velocidad sin buffering con catálogo amplio de anime, series y películas.',
+    description: 'Servidor de ultra-alta velocidad sin buffering con pistas de audio en español.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
+      const targetId = res.imdbId || KNOWN_IMDB_IDS[res.id] || res.id;
       return res.isTv
-        ? `https://vidsrc.icu/embed/tv/${res.id}/${res.season}/${res.episode}`
-        : `https://vidsrc.icu/embed/movie/${res.id}`;
+        ? `https://vidsrc.sh/embed/tv?imdb=${targetId}&season=${res.season}&episode=${res.episode}`
+        : `https://vidsrc.sh/embed/movie?imdb=${targetId}`;
     }
   },
   {
-    id: 'autoembed_latino',
-    name: 'AutoEmbed 4K',
-    subtitle: 'Nodo Automatizado con Respaldo Múltiple (0% Esperas)',
-    badge: 'AUTOEMBED',
-    tag: 'AutoEmbed',
+    id: 'embed69_castellano',
+    name: 'Embed69 Castellano',
+    subtitle: 'Nodo Alternativo • Español España y Multi-Audio (0% Anuncios)',
+    badge: 'ESPAÑA',
+    tag: 'Castellano',
     quality: '1080p / 4K HDR',
     ping: '5ms',
     isNative: false,
     prefersNativeHls: false,
     isDirectHls: false,
     sandboxSafe: true,
-    language: 'Español Latino / Subtitulado',
-    description: 'Nodo automatizado con conmutación dinámica de CDN para máxima disponibilidad.',
+    language: 'Español Castellano / Multi-Audio',
+    description: 'Nodo alternativo en Español con amplia compatibilidad de títulos y series.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      return res.isTv
-        ? `https://player.autoembed.cc/embed/tv/${res.id}/${res.season}/${res.episode}`
-        : `https://player.autoembed.cc/embed/movie/${res.id}`;
+      const effectiveImdb = res.imdbId || KNOWN_IMDB_IDS[res.id] || null;
+      if (effectiveImdb) {
+        return res.isTv
+          ? `https://embed69.org/f/${effectiveImdb}-${res.season}x${String(res.episode).padStart(2, '0')}`
+          : `https://embed69.org/f/${effectiveImdb}`;
+      }
+      return '';
     }
   },
   {
-    id: 'vidsrc_cc',
-    name: 'Anime & Series Master',
-    subtitle: 'Especializado en Anime 4K y Temporadas Completas',
-    badge: 'ANIME 4K',
-    tag: 'Anime Master',
-    quality: '1080p / 4K UHD',
+    id: 'cuevana_latino',
+    name: 'Cuevana VIP Latino',
+    subtitle: 'Respaldo Latino de Alta Disponibilidad • Full HD 1080p',
+    badge: 'CUEVANA 4K',
+    tag: 'Cuevana VIP',
+    quality: '1080p Full HD / 4K',
     ping: '6ms',
     isNative: false,
     prefersNativeHls: false,
     isDirectHls: false,
     sandboxSafe: true,
-    language: 'Audio Latino & Japonés Subtitulado',
-    description: 'Optimizado para animes y series con listas de episodios completas y audio dual.',
+    language: 'Español Latino Oficial',
+    description: 'Nodo espejo de respaldo especializado en películas y series en Español Latino.',
     getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
       const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      return res.isTv
-        ? `https://vidsrc.cc/v2/embed/tv/${res.id}/${res.season}/${res.episode}`
-        : `https://vidsrc.cc/v2/embed/movie/${res.id}`;
-    }
-  },
-  {
-    id: 'multiembed_global',
-    name: 'MultiEmbed VIP',
-    subtitle: 'Nodo Espejo Global • Respaldo Internacional Multi-Audio',
-    badge: 'VIP GLOBAL',
-    tag: 'MultiEmbed',
-    quality: '1080p Full HD / 4K',
-    ping: '7ms',
-    isNative: false,
-    prefersNativeHls: false,
-    isDirectHls: false,
-    sandboxSafe: true,
-    language: 'Multi-Audio / Subtitulado (0% Anuncios)',
-    description: 'Nodo espejo global de respaldo con amplia compatibilidad de títulos.',
-    getUrl: (id, isTv = false, season = 1, episode = 1, imdbId = null) => {
-      const res = resolveMediaAlias(id, isTv, season, episode, imdbId);
-      return res.isTv
-        ? `https://multiembed.mov/?video_id=${res.id}&tmdb=1&s=${res.season}&e=${res.episode}`
-        : `https://multiembed.mov/?video_id=${res.id}&tmdb=1`;
+      const effectiveImdb = res.imdbId || KNOWN_IMDB_IDS[res.id] || null;
+      if (effectiveImdb) {
+        return res.isTv
+          ? `https://embed69.org/f/${effectiveImdb}-${res.season}x${String(res.episode).padStart(2, '0')}`
+          : `https://embed69.org/f/${effectiveImdb}`;
+      }
+      return '';
     }
   }
 ];

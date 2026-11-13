@@ -60,22 +60,22 @@ export default function MovieCard({
         {/* Top Badges: Audio Dub + Quality + Rating */}
         <div className="absolute top-2.5 inset-x-2.5 z-10 flex items-center justify-between pointer-events-none gap-1">
           {/* Audio Tag: Latino Oficial */}
-          <div className="flex items-center space-x-1 bg-emerald-500/90 text-black border border-emerald-300/40 text-[9px] font-black tracking-wider px-2 py-0.5 rounded-full shadow-[0_2px_10px_rgba(16,185,129,0.4)] backdrop-blur-md">
+          <div className="flex items-center space-x-1 bg-emerald-500 text-black border border-emerald-300/60 text-[9px] font-black tracking-wider px-2 py-0.5 rounded-full shadow-md">
             <Volume2 className="w-2.5 h-2.5 text-black stroke-[3]" />
             <span>LATINO</span>
           </div>
 
-          <div className="flex items-center space-x-1.5">
+          <div className="flex items-center space-x-1">
             {isCam ? (
-              <span className="bg-amber-500/90 text-black text-[9px] font-black px-1.5 py-0.5 rounded-md shadow">
+              <span className="bg-amber-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-md shadow">
                 CAM CINE
               </span>
             ) : (
-              <span className="bg-black/75 text-white/90 border border-white/20 text-[9px] font-black tracking-wider px-1.5 py-0.5 rounded-md backdrop-blur-md">
+              <span className="bg-[#09090f]/90 text-white/95 border border-white/20 text-[9px] font-black tracking-wider px-1.5 py-0.5 rounded-md">
                 4K HDR
               </span>
             )}
-            <span className="bg-black/75 text-amber-300 border border-amber-400/30 text-[10px] font-bold px-1.5 py-0.5 rounded-md flex items-center backdrop-blur-md">
+            <span className="bg-[#09090f]/90 text-amber-300 border border-amber-400/35 text-[10px] font-bold px-1.5 py-0.5 rounded-md flex items-center">
               <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400 inline mr-0.5" />
               {ratingScore}
             </span>

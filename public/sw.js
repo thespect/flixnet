@@ -2,7 +2,7 @@
 // Almacena en caché la interfaz adaptativa y bloquea redes publicitarias a nivel de red,
 // sin interceptar flujos de video .m3u8/.ts ni llamadas dinámicas de streaming.
 
-const CACHE_NAME = 'cineflex-max-4k-v18';
+const CACHE_NAME = 'cineflex-max-4k-v19';
 const APP_SHELL = [
   './manifest.webmanifest',
   './hls.min.js',

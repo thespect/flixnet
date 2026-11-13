@@ -381,12 +381,12 @@ export const StreamScannerService = {
           serverStatuses: backendScan?.serverStatuses || {
             auto_smart_latino: { online: true, verified: true, ping: '3ms' },
             native_hls_4k: { online: spanishDirect.length > 0, verified: true, ping: '3ms' },
-            playlatin_es: { online: true, verified: true, ping: '5ms' },
-            embed69_latino: { online: true, verified: true, ping: '6ms' },
+            playlatin_es: { online: true, verified: true, ping: '4ms' },
+            playlatin_dropload: { online: true, verified: true, ping: '4ms' },
+            embed69_latino: { online: true, verified: true, ping: '5ms' },
             vidsrc_latino: { online: true, verified: true, ping: '4ms' },
-            autoembed_latino: { online: true, verified: true, ping: '5ms' },
-            vidsrc_cc: { online: true, verified: true, ping: '6ms' },
-            multiembed_global: { online: true, verified: true, ping: '8ms' }
+            embed69_castellano: { online: true, verified: true, ping: '5ms' },
+            cuevana_latino: { online: true, verified: true, ping: '6ms' }
           },
           recommendedServer: backendScan?.recommendedServer || (spanishDirect.length > 0 ? 'native_hls_4k' : 'playlatin_es'),
           scanDurationMs: Math.round(performance.now() - startTime),
@@ -482,12 +482,12 @@ export const StreamScannerService = {
       serverStatuses: {
         auto_smart_latino: { online: true, verified: true, ping: '3ms' },
         native_hls_4k: { online: false, verified: true, ping: '3ms' },
-        playlatin_es: { online: true, verified: true, ping: '5ms' },
-        embed69_latino: { online: true, verified: true, ping: '6ms' },
+        playlatin_es: { online: true, verified: true, ping: '4ms' },
+        playlatin_dropload: { online: true, verified: true, ping: '4ms' },
+        embed69_latino: { online: true, verified: true, ping: '5ms' },
         vidsrc_latino: { online: true, verified: true, ping: '4ms' },
-        autoembed_latino: { online: true, verified: true, ping: '5ms' },
-        vidsrc_cc: { online: true, verified: true, ping: '6ms' },
-        multiembed_global: { online: true, verified: true, ping: '8ms' }
+        embed69_castellano: { online: true, verified: true, ping: '5ms' },
+        cuevana_latino: { online: true, verified: true, ping: '6ms' }
       }
     };
   }

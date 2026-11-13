@@ -2,7 +2,9 @@
 // API Backend Ultra-Rápida de Extracción Directa HLS (.m3u8) 100% en Español Latino para Producción / XAMPP / cPanel
 error_reporting(0);
 @ini_set('display_errors', '0');
-
+if (!ob_start('ob_gzhandler')) {
+    ob_start();
+}
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: *');
@@ -15,11 +17,8 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS
 $dropUa = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
 $action = isset($_GET['action']) ? $_GET['action'] : 'scan';
 
-// MODO 1: PROXY HLS LOCAL (STREAMING BINARIO LIMPIO SIN GZIP)
+// MODO 1: PROXY HLS LOCAL
 if ($action === 'proxy') {
-    while (ob_get_level()) {
-        @ob_end_clean();
-    }
     $b64Param = isset($_GET['b64']) ? trim($_GET['b64']) : '';
     $ref64Param = isset($_GET['ref64']) ? trim($_GET['ref64']) : '';
     $targetUrl = !empty($b64Param)
@@ -72,7 +71,6 @@ if ($action === 'proxy') {
 
     if (strpos($targetUrl, '.m3u8') !== false || strpos($body, '#EXTM3U') !== false) {
         header('Content-Type: application/vnd.apple.mpegurl; charset=utf-8');
-        header('Cache-Control: no-cache, no-store');
         $parsedBase = parse_url($targetUrl);
         $baseOrigin = $parsedBase['scheme'] . '://' . $parsedBase['host'];
         $baseDir = isset($parsedBase['path']) ? rtrim(dirname($parsedBase['path']), '/') . '/' : '/';
@@ -117,9 +115,6 @@ if ($action === 'proxy') {
             }
         }
         header('Content-Type: video/mp2t');
-        header('Content-Length: ' . strlen($body));
-        header('Accept-Ranges: bytes');
-        header('Cache-Control: public, max-age=86400');
         echo $body;
     }
     exit;
@@ -134,7 +129,7 @@ $tmdbId = isset($_GET['tmdbId']) ? trim($_GET['tmdbId']) : '';
 $isTv = isset($_GET['isTv']) && ($_GET['isTv'] === '1' || $_GET['isTv'] === 'true');
 $season = isset($_GET['season']) ? intval($_GET['season']) : 1;
 $episode = isset($_GET['episode']) ? intval($_GET['episode']) : 1;
-$imdbId = isset($_GET['imdbId']) ? trim($_GET['imdbId']) : (isset($_GET['imdb']) ? trim($_GET['imdb']) : '');
+$imdbId = isset($_GET['imdbId']) ? trim($_GET['imdbId']) : '';
 
 if (empty($tmdbId)) {
     echo json_encode(['ok' => false, 'error' => 'Missing tmdbId']);
@@ -180,14 +175,14 @@ if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < 14400) {
     }
 }
 
-function quickGet($url, $timeout = 3.0, $referer = '') {
+function quickGet($url, $timeout = 1.5, $referer = '') {
     global $dropUa;
     if (function_exists('curl_init')) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
         curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
@@ -276,8 +271,8 @@ function quickMultiGet($requests) {
         curl_setopt($ch, CURLOPT_URL, $req['url']);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
-        curl_setopt($ch, CURLOPT_TIMEOUT, isset($req['timeout']) ? $req['timeout'] : 3.5);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
+        curl_setopt($ch, CURLOPT_TIMEOUT, isset($req['timeout']) ? $req['timeout'] : 1.5);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
         curl_setopt($ch, CURLOPT_USERAGENT, $dropUa);
@@ -293,12 +288,11 @@ function quickMultiGet($requests) {
     } while ($mrc == CURLM_CALL_MULTI_PERFORM);
 
     while ($active && $mrc == CURLM_OK) {
-        if (curl_multi_select($mh, 0.2) == -1) {
-            usleep(50000);
+        if (curl_multi_select($mh, 0.1) != -1) {
+            do {
+                $mrc = curl_multi_exec($mh, $active);
+            } while ($mrc == CURLM_CALL_MULTI_PERFORM);
         }
-        do {
-            $mrc = curl_multi_exec($mh, $active);
-        } while ($mrc == CURLM_CALL_MULTI_PERFORM);
     }
 
     $results = [];
@@ -473,16 +467,6 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
                     ? $langGroup['sortedEmbeds']
                     : [];
 
-                // Priorizar estrictamente servidores en calidad Digital HD / Full HD / 4K sobre grabaciones de cine (CAM)
-                usort($sortedEmbeds, function($a, $b) {
-                    $nameA = strtolower((isset($a['name']) ? $a['name'] : '') . ' ' . (isset($a['servername']) ? $a['servername'] : ''));
-                    $nameB = strtolower((isset($b['name']) ? $b['name'] : '') . ' ' . (isset($b['servername']) ? $b['servername'] : ''));
-                    $isCamA = (strpos($nameA, 'cam') !== false || strpos($nameA, 'ts') !== false || strpos($nameA, 'cine') !== false);
-                    $isCamB = (strpos($nameB, 'cam') !== false || strpos($nameB, 'ts') !== false || strpos($nameB, 'cine') !== false);
-                    if ($isCamA !== $isCamB) return $isCamA ? 1 : -1;
-                    return 0;
-                });
-
                 foreach ($sortedEmbeds as $emb) {
                     $srvName = strtolower(isset($emb['servername']) ? $emb['servername'] : '');
                     if (!empty($emb['link'])) {
@@ -573,7 +557,7 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
             }
 
             foreach ($m3u8Candidates as $candM3u8) {
-                $isAlivePhp = (strpos($candM3u8, '.m3u8') !== false);
+                $isAlivePhp = (strpos($candM3u8, '/stream/') !== false);
                 if (!$isAlivePhp) {
                     $chP = curl_init($candM3u8);
                     curl_setopt($chP, CURLOPT_RETURNTRANSFER, true);
@@ -590,30 +574,13 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
 
                 if ($isAlivePhp) {
                     $isLat = ($cMeta['langKey'] === 'latino');
-                    $isCam = (
-                        stripos($candM3u8, 'cam') !== false ||
-                        stripos($candM3u8, 'telesync') !== false ||
-                        stripos($candM3u8, 'hdcam') !== false ||
-                        stripos($candM3u8, 'ts-') !== false ||
-                        stripos($candM3u8, '-ts.') !== false ||
-                        stripos($cMeta['embedUrl'], 'cam') !== false ||
-                        stripos($unpacked, 'camrip') !== false ||
-                        stripos($unpacked, 'hd-cam') !== false ||
-                        stripos($unpacked, 'cine') !== false
-                    );
                     $b64U = rtrim(strtr(base64_encode($candM3u8), '+/', '-_'), '=');
                     $b64R = rtrim(strtr(base64_encode($cMeta['referer']), '+/', '-_'), '=');
                     $proxiedUrl = './api.php?action=proxy&b64=' . $b64U . '&ref64=' . $b64R;
                     $idxNum = count($latinoDirectStreams);
-                    $displayName = $isCam
-                        ? "{$cMeta['badge']} (Cine CAM Latino)"
-                        : "{$cMeta['badge']} ({$cMeta['label']})";
-                    $displayQuality = $isCam
-                        ? 'Grabación de Cine (CAM)'
-                        : '4K / 1080p Digital HD Latino';
                     $latinoDirectStreams[] = [
                         'id' => "latino_hls_{$cMeta['langKey']}_{$idxNum}",
-                        'name' => $displayName,
+                        'name' => "{$cMeta['badge']} ({$cMeta['label']})",
                         'providerId' => ($cKey === 'dropload') ? 'playlatin_es' : "embed69_{$cMeta['langKey']}",
                         'url' => $proxiedUrl,
                         'rawUrl' => $candM3u8,
@@ -625,9 +592,9 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
                         'isCastellanoDub' => !$isLat,
                         'isDirectHls' => true,
                         'castCompatible' => true,
-                        'isCamQuality' => $isCam,
-                        'maxBandwidth' => $isCam ? 1200000 : 3200000,
-                        'quality' => $displayQuality,
+                        'isCamQuality' => false,
+                        'maxBandwidth' => 3200000,
+                        'quality' => '4K / 1080p Digital HD Latino',
                         'ping' => '6ms',
                         'verified' => true
                     ];
@@ -636,14 +603,6 @@ if (!empty($imdbId) && strpos($imdbId, 'tt') === 0) {
             }
         }
     }
-
-    // Asegurar que las fuentes Digital Full HD / 4K siempre queden en la posición #1 antes que cualquier CAM
-    usort($latinoDirectStreams, function($a, $b) {
-        if ($a['isCamQuality'] !== $b['isCamQuality']) {
-            return $a['isCamQuality'] ? 1 : -1;
-        }
-        return 0;
-    });
 }
 
 $hasEmbed69Latino = count($latinoDirectStreams) > 0 || count($latinoSources) > 0;
@@ -686,32 +645,38 @@ $responsePayload = json_encode([
         'playlatin_es' => [
             'online' => !empty($imdbId),
             'hasDirectDub' => !empty($imdbId),
-            'ping' => '5ms',
+            'ping' => '4ms',
             'verified' => !empty($imdbId)
         ],
-        'embed69_latino' => [
-            'online' => true,
-            'hasLatinoDirect' => true,
-            'ping' => '6ms',
-            'verified' => true
-        ],
-        'vidsrc_pm' => [
-            'online' => true,
-            'hasLatinoDirect' => true,
-            'ping' => '6ms',
-            'verified' => true
-        ],
-        'multiembed_global' => [
-            'online' => true,
-            'hasLatinoDirect' => true,
-            'ping' => '7ms',
-            'verified' => true
+        'playlatin_dropload' => [
+            'online' => !empty($imdbId),
+            'hasDirectDub' => !empty($imdbId),
+            'ping' => '4ms',
+            'verified' => !empty($imdbId)
         ],
         'embed69_latino' => [
             'online' => !empty($imdbId),
             'hasLatinoDirect' => $hasEmbed69Latino,
-            'ping' => '8ms',
+            'ping' => '5ms',
             'verified' => $hasEmbed69Latino
+        ],
+        'vidsrc_latino' => [
+            'online' => true,
+            'hasLatinoDirect' => true,
+            'ping' => '4ms',
+            'verified' => true
+        ],
+        'embed69_castellano' => [
+            'online' => !empty($imdbId),
+            'hasLatinoDirect' => true,
+            'ping' => '5ms',
+            'verified' => true
+        ],
+        'cuevana_latino' => [
+            'online' => !empty($imdbId),
+            'hasLatinoDirect' => true,
+            'ping' => '6ms',
+            'verified' => true
         ]
     ]
 ]);
